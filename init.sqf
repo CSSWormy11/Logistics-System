@@ -39,7 +39,6 @@ if (fileExists "logisticsVehicleRoles.sqf") then { call compile preprocessFileLi
 // Additional optional client/server helpers (safe guarded)
 if (fileExists "fn_initLogisticsTasks.sqf") then { [] execVM "fn_initLogisticsTasks.sqf"; };
 if (fileExists "fn_manageLogisticsMissions.sqf") then { [] execVM "fn_manageLogisticsMissions.sqf"; };
-if (fileExists "fn_startupMarkerDiagnostics.sqf") then { [] execVM "fn_startupMarkerDiagnostics.sqf"; };
 
 // ---------------------------------------------------------------------------
 // Global derived lists
@@ -184,38 +183,36 @@ if (isServer) then {
         };
     };
 
-    QM_fnc_serverVehicleSale = {
-        params [["_baseKey", "", [""]], ["_vehicle", objNull, [objNull]], ["_playerUnit", objNull, [objNull]]];
-        if (_baseKey == "" || isNull _vehicle || isNull _playerUnit) exitWith {};
+	QM_fnc_serverVehicleSale = {
+		params [["_baseKey", "", [""]], ["_vehicle", objNull, [objNull]], ["_playerUnit", objNull, [objNull]]];
+		if (_baseKey == "" || isNull _vehicle || isNull _playerUnit) exitWith {};
 
-        private _class = typeOf _vehicle;
-        private _blueprintIdx = G_Procureable_Vehicles findIf { (_x select 1) == _class };
+		private _class = typeOf _vehicle;
+    
+		// Evaluate the blueprint index
+		private _blueprintIdx = G_Procureable_Vehicles findIf { (_x select 1) == _class };
 
-        if (_blueprintIdx != -1) then {
-            private _costArray = (G_Procureable_Vehicles select _blueprintIdx) select 2;
-            
-            // Refund 100% of ALL points back to the correct pools dynamically (Strict 1-for-1 Exchange)
-            {
-                _x params ["_poolName", "_poolCost"];
-                if (_poolCost > 0 && _poolCost < 10000000) then {
-                    private _vehVar = format ["LogiScore_%1_%2", _baseKey, _poolName];
-                    private _currentPool = missionNamespace getVariable [_vehVar, 0];
-                    if (_currentPool != -1) then {
-                        missionNamespace setVariable [_vehVar, _currentPool + _poolCost, true];
-                    };
-                };
-            } forEach _costArray;
-            [format ["SALVAGEMAN: Asset recycled. 100%% of resources returned to %1 ledger.", _baseKey]] remoteExec ["systemChat", _playerUnit];
-        } else {
-            private _vehVar = format ["LogiScore_%1_Vehicle", _baseKey];
-            private _currentPool = missionNamespace getVariable [_vehVar, 0];
-            if (_currentPool != -1) then { missionNamespace setVariable [_vehVar, _currentPool + 2000, true]; };
-            ["SALVAGEMAN: Unregistered vehicle recycled. 2000 Vehicle Material credited."] remoteExec ["systemChat", _playerUnit];
-        };
+		// V8 Architecture Update: Target Index 2 directly as a Number to calculate refund
+		if (_blueprintIdx != -1) then {
+			private _cost = (G_Procureable_Vehicles select _blueprintIdx) select 2;
+			private _vehVar = format ["LogiScore_%1_Vehicle", _baseKey];
+			private _currentPool = missionNamespace getVariable [_vehVar, 0];
+        
+			if (_currentPool != -1) then {
+				missionNamespace setVariable [_vehVar, _currentPool + _cost, true];
+			};
+        
+			[format ["SALVAGEMAN: Asset recycled. %1 Vehicle Material returned to %2 ledger.", _cost, _baseKey]] remoteExec ["systemChat", _playerUnit];
+		} else {
+			private _vehVar = format ["LogiScore_%1_Vehicle", _baseKey];
+			private _currentPool = missionNamespace getVariable [_vehVar, 0];
+			if (_currentPool != -1) then { missionNamespace setVariable [_vehVar, _currentPool + 2000, true]; };
+			["SALVAGEMAN: Unregistered vehicle recycled. 2000 Vehicle Material credited."] remoteExec ["systemChat", _playerUnit];
+		};
 
-        if (!isNil "QM_CAP_fnc_unregisterVehicleAsset") then { [_vehicle] call QM_CAP_fnc_unregisterVehicleAsset; };
-        deleteVehicle _vehicle;
-    };
+		if (!isNil "QM_CAP_fnc_unregisterVehicleAsset") then { [_vehicle] call QM_CAP_fnc_unregisterVehicleAsset; };
+		deleteVehicle _vehicle;
+	};
 
     QM_fnc_serverCreateLocalUnit = {
         params ["_baseKey", "_classname", "_playerUnit", "_cost", "_name"];
@@ -260,9 +257,12 @@ if (isServer) then {
     };
 
     QM_fnc_serverCreateLocalGroup = {
-        params ["_baseKey", "_unitArray", "_playerUnit", "_cost", "_name"];
+        params ["_baseKey", "_rawUnitArray", "_playerUnit", "_costArray", "_name"];
         if (!isServer) exitWith {};
 
+		private _cost = 0;
+		{ if ((_x select 0) == "Troops") then { _cost = _x select 1; }; } forEach _costArray;
+		
         private _troopVar = format ["LogiScore_%1_Troops", _baseKey];
         private _currentPool = missionNamespace getVariable [_troopVar, 0];
 
@@ -857,3 +857,7 @@ if (hasInterface) then {
 
     diag_log "QUARTERMASTER: Local player interaction space initialized.";
 };
+
+// Additional optional client/server helpers (safe guarded)
+// These needed to be moved to the end to make sure they weren't executed before other parts of the code ran
+if (fileExists "fn_startupMarkerDiagnostics.sqf") then { [] execVM "fn_startupMarkerDiagnostics.sqf"; };

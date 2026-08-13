@@ -1,581 +1,532 @@
 // ============================================================================
-// LOGISTICS SYSTEM: VIRTUAL ARSENAL CONFIGURATION MANIFEST (PART 2)
+// LOGISTICS SYSTEM: VIRTUAL ARSENAL CONFIGURATION MANIFEST
 // File: virtualArsenalTemplate.sqf
-// Description: Multi-use configuration registry.
-//              Virtual systems interpret this as an infinite white-list array.
-//              Traditional material exchanges read this to populate physical baseline stock.
-// Format: ["Classname", Default Stock Spawning Quantity]
-// Called By: init.sqf (Compiled during server/master initialization)
+// Description: Single source of truth for Virtual Arsenal whitelist items.
+//              Combines comprehensive asset depth with strict Faction and 
+//              Terrain array filtering for dynamic loadouts.
+// ============================================================================
+// TEMPLATE INDEX MAP
+// ============================================================================
+//
+// [0] Classname (String)
+// [1] Default Stock Quantity (Integer)
+// [2] Side / Faction (String: "WEST", "EAST", "GUER", "ALL")
+// [3] Terrain Compatibility Array (Array of Strings)
+//
 // ============================================================================
 
-// --- BLUFOR/NATO WHITELISTER WEAPON blue-prints ASSEMBLY ---
+diag_log "QUARTERMASTER DATABASE: virtualArsenalTemplate.sqf initialization started.";
+
 G_Allowed_Weapons = [
-["arifle_MX_ACO_pointer_F", 8],
-["arifle_MX_Black_F", 8],
-["arifle_MX_F", 8],
-["arifle_MX_GL_Black_F", 8],
-["arifle_MX_GL_F", 8],
-["arifle_MX_GL_khk_F", 8],
-["arifle_MX_khk_F", 8],
-["arifle_MX_SW_Black_F", 8],
-["arifle_MX_SW_F", 8],
-["arifle_MX_SW_khk_F", 8],
-["arifle_MXC_Black_F", 8],
-["arifle_MXC_F", 8],
-["arifle_MXC_khk_F", 8],
-["arifle_MXM_Black_F", 8],
-["arifle_MXM_F", 8],
-["arifle_MXM_khk_F", 8],
-["arifle_SDAR_F", 8],
-["arifle_SPAR_01_blk_F", 8],
-["arifle_SPAR_01_GL_blk_F", 8],
-["arifle_SPAR_01_GL_khk_F", 8],
-["arifle_SPAR_01_GL_snd_F", 8],
-["arifle_SPAR_01_khk_F", 8],
-["arifle_SPAR_01_snd_F", 8],
-["arifle_SPAR_02_blk_F", 8],
-["arifle_SPAR_02_khk_F", 8],
-["arifle_SPAR_02_snd_F", 8],
-["arifle_SPAR_03_blk_F", 8],
-["arifle_SPAR_03_khk_F", 8],
-["arifle_SPAR_03_snd_F", 8],
-["hgun_P07_blk_F", 8],
-["hgun_P07_F", 8],
-["hgun_P07_khk_F", 8],
-["hgun_Pistol_heavy_01_F", 8],
-["hgun_Pistol_heavy_01_green_F", 8],
-["launch_B_Titan_F", 8],
-["launch_B_Titan_olive_F", 8],
-["launch_B_Titan_short_F", 8],
-["launch_B_Titan_short_tna_F", 8],
-["launch_B_Titan_tna_F", 8],
-["launch_I_Titan_F", 8],
-["launch_I_Titan_short_F", 8],
-["launch_MRAWS_green_F", 8],
-["launch_MRAWS_green_rail_F", 8],
-["launch_MRAWS_olive_F", 8],
-["launch_MRAWS_olive_rail_F", 8],
-["launch_MRAWS_sand_F", 8],
-["launch_MRAWS_sand_rail_F", 8],
-["launch_NLAW_F", 8],
-["launch_O_Titan_short_F", 8],
-["MMG_02_black_F", 8],
-["MMG_02_camo_F", 8],
-["MMG_02_sand_F", 8],
-["SMG_01_F", 8],
-["srifle_DMR_02_camo_F", 8],
-["srifle_DMR_02_F", 8],
-["srifle_DMR_02_sniper_F", 8],
-["srifle_DMR_03_F", 8],
-["srifle_DMR_03_khaki_F", 8],
-["srifle_DMR_03_multicam_F", 8],
-["srifle_DMR_03_tan_F", 8],
-["srifle_DMR_03_woodland_F", 8],
-["srifle_EBR_F", 8],
-["srifle_LRR_camo_F", 8],
-["srifle_LRR_F", 8],
-["srifle_LRR_tna_F", 8]
+
+    // ========================================================================
+    // FACTION: WEST (NATO)
+    // ========================================================================
+    
+    // ------------------------------------------------------------------------
+    // ASSAULT RIFLES - MEDITERRANEAN / DESERT
+    // ------------------------------------------------------------------------
+    ["arifle_MX_F", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["arifle_MXC_F", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["arifle_MXM_F", 20, "WEST", ["Mediterranean", "Desert"]],
+    ["arifle_MX_GL_F", 20, "WEST", ["Mediterranean", "Desert"]],
+    ["arifle_MX_SW_F", 15, "WEST", ["Mediterranean", "Desert"]],
+    ["arifle_MX_Black_F", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["arifle_MXC_Black_F", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["arifle_MXM_Black_F", 20, "WEST", ["Mediterranean", "Desert"]],
+    ["arifle_MX_GL_Black_F", 20, "WEST", ["Mediterranean", "Desert"]],
+    ["arifle_MX_SW_Black_F", 15, "WEST", ["Mediterranean", "Desert"]],
+    ["arifle_SPAR_01_blk_F", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["arifle_SPAR_01_snd_F", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["arifle_SPAR_01_GL_blk_F", 20, "WEST", ["Mediterranean", "Desert"]],
+    ["arifle_SPAR_01_GL_snd_F", 20, "WEST", ["Mediterranean", "Desert"]],
+    ["arifle_SPAR_02_blk_F", 15, "WEST", ["Mediterranean", "Desert"]],
+    ["arifle_SPAR_02_snd_F", 15, "WEST", ["Mediterranean", "Desert"]],
+    
+    // ------------------------------------------------------------------------
+    // ASSAULT RIFLES - WOODLAND / JUNGLE (TROPIC / KHAKI)
+    // ------------------------------------------------------------------------
+    ["arifle_MX_khk_F", 30, "WEST", ["Woodland", "Jungle"]],
+    ["arifle_MXC_khk_F", 30, "WEST", ["Woodland", "Jungle"]],
+    ["arifle_MXM_khk_F", 20, "WEST", ["Woodland", "Jungle"]],
+    ["arifle_MX_GL_khk_F", 20, "WEST", ["Woodland", "Jungle"]],
+    ["arifle_MX_SW_khk_F", 15, "WEST", ["Woodland", "Jungle"]],
+    ["arifle_SPAR_01_khk_F", 30, "WEST", ["Woodland", "Jungle"]],
+    ["arifle_SPAR_01_GL_khk_F", 20, "WEST", ["Woodland", "Jungle"]],
+    ["arifle_SPAR_02_khk_F", 15, "WEST", ["Woodland", "Jungle"]],
+
+    // ------------------------------------------------------------------------
+    // MARKSMAN & SNIPER RIFLES - MEDITERRANEAN / DESERT
+    // ------------------------------------------------------------------------
+    ["srifle_DMR_02_F", 10, "WEST", ["Mediterranean", "Desert"]],
+    ["srifle_DMR_02_camo_F", 10, "WEST", ["Mediterranean", "Desert"]],
+    ["srifle_DMR_02_sniper_F", 10, "WEST", ["Mediterranean", "Desert"]],
+    ["srifle_DMR_03_F", 15, "WEST", ["Mediterranean", "Desert"]],
+    ["srifle_DMR_03_tan_F", 15, "WEST", ["Mediterranean", "Desert"]],
+    ["srifle_DMR_03_multicam_F", 15, "WEST", ["Mediterranean", "Desert"]],
+    ["srifle_EBR_F", 15, "WEST", ["Mediterranean", "Desert"]],
+    ["srifle_LRR_F", 5, "WEST", ["Mediterranean", "Desert"]],
+    ["srifle_LRR_camo_F", 5, "WEST", ["Mediterranean", "Desert"]],
+
+    // ------------------------------------------------------------------------
+    // MARKSMAN & SNIPER RIFLES - WOODLAND / JUNGLE
+    // ------------------------------------------------------------------------
+    ["srifle_DMR_03_khaki_F", 15, "WEST", ["Woodland", "Jungle"]],
+    ["srifle_DMR_03_woodland_F", 15, "WEST", ["Woodland", "Jungle"]],
+    ["srifle_LRR_tna_F", 5, "WEST", ["Woodland", "Jungle"]],
+
+    // ------------------------------------------------------------------------
+    // MACHINE GUNS & SMGS - ALL TERRAINS
+    // ------------------------------------------------------------------------
+    ["MMG_02_black_F", 10, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["MMG_02_camo_F", 10, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["MMG_02_sand_F", 10, "WEST", ["Mediterranean", "Desert"]],
+    ["SMG_01_F", 20, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["arifle_SDAR_F", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]], // Universal Underwater Rifle
+
+    // ------------------------------------------------------------------------
+    // HANDGUNS - ALL TERRAINS
+    // ------------------------------------------------------------------------
+    ["hgun_P07_F", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["hgun_P07_blk_F", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["hgun_P07_khk_F", 30, "WEST", ["Woodland", "Jungle"]],
+    ["hgun_Pistol_heavy_01_F", 20, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["hgun_Pistol_heavy_01_green_F", 20, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+
+    // ------------------------------------------------------------------------
+    // LAUNCHERS - MEDITERRANEAN / DESERT
+    // ------------------------------------------------------------------------
+    ["launch_B_Titan_F", 10, "WEST", ["Mediterranean", "Desert"]],
+    ["launch_B_Titan_short_F", 10, "WEST", ["Mediterranean", "Desert"]],
+    ["launch_MRAWS_sand_F", 15, "WEST", ["Mediterranean", "Desert"]],
+    ["launch_MRAWS_sand_rail_F", 15, "WEST", ["Mediterranean", "Desert"]],
+
+    // ------------------------------------------------------------------------
+    // LAUNCHERS - WOODLAND / JUNGLE
+    // ------------------------------------------------------------------------
+    ["launch_B_Titan_olive_F", 10, "WEST", ["Woodland", "Jungle"]],
+    ["launch_B_Titan_tna_F", 10, "WEST", ["Woodland", "Jungle"]],
+    ["launch_B_Titan_short_tna_F", 10, "WEST", ["Woodland", "Jungle"]],
+    ["launch_MRAWS_green_F", 15, "WEST", ["Woodland", "Jungle"]],
+    ["launch_MRAWS_green_rail_F", 15, "WEST", ["Woodland", "Jungle"]],
+    ["launch_MRAWS_olive_F", 15, "WEST", ["Woodland", "Jungle"]],
+    ["launch_MRAWS_olive_rail_F", 15, "WEST", ["Woodland", "Jungle"]],
+
+    // ------------------------------------------------------------------------
+    // LAUNCHERS - UNIVERSAL
+    // ------------------------------------------------------------------------
+    ["launch_NLAW_F", 20, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+
+
+    // ========================================================================
+    // FACTION: EAST (CSAT)
+    // ========================================================================
+    ["arifle_Katiba_F", 30, "EAST", ["Mediterranean", "Desert"]],
+    ["arifle_CTAR_hex_F", 30, "EAST", ["Mediterranean", "Desert"]],
+    ["arifle_CTAR_ghex_F", 30, "EAST", ["Woodland", "Jungle"]],
+    ["launch_O_Titan_short_F", 10, "EAST", ["Mediterranean", "Desert"]],
+    ["launch_RPG32_F", 20, "EAST", ["Mediterranean", "Desert"]],
+    ["launch_RPG32_ghex_F", 20, "EAST", ["Woodland", "Jungle"]],
+
+
+    // ========================================================================
+    // FACTION: GUER (INDEPENDENT)
+    // ========================================================================
+    ["arifle_Mk20_F", 30, "GUER", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["arifle_Mk20_GL_F", 20, "GUER", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["launch_I_Titan_F", 10, "GUER", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["launch_I_Titan_short_F", 10, "GUER", ["Woodland", "Jungle", "Mediterranean", "Desert"]]
 ];
 
-// --- BALANCED MAGAZINE RE-SUPPLY ALLOCATION PACKS ---
+
 G_Allowed_Magazines = [
-["100Rnd_65x39_caseless_black_mag", 100],
-["100Rnd_65x39_caseless_black_mag_tracer", 100],
-["100Rnd_65x39_caseless_khaki_mag", 100],
-["100Rnd_65x39_caseless_khaki_mag_tracer", 100],
-["100Rnd_65x39_caseless_mag", 100],
-["100Rnd_65x39_caseless_mag_Tracer", 100],
-["10Rnd_338_Mag", 100],
-["11Rnd_45ACP_Mag", 100],
-["130Rnd_338_Mag", 100],
-["150Rnd_556x45_Drum_Green_Mag_F", 100],
-["150Rnd_556x45_Drum_Green_Mag_Tracer_F", 100],
-["150Rnd_556x45_Drum_Mag_F", 100],
-["150Rnd_556x45_Drum_Mag_Tracer_F", 100],
-["150Rnd_556x45_Drum_Sand_Mag_F", 100],
-["150Rnd_556x45_Drum_Sand_Mag_Tracer_F", 100],
-["16Rnd_9x21_green_Mag", 100],
-["16Rnd_9x21_Mag", 100],
-["16Rnd_9x21_red_Mag", 100],
-["16Rnd_9x21_yellow_Mag", 100],
-["1Rnd_HE_Grenade_shell", 100],
-["1Rnd_Smoke_Grenade_shell", 100],
-["1Rnd_SmokeBlue_Grenade_shell", 100],
-["1Rnd_SmokeGreen_Grenade_shell", 100],
-["1Rnd_SmokeOrange_Grenade_shell", 100],
-["1Rnd_SmokePurple_Grenade_shell", 100],
-["1Rnd_SmokeRed_Grenade_shell", 100],
-["1Rnd_SmokeYellow_Grenade_shell", 100],
-["20Rnd_556x45_UW_mag", 100],
-["20Rnd_650x39_Cased_Mag_F", 100],
-["20Rnd_762x51_Mag", 100],
-["30Rnd_45ACP_Mag_SMG_01", 100],
-["30Rnd_45ACP_Mag_SMG_01_Tracer_Green", 100],
-["30Rnd_45ACP_Mag_SMG_01_Tracer_Red", 100],
-["30Rnd_45ACP_Mag_SMG_01_Tracer_Yellow", 100],
-["30Rnd_556x45_Stanag_red", 100],
-["30Rnd_556x45_Stanag_Sand_red", 100],
-["30Rnd_556x45_Stanag_Sand_Tracer_Red", 100],
-["30Rnd_556x45_Stanag_Tracer_Red", 100],
-["30Rnd_65x39_caseless_black_mag", 100],
-["30Rnd_65x39_caseless_black_mag_Tracer", 100],
-["30Rnd_65x39_caseless_khaki_mag", 100],
-["30Rnd_65x39_caseless_khaki_mag_Tracer", 100],
-["30Rnd_65x39_caseless_mag", 100],
-["30Rnd_9x21_Green_Mag", 100],
-["30Rnd_9x21_Mag", 100],
-["30Rnd_9x21_Red_Mag", 100],
-["30Rnd_9x21_Yellow_Mag", 100],
-["3Rnd_HE_Grenade_shell", 100],
-["3Rnd_Smoke_Grenade_shell", 100],
-["3Rnd_SmokeBlue_Grenade_shell", 100],
-["3Rnd_SmokeGreen_Grenade_shell", 100],
-["3Rnd_SmokeOrange_Grenade_shell", 100],
-["3Rnd_SmokePurple_Grenade_shell", 100],
-["3Rnd_SmokeRed_Grenade_shell", 100],
-["3Rnd_SmokeYellow_Grenade_shell", 100],
-["3Rnd_UGL_FlareCIR_F", 100],
-["3Rnd_UGL_FlareGreen_F", 100],
-["3Rnd_UGL_FlareRed_F", 100],
-["3Rnd_UGL_FlareWhite_F", 100],
-["3Rnd_UGL_FlareYellow_F", 100],
-["3rnd_UGL_FlareGreen_Illumination_F", 100],
-["3rnd_UGL_FlareRed_Illumination_F", 100],
-["3rnd_UGL_FlareWhite_Illumination_F", 100],
-["3rnd_UGL_FlareYellow_Illumination_F", 100],
-["7Rnd_408_Mag", 100],
-["APERSBoundingMine_Range_Mag", 100],
-["APERSMineDispenser_Mag", 100],
-["APERSMine_Range_Mag", 100],
-["APERSTripMine_Wire_Mag", 100],
-["ATMine_Range_Mag", 100],
-["B_IR_Grenade", 100],
-["Chemlight_green", 100],
-["ClaymoreDirectionalMine_Remote_Mag", 100],
-["DemoCharge_Remote_Mag", 100],
-["HandGrenade", 100],
-["Laserbatteries", 100],
-["MiniGrenade", 100],
-["MRAWS_HEAT55_F", 100],
-["MRAWS_HEAT_F", 100],
-["MRAWS_HE_F", 100],
-["NLAW_F", 100],
-["SatchelCharge_Remote_Mag", 100],
-["SLAMDirectionalMine_Wire_Mag", 100],
-["SmokeShell", 100],
-["SmokeShellBlue", 100],
-["SmokeShellGreen", 100],
-["SmokeShellOrange", 100],
-["SmokeShellPurple", 100],
-["SmokeShellRed", 100],
-["SmokeShellYellow", 100],
-["Titan_AA", 100],
-["Titan_AP", 100],
-["Titan_AT", 100],
-["UGL_FlareCIR_F", 100],
-["UGL_FlareGreen_F", 100],
-["UGL_FlareGreen_Illumination_F", 100],
-["UGL_FlareWhite_F", 100],
-["UGL_FlareWhite_Illumination_F", 100]
+    // ========================================================================
+    // CATEGORY: AMMUNITION (ALL AMMO IS UNIVERSAL TERRAIN TO PREVENT ERRORS)
+    // ========================================================================
+    
+    // ------------------------------------------------------------------------
+    // WEST AMMUNITION
+    // ------------------------------------------------------------------------
+    ["30Rnd_65x39_caseless_mag", 200, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["30Rnd_65x39_caseless_mag_Tracer", 200, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["30Rnd_65x39_caseless_black_mag", 200, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["30Rnd_65x39_caseless_khaki_mag", 200, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["100Rnd_65x39_caseless_mag", 100, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["100Rnd_65x39_caseless_black_mag", 100, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["100Rnd_65x39_caseless_khaki_mag", 100, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["30Rnd_556x45_Stanag_red", 200, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["30Rnd_556x45_Stanag_Sand_red", 200, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["150Rnd_556x45_Drum_Mag_F", 50, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["150Rnd_556x45_Drum_Sand_Mag_F", 50, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["150Rnd_556x45_Drum_Green_Mag_F", 50, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["20Rnd_762x51_Mag", 100, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["10Rnd_338_Mag", 100, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["130Rnd_338_Mag", 50, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["7Rnd_408_Mag", 100, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["16Rnd_9x21_Mag", 100, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["30Rnd_45ACP_Mag_SMG_01", 100, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["11Rnd_45ACP_Mag", 100, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["20Rnd_556x45_UW_mag", 100, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]], // SDAR Mag
+    ["MRAWS_HEAT_F", 40, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["MRAWS_HE_F", 40, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["NLAW_F", 20, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["Titan_AA", 20, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["Titan_AT", 20, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["Titan_AP", 20, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+
+    // ------------------------------------------------------------------------
+    // EAST & GUER AMMUNITION
+    // ------------------------------------------------------------------------
+    ["30Rnd_65x39_caseless_green", 200, "EAST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["30Rnd_580x42_mag_F", 200, "EAST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["20Rnd_650x39_Cased_Mag_F", 100, "EAST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["30Rnd_9x21_Green_Mag", 100, "GUER", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+
+    // ------------------------------------------------------------------------
+    // GRENADES, FLARES & EXPLOSIVES (UNIVERSAL FACTION - "ALL")
+    // ------------------------------------------------------------------------
+    ["1Rnd_HE_Grenade_shell", 100, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["3Rnd_HE_Grenade_shell", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["1Rnd_Smoke_Grenade_shell", 100, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["1Rnd_SmokeRed_Grenade_shell", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["1Rnd_SmokeGreen_Grenade_shell", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["1Rnd_SmokeBlue_Grenade_shell", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["UGL_FlareWhite_F", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["UGL_FlareRed_F", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["UGL_FlareGreen_F", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["HandGrenade", 150, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["MiniGrenade", 150, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["SmokeShell", 150, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["SmokeShellRed", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["SmokeShellGreen", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["SmokeShellBlue", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["SmokeShellPurple", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["SmokeShellOrange", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["SmokeShellYellow", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_IR_Grenade", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["Chemlight_green", 100, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    
+    // ------------------------------------------------------------------------
+    // MINES & DEMOLITIONS (UNIVERSAL FACTION - "ALL")
+    // ------------------------------------------------------------------------
+    ["DemoCharge_Remote_Mag", 30, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["SatchelCharge_Remote_Mag", 15, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["ClaymoreDirectionalMine_Remote_Mag", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["SLAMDirectionalMine_Wire_Mag", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["ATMine_Range_Mag", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["APERSMine_Range_Mag", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["APERSBoundingMine_Range_Mag", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["APERSTripMine_Wire_Mag", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["APERSMineDispenser_Mag", 10, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]]
 ];
 
-// --- INFANTRY CLOTHING GEAR AND ATTACHMENTS ---
+
 G_Allowed_Items = [
-["acc_flashlight", 8],
-["acc_flashlight_pistol", 8],
-["acc_flashlight_smg_01", 8],
-["acc_pointer_IR", 8],
-["B_UavTerminal", 8],
-["Binocular", 8],
-["bipod_01_F_blk", 8],
-["bipod_01_F_khk", 8],
-["bipod_01_F_mtp", 8],
-["bipod_01_F_snd", 8],
-["FirstAidKit", 8],
-["G_AirPurifyingRespirator_01_F", 8],
-["G_Aviator", 8],
-["G_B_Diving", 8],
-["G_Balaclava_blk", 8],
-["G_Balaclava_BlueStrips", 8],
-["G_Balaclava_combat", 8],
-["G_Balaclava_Flames1", 8],
-["G_Balaclava_Flecktarn", 8],
-["G_Balaclava_Halloween_01", 8],
-["G_Balaclava_lowprofile", 8],
-["G_Balaclava_oli", 8],
-["G_Balaclava_Scarecrow_01", 8],
-["G_Balaclava_Skull1", 8],
-["G_Balaclava_TI_blk_F", 8],
-["G_Balaclava_TI_G_blk_F", 8],
-["G_Balaclava_TI_G_tna_F", 8],
-["G_Balaclava_TI_tna_F", 8],
-["G_Balaclava_Tropentarn", 8],
-["G_Bandanna_aviator", 8],
-["G_Bandanna_blk", 8],
-["G_Bandanna_BlueFlame1", 8],
-["G_Bandanna_BlueFlame2", 8],
-["G_Bandanna_CandySkull", 8],
-["G_Bandanna_khk", 8],
-["G_Bandanna_oli", 8],
-["G_Bandanna_OrangeFlame1", 8],
-["G_Bandanna_RedFlame1", 8],
-["G_Bandanna_shades", 8],
-["G_Bandanna_Skull1", 8],
-["G_Bandanna_Skull2", 8],
-["G_Bandanna_sport", 8],
-["G_Bandanna_Syndikat1", 8],
-["G_Bandanna_tan", 8],
-["G_Bandanna_Vampire_01", 8],
-["G_Combat", 8],
-["G_Combat_Goggles_tna_F", 8],
-["G_EyeProtectors_Earpiece_F", 8],
-["G_EyeProtectors_F", 8],
-["G_Lowprofile", 8],
-["G_RegulatorMask_F", 8],
-["G_Shades_Black", 8],
-["G_Shades_Blue", 8],
-["G_Shades_Green", 8],
-["G_Shades_Red", 8],
-["G_Spectacles_Tinted", 8],
-["G_Sport_Blackred", 8],
-["G_Sport_BlackWhite", 8],
-["G_Sport_Blackyellow", 8],
-["G_Sport_Checkered", 8],
-["G_Sport_Greenblack", 8],
-["G_Sport_Red", 8],
-["G_Squares", 8],
-["G_Squares_Tinted", 8],
-["G_Tactical_Black", 8],
-["G_Tactical_Clear", 8],
-["G_WirelessEarpiece_F", 8],
-["H_Bandanna_blu", 8],
-["H_Bandanna_camo", 8],
-["H_Bandanna_cbr", 8],
-["H_Bandanna_gry", 8],
-["H_Bandanna_khk", 8],
-["H_Bandanna_khk_hs", 8],
-["H_Bandanna_mcamo", 8],
-["H_Bandanna_sand", 8],
-["H_Bandanna_sgg", 8],
-["H_Bandanna_surfer", 8],
-["H_Bandanna_surfer_blk", 8],
-["H_Bandanna_surfer_grn", 8],
-["H_Beret_02", 8],
-["H_Beret_blk", 8],
-["H_Beret_Colonel", 8],
-["H_Booniehat_khk", 8],
-["H_Booniehat_khk_hs", 8],
-["H_Booniehat_mcamo", 8],
-["H_Booniehat_mgrn", 8],
-["H_Booniehat_oli", 8],
-["H_Booniehat_tan", 8],
-["H_Booniehat_tna_F", 8],
-["H_Booniehat_wdl", 8],
-["H_Cap_blk", 8],
-["H_Cap_grn", 8],
-["H_Cap_grn_BI", 8],
-["H_Cap_headphones", 8],
-["H_Cap_khaki_specops_UK", 8],
-["H_Cap_marshal", 8],
-["H_Cap_oli", 8],
-["H_Cap_oli_hs", 8],
-["H_Cap_tan", 8],
-["H_Cap_tan_specops_US", 8],
-["H_Cap_usblack", 8],
-["H_CrewHelmetHeli_B", 8],
-["H_EarProtectors_black_F", 8],
-["H_EarProtectors_orange_F", 8],
-["H_EarProtectors_red_F", 8],
-["H_EarProtectors_white_F", 8],
-["H_EarProtectors_yellow_F", 8],
-["H_HeadSet_black_F", 8],
-["H_HeadSet_orange_F", 8],
-["H_HeadSet_red_F", 8],
-["H_HeadSet_white_F", 8],
-["H_HeadSet_yellow_F", 8],
-["H_HelmetB", 8],
-["H_HelmetB_black", 8],
-["H_HelmetB_camo", 8],
-["H_HelmetB_desert", 8],
-["H_HelmetB_Enh_tna_F", 8],
-["H_HelmetB_grass", 8],
-["H_HelmetB_light", 8],
-["H_HelmetB_light_black", 8],
-["H_HelmetB_light_desert", 8],
-["H_HelmetB_light_grass", 8],
-["H_HelmetB_light_sand", 8],
-["H_HelmetB_light_snakeskin", 8],
-["H_HelmetB_light_wdl", 8],
-["H_HelmetB_Light_tna_F", 8],
-["H_HelmetB_plain_wdl", 8],
-["H_HelmetB_sand", 8],
-["H_HelmetB_snakeskin", 8],
-["H_HelmetB_TI_arid_F", 8],
-["H_HelmetB_TI_tna_F", 8],
-["H_HelmetB_tna_F", 8],
-["H_HelmetCrew_B", 8],
-["H_HelmetSpecB", 8],
-["H_HelmetSpecB_blk", 8],
-["H_HelmetSpecB_paint1", 8],
-["H_HelmetSpecB_paint2", 8],
-["H_HelmetSpecB_sand", 8],
-["H_HelmetSpecB_snakeskin", 8],
-["H_HelmetSpecB_wdl", 8],
-["H_MilCap_grn", 8],
-["H_MilCap_gry", 8],
-["H_MilCap_mcamo", 8],
-["H_MilCap_tna_F", 8],
-["H_MilCap_wdl", 8],
-["H_ParadeDressCap_01_US_F", 8],
-["H_PilotHelmetFighter_B", 8],
-["H_PilotHelmetHeli_B", 8],
-["H_Shemag_olive", 8],
-["H_Shemag_olive_hs", 8],
-["H_ShemagOpen_khk", 8],
-["H_ShemagOpen_tan", 8],
-["H_Watchcap_blk", 8],
-["H_Watchcap_camo", 8],
-["H_Watchcap_cbr", 8],
-["H_Watchcap_khk", 8],
-["H_WirelessEarpiece_F", 8],
-["ItemCompass", 8],
-["ItemGPS", 8],
-["ItemMap", 8],
-["ItemRadio", 8],
-["ItemWatch", 8],
-["Laserdesignator", 8],
-["Laserdesignator_01_khk_F", 8],
-["Laserdesignator_03", 8],
-["Medikit", 8],
-["MineDetector", 8],
-["muzzle_snds_338_black", 8],
-["muzzle_snds_338_green", 8],
-["muzzle_snds_338_sand", 8],
-["muzzle_snds_acp", 8],
-["muzzle_snds_B", 8],
-["muzzle_snds_B_arid_F", 8],
-["muzzle_snds_B_khk_F", 8],
-["muzzle_snds_B_lush_F", 8],
-["muzzle_snds_B_snd_F", 8],
-["muzzle_snds_H", 8],
-["muzzle_snds_H_khk_F", 8],
-["muzzle_snds_H_snd_F", 8],
-["muzzle_snds_L", 8],
-["muzzle_snds_M", 8],
-["muzzle_snds_m_khk_F", 8],
-["muzzle_snds_m_snd_F", 8],
-["NVGoggles", 8],
-["NVGoggles_INDEP", 8],
-["NVGoggles_tna_F", 8],
-["NVGogglesB_blk_F", 8],
-["NVGogglesB_grn_F", 8],
-["NVGogglesB_gry_F", 8],
-["optic_Aco", 8],
-["optic_Aco_smg", 8],
-["optic_AMS", 8],
-["optic_AMS_khk", 8],
-["optic_AMS_snd", 8],
-["optic_DMS", 8],
-["optic_ERCO_blk_F", 8],
-["optic_ERCO_khk_F", 8],
-["optic_ERCO_snd_F", 8],
-["optic_Hamr", 8],
-["optic_Hamr_khk_F", 8],
-["optic_Holosight", 8],
-["optic_Holosight_arid_F", 8],
-["optic_Holosight_blk_F", 8],
-["optic_Holosight_khk_F", 8],
-["optic_Holosight_lush_F", 8],
-["optic_Holosight_smg", 8],
-["optic_Holosight_smg_blk_F", 8],
-["optic_Holosight_smg_khk_F", 8],
-["optic_LRPS", 8],
-["optic_LRPS_tna_F", 8],
-["optic_MRD", 8],
-["optic_MRD_black", 8],
-["optic_NVS", 8],
-["optic_SOS", 8],
-["optic_SOS_khk_F", 8],
-["optic_tws", 8],
-["optic_tws_mg", 8],
-["Rangefinder", 8],
-["ToolKit", 8],
-["U_B_CBRN_Suit_01_MTP_F", 8],
-["U_B_CBRN_Suit_01_Tropic_F", 8],
-["U_B_CBRN_Suit_01_Wdl_F", 8],
-["U_B_CombatUniform_mcam", 8],
-["U_B_CombatUniform_mcam_tshirt", 8],
-["U_B_CombatUniform_mcam_vest", 8],
-["U_B_CombatUniform_mcam_wdl_f", 8],
-["U_B_CombatUniform_tshirt_mcam_wdL_f", 8],
-["U_B_CombatUniform_vest_mcam_wdl_f", 8],
-["U_B_CTRG_1", 8],
-["U_B_CTRG_2", 8],
-["U_B_CTRG_3", 8],
-["U_B_CTRG_Soldier_2_Arid_F", 8],
-["U_B_CTRG_Soldier_2_F", 8],
-["U_B_CTRG_Soldier_3_Arid_F", 8],
-["U_B_CTRG_Soldier_3_F", 8],
-["U_B_CTRG_Soldier_Arid_F", 8],
-["U_B_CTRG_Soldier_F", 8],
-["U_B_CTRG_Soldier_urb_1_F", 8],
-["U_B_CTRG_Soldier_urb_2_F", 8],
-["U_B_CTRG_Soldier_urb_3_F", 8],
-["U_B_FullGhillie_ard", 8],
-["U_B_FullGhillie_lsh", 8],
-["U_B_FullGhillie_sard", 8],
-["U_B_GhillieSuit", 8],
-["U_B_HeliPilotCoveralls", 8],
-["U_B_ParadeUniform_01_US_decorated_F", 8],
-["U_B_ParadeUniform_01_US_F", 8],
-["U_B_PilotCoveralls", 8],
-["U_B_T_FullGhillie_tna_F", 8],
-["U_B_T_Soldier_AR_F", 8],
-["U_B_T_Soldier_F", 8],
-["U_B_T_Soldier_SL_F", 8],
-["U_B_T_Sniper_F", 8],
-["U_B_Wetsuit", 8],
-["U_C_FormalSuit_01_black_F", 8],
-["U_C_FormalSuit_01_blue_F", 8],
-["U_C_FormalSuit_01_gray_F", 8],
-["U_C_FormalSuit_01_khaki_F", 8],
-["U_C_FormalSuit_01_tshirt_black_F", 8],
-["U_C_FormalSuit_01_tshirt_gray_F", 8],
-["U_Competitor", 8],
-["U_Marshal", 8],
-["U_Rangemaster", 8],
-["V_BandollierB_blk", 8],
-["V_BandollierB_cbr", 8],
-["V_BandollierB_ghex_F", 8],
-["V_BandollierB_khk", 8],
-["V_BandollierB_oli", 8],
-["V_BandollierB_rgr", 8],
-["V_Chestrig_blk", 8],
-["V_Chestrig_khk", 8],
-["V_Chestrig_oli", 8],
-["V_Chestrig_rgr", 8],
-["V_DeckCrew_blue_F", 8],
-["V_DeckCrew_brown_F", 8],
-["V_DeckCrew_green_F", 8],
-["V_DeckCrew_red_F", 8],
-["V_DeckCrew_violet_F", 8],
-["V_DeckCrew_white_F", 8],
-["V_DeckCrew_yellow_F", 8],
-["V_EOD_blue_F", 8],
-["V_EOD_coyote_F", 8],
-["V_EOD_olive_F", 8],
-["V_LegStrapBag_black_F", 8],
-["V_LegStrapBag_coyote_F", 8],
-["V_LegStrapBag_olive_F", 8],
-["V_PlateCarrier1_blk", 8],
-["V_PlateCarrier1_rgr", 8],
-["V_PlateCarrier1_rgr_noflag_F", 8],
-["V_PlateCarrier1_tna_F", 8],
-["V_PlateCarrier1_wdl", 8],
-["V_PlateCarrier2_blk", 8],
-["V_PlateCarrier2_rgr", 8],
-["V_PlateCarrier2_rgr_noflag_F", 8],
-["V_PlateCarrier2_tna_F", 8],
-["V_PlateCarrier2_wdl", 8],
-["V_PlateCarrierGL_blk", 8],
-["V_PlateCarrierGL_mtp", 8],
-["V_PlateCarrierGL_rgr", 8],
-["V_PlateCarrierGL_tna_F", 8],
-["V_PlateCarrierGL_wdl", 8],
-["V_PlateCarrierH_CTRG", 8],
-["V_PlateCarrierL_CTRG", 8],
-["V_PlateCarrierSpec_blk", 8],
-["V_PlateCarrierSpec_mtp", 8],
-["V_PlateCarrierSpec_rgr", 8],
-["V_PlateCarrierSpec_tna_F", 8],
-["V_PlateCarrierSpec_wdl", 8],
-["V_Rangemaster_belt", 8],
-["V_RebreatherB", 8],
-["V_Safety_blue_F", 8],
-["V_Safety_orange_F", 8],
-["V_Safety_yellow_F", 8],
-["V_TacChestrig_cbr_F", 8],
-["V_TacChestrig_grn_F", 8],
-["V_TacChestrig_oli_F", 8],
-["V_TacVest_blk", 8],
-["V_TacVest_brn", 8],
-["V_TacVest_camo", 8],
-["V_TacVest_khk", 8],
-["V_TacVest_oli", 8],
-["V_TacVestIR_blk", 8]
+    // ========================================================================
+    // CATEGORY: UNIFORMS, VESTS & HEADGEAR (WEST)
+    // ========================================================================
+    
+    // ------------------------------------------------------------------------
+    // UNIFORMS - MEDITERRANEAN / DESERT
+    // ------------------------------------------------------------------------
+    ["U_B_CombatUniform_mcam", 50, "WEST", ["Mediterranean", "Desert"]],
+    ["U_B_CombatUniform_mcam_tshirt", 50, "WEST", ["Mediterranean", "Desert"]],
+    ["U_B_CombatUniform_mcam_vest", 50, "WEST", ["Mediterranean", "Desert"]],
+    ["U_B_CTRG_1", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["U_B_CTRG_2", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["U_B_CTRG_3", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["U_B_CTRG_Soldier_Arid_F", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["U_B_CTRG_Soldier_2_Arid_F", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["U_B_CTRG_Soldier_3_Arid_F", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["U_B_FullGhillie_ard", 5, "WEST", ["Mediterranean", "Desert"]],
+    ["U_B_FullGhillie_sard", 5, "WEST", ["Mediterranean", "Desert"]],
+    ["U_B_GhillieSuit", 10, "WEST", ["Mediterranean", "Desert"]],
+
+    // ------------------------------------------------------------------------
+    // UNIFORMS - WOODLAND / JUNGLE
+    // ------------------------------------------------------------------------
+    ["U_B_T_Soldier_F", 50, "WEST", ["Woodland", "Jungle"]],
+    ["U_B_T_Soldier_AR_F", 50, "WEST", ["Woodland", "Jungle"]],
+    ["U_B_T_Soldier_SL_F", 50, "WEST", ["Woodland", "Jungle"]],
+    ["U_B_CTRG_Soldier_F", 30, "WEST", ["Woodland", "Jungle"]],
+    ["U_B_CTRG_Soldier_2_F", 30, "WEST", ["Woodland", "Jungle"]],
+    ["U_B_CTRG_Soldier_3_F", 30, "WEST", ["Woodland", "Jungle"]],
+    ["U_B_CombatUniform_mcam_wdl_f", 50, "WEST", ["Woodland", "Jungle"]],
+    ["U_B_CombatUniform_tshirt_mcam_wdL_f", 50, "WEST", ["Woodland", "Jungle"]],
+    ["U_B_CombatUniform_vest_mcam_wdl_f", 50, "WEST", ["Woodland", "Jungle"]],
+    ["U_B_FullGhillie_lsh", 5, "WEST", ["Woodland", "Jungle"]],
+    ["U_B_T_Sniper_F", 5, "WEST", ["Woodland", "Jungle"]],
+    ["U_B_T_FullGhillie_tna_F", 5, "WEST", ["Woodland", "Jungle"]],
+    
+    // ------------------------------------------------------------------------
+    // UNIFORMS - SPECIALTY (ALL TERRAINS)
+    // ------------------------------------------------------------------------
+    ["U_B_Wetsuit", 10, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["U_B_HeliPilotCoveralls", 10, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["U_B_PilotCoveralls", 10, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["U_B_CBRN_Suit_01_MTP_F", 10, "WEST", ["Mediterranean", "Desert"]],
+    ["U_B_CBRN_Suit_01_Tropic_F", 10, "WEST", ["Woodland", "Jungle"]],
+    ["U_B_CBRN_Suit_01_Wdl_F", 10, "WEST", ["Woodland", "Jungle"]],
+
+    // ------------------------------------------------------------------------
+    // VESTS - MEDITERRANEAN / DESERT
+    // ------------------------------------------------------------------------
+    ["V_PlateCarrier1_blk", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["V_PlateCarrier2_blk", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["V_PlateCarrierSpec_blk", 15, "WEST", ["Mediterranean", "Desert"]],
+    ["V_PlateCarrierGL_blk", 15, "WEST", ["Mediterranean", "Desert"]],
+    ["V_PlateCarrierSpec_mtp", 15, "WEST", ["Mediterranean", "Desert"]],
+    ["V_PlateCarrierGL_mtp", 15, "WEST", ["Mediterranean", "Desert"]],
+    ["V_PlateCarrierH_CTRG", 20, "WEST", ["Mediterranean", "Desert"]],
+    ["V_PlateCarrierL_CTRG", 20, "WEST", ["Mediterranean", "Desert"]],
+    ["V_TacVest_blk", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["V_TacVest_brn", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["V_TacVest_camo", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["V_TacVest_khk", 30, "WEST", ["Mediterranean", "Desert"]],
+
+    // ------------------------------------------------------------------------
+    // VESTS - WOODLAND / JUNGLE
+    // ------------------------------------------------------------------------
+    ["V_PlateCarrier1_tna_F", 50, "WEST", ["Woodland", "Jungle"]],
+    ["V_PlateCarrier2_tna_F", 50, "WEST", ["Woodland", "Jungle"]],
+    ["V_PlateCarrierSpec_tna_F", 15, "WEST", ["Woodland", "Jungle"]],
+    ["V_PlateCarrierGL_tna_F", 15, "WEST", ["Woodland", "Jungle"]],
+    ["V_PlateCarrier1_wdl", 50, "WEST", ["Woodland", "Jungle"]],
+    ["V_PlateCarrier2_wdl", 50, "WEST", ["Woodland", "Jungle"]],
+    ["V_PlateCarrierSpec_wdl", 15, "WEST", ["Woodland", "Jungle"]],
+    ["V_PlateCarrierGL_wdl", 15, "WEST", ["Woodland", "Jungle"]],
+    ["V_TacVest_oli", 30, "WEST", ["Woodland", "Jungle"]],
+
+    // ------------------------------------------------------------------------
+    // VESTS - UNIVERSAL (RANGER GREEN / UTILITY)
+    // ------------------------------------------------------------------------
+    ["V_PlateCarrier1_rgr", 50, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["V_PlateCarrier2_rgr", 50, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["V_PlateCarrierSpec_rgr", 15, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["V_PlateCarrierGL_rgr", 15, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["V_RebreatherB", 10, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["V_LegStrapBag_black_F", 20, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["V_LegStrapBag_coyote_F", 20, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+
+    // ------------------------------------------------------------------------
+    // HEADGEAR - MEDITERRANEAN / DESERT
+    // ------------------------------------------------------------------------
+    ["H_HelmetB", 50, "WEST", ["Mediterranean", "Desert"]],
+    ["H_HelmetB_camo", 50, "WEST", ["Mediterranean", "Desert"]],
+    ["H_HelmetB_desert", 50, "WEST", ["Mediterranean", "Desert"]],
+    ["H_HelmetB_sand", 50, "WEST", ["Mediterranean", "Desert"]],
+    ["H_HelmetB_light", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["H_HelmetB_light_desert", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["H_HelmetB_light_sand", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["H_HelmetSpecB", 20, "WEST", ["Mediterranean", "Desert"]],
+    ["H_HelmetSpecB_sand", 20, "WEST", ["Mediterranean", "Desert"]],
+    ["H_HelmetB_black", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["H_HelmetSpecB_blk", 20, "WEST", ["Mediterranean", "Desert"]],
+    ["H_Booniehat_mcamo", 20, "WEST", ["Mediterranean", "Desert"]],
+    ["H_Booniehat_tan", 20, "WEST", ["Mediterranean", "Desert"]],
+
+    // ------------------------------------------------------------------------
+    // HEADGEAR - WOODLAND / JUNGLE
+    // ------------------------------------------------------------------------
+    ["H_HelmetB_tna_F", 50, "WEST", ["Woodland", "Jungle"]],
+    ["H_HelmetB_Enh_tna_F", 50, "WEST", ["Woodland", "Jungle"]],
+    ["H_HelmetB_Light_tna_F", 30, "WEST", ["Woodland", "Jungle"]],
+    ["H_HelmetB_TI_tna_F", 10, "WEST", ["Woodland", "Jungle"]],
+    ["H_HelmetB_grass", 50, "WEST", ["Woodland", "Jungle"]],
+    ["H_HelmetB_light_grass", 30, "WEST", ["Woodland", "Jungle"]],
+    ["H_HelmetB_plain_wdl", 50, "WEST", ["Woodland", "Jungle"]],
+    ["H_HelmetSpecB_wdl", 20, "WEST", ["Woodland", "Jungle"]],
+    ["H_Booniehat_tna_F", 20, "WEST", ["Woodland", "Jungle"]],
+    ["H_Booniehat_wdl", 20, "WEST", ["Woodland", "Jungle"]],
+    ["H_Booniehat_oli", 20, "WEST", ["Woodland", "Jungle"]],
+
+    // ------------------------------------------------------------------------
+    // HEADGEAR - UNIVERSAL & SPECIALTY
+    // ------------------------------------------------------------------------
+    ["H_PilotHelmetFighter_B", 10, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["H_PilotHelmetHeli_B", 10, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["H_CrewHelmetHeli_B", 10, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["H_HelmetCrew_B", 10, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["H_Watchcap_blk", 20, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["H_MilCap_mcamo", 20, "WEST", ["Mediterranean", "Desert"]],
+    ["H_MilCap_tna_F", 20, "WEST", ["Woodland", "Jungle"]],
+
+
+    // ========================================================================
+    // CATEGORY: OPTICS, ATTACHMENTS & GEAR (UNIVERSAL FACTION - "ALL")
+    // ========================================================================
+    // Placing these in the "ALL" faction prevents Arsenal lookup bugs if a 
+    // player switches uniforms or picks up a weapon dropped by a different side.
+    
+    // ------------------------------------------------------------------------
+    // OPTICS - MEDITERRANEAN / DESERT
+    // ------------------------------------------------------------------------
+    ["optic_Holosight_arid_F", 30, "ALL", ["Mediterranean", "Desert"]],
+    ["optic_Holosight_blk_F", 30, "ALL", ["Mediterranean", "Desert"]],
+    ["optic_Holosight_smg_blk_F", 30, "ALL", ["Mediterranean", "Desert"]],
+    ["optic_ERCO_blk_F", 20, "ALL", ["Mediterranean", "Desert"]],
+    ["optic_ERCO_snd_F", 20, "ALL", ["Mediterranean", "Desert"]],
+    ["optic_AMS_snd", 10, "ALL", ["Mediterranean", "Desert"]],
+
+    // ------------------------------------------------------------------------
+    // OPTICS - WOODLAND / JUNGLE
+    // ------------------------------------------------------------------------
+    ["optic_Holosight_khk_F", 30, "ALL", ["Woodland", "Jungle"]],
+    ["optic_Holosight_lush_F", 30, "ALL", ["Woodland", "Jungle"]],
+    ["optic_Holosight_smg_khk_F", 30, "ALL", ["Woodland", "Jungle"]],
+    ["optic_ERCO_khk_F", 20, "ALL", ["Woodland", "Jungle"]],
+    ["optic_Hamr_khk_F", 20, "ALL", ["Woodland", "Jungle"]],
+    ["optic_AMS_khk", 10, "ALL", ["Woodland", "Jungle"]],
+    ["optic_SOS_khk_F", 10, "ALL", ["Woodland", "Jungle"]],
+    ["optic_LRPS_tna_F", 10, "ALL", ["Woodland", "Jungle"]],
+
+    // ------------------------------------------------------------------------
+    // OPTICS - UNIVERSAL (STANDARD BLACK / DEFAULT)
+    // ------------------------------------------------------------------------
+    ["optic_Aco", 40, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["optic_Aco_smg", 40, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["optic_Holosight", 40, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["optic_Holosight_smg", 40, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["optic_Hamr", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["optic_MRD", 30, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["optic_MRD_black", 30, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["optic_DMS", 15, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["optic_SOS", 10, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["optic_LRPS", 10, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["optic_AMS", 10, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["optic_NVS", 5, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["optic_tws", 5, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["optic_tws_mg", 5, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+
+    // ------------------------------------------------------------------------
+    // SUPPRESSORS & MUZZLES (UNIVERSAL COMPATIBILITY)
+    // ------------------------------------------------------------------------
+    ["muzzle_snds_acp", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["muzzle_snds_L", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["muzzle_snds_M", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["muzzle_snds_m_snd_F", 20, "ALL", ["Mediterranean", "Desert"]],
+    ["muzzle_snds_m_khk_F", 20, "ALL", ["Woodland", "Jungle"]],
+    ["muzzle_snds_H", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["muzzle_snds_H_snd_F", 20, "ALL", ["Mediterranean", "Desert"]],
+    ["muzzle_snds_H_khk_F", 20, "ALL", ["Woodland", "Jungle"]],
+    ["muzzle_snds_B", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["muzzle_snds_B_arid_F", 20, "ALL", ["Mediterranean", "Desert"]],
+    ["muzzle_snds_B_snd_F", 20, "ALL", ["Mediterranean", "Desert"]],
+    ["muzzle_snds_B_lush_F", 20, "ALL", ["Woodland", "Jungle"]],
+    ["muzzle_snds_B_khk_F", 20, "ALL", ["Woodland", "Jungle"]],
+    ["muzzle_snds_338_black", 10, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["muzzle_snds_338_sand", 10, "ALL", ["Mediterranean", "Desert"]],
+    ["muzzle_snds_338_green", 10, "ALL", ["Woodland", "Jungle"]],
+
+    // ------------------------------------------------------------------------
+    // POINTERS & BIPODS
+    // ------------------------------------------------------------------------
+    ["acc_flashlight", 40, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["acc_flashlight_pistol", 40, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["acc_flashlight_smg_01", 40, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["acc_pointer_IR", 40, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["bipod_01_F_blk", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["bipod_01_F_mtp", 20, "ALL", ["Mediterranean", "Desert"]],
+    ["bipod_01_F_snd", 20, "ALL", ["Mediterranean", "Desert"]],
+    ["bipod_01_F_khk", 20, "ALL", ["Woodland", "Jungle"]],
+
+    // ------------------------------------------------------------------------
+    // FACEWEAR & GOGGLES
+    // ------------------------------------------------------------------------
+    ["G_Combat", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["G_Combat_Goggles_tna_F", 50, "ALL", ["Woodland", "Jungle"]],
+    ["G_Lowprofile", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["G_Tactical_Black", 30, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["G_Tactical_Clear", 30, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["G_Balaclava_blk", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["G_Balaclava_oli", 20, "ALL", ["Woodland", "Jungle"]],
+    ["G_Balaclava_TI_blk_F", 10, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["G_B_Diving", 10, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["G_AirPurifyingRespirator_01_F", 10, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+
+    // ------------------------------------------------------------------------
+    // TOOLS, NAV & MEDICAL
+    // ------------------------------------------------------------------------
+    ["ItemMap", 100, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["ItemCompass", 100, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["ItemWatch", 100, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["ItemRadio", 100, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["ItemGPS", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_UavTerminal", 15, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]], // Keep UAV Terminals Faction-Specific
+    ["NVGoggles", 50, "ALL", ["Mediterranean", "Desert"]],
+    ["NVGoggles_tna_F", 50, "ALL", ["Woodland", "Jungle"]],
+    ["NVGogglesB_blk_F", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["Binocular", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["Rangefinder", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["Laserdesignator", 10, "ALL", ["Mediterranean", "Desert"]],
+    ["Laserdesignator_01_khk_F", 10, "ALL", ["Woodland", "Jungle"]],
+    ["Laserbatteries", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["FirstAidKit", 200, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["Medikit", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["ToolKit", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["MineDetector", 15, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]]
 ];
 
-// --- LOAD-BEARING BACKPACK CONFIGURATIONS ---
+
 G_Allowed_Backpacks = [
-["B_AA_01_weapon_F", 8],
-["B_AssaultPack_blk", 8],
-["B_AssaultPack_cbr", 8],
-["B_AssaultPack_dgtl", 8],
-["B_AssaultPack_khk", 8],
-["B_AssaultPack_mcamo", 8],
-["B_AssaultPack_rgr", 8],
-["B_AssaultPack_sgg", 8],
-["B_AssaultPack_tna_F", 8],
-["B_AssaultPack_wdl_F", 8],
-["B_AT_01_weapon_F", 8],
-["B_Bergen_dgtl_F", 8],
-["B_Bergen_mcamo_F", 8],
-["B_Bergen_tna_F", 8],
-["B_Carryall_blk", 8],
-["B_Carryall_cbr", 8],
-["B_Carryall_green_F", 8],
-["B_Carryall_khk", 8],
-["B_Carryall_mcamo", 8],
-["B_Carryall_oli", 8],
-["B_Carryall_oucamo", 8],
-["B_Carryall_wdl_F", 8],
-["B_CombinationUnitRespirator_01_F", 8],
-["B_FieldPack_blk", 8],
-["B_FieldPack_cbr", 8],
-["B_FieldPack_green_F", 8],
-["B_FieldPack_khk", 8],
-["B_FieldPack_oli", 8],
-["B_FieldPack_oucamo", 8],
-["B_GMG_01_A_weapon_F", 8],
-["B_GMG_01_high_weapon_F", 8],
-["B_GMG_01_weapon_F", 8],
-["B_HMG_01_A_weapon_F", 8],
-["B_HMG_01_high_weapon_F", 8],
-["B_HMG_01_support_F", 8],
-["B_HMG_01_support_high_F", 8],
-["B_HMG_01_weapon_F", 8],
-["B_Kitbag_cbr", 8],
-["B_Kitbag_mcamo", 8],
-["B_Kitbag_rgr", 8],
-["B_Kitbag_sgg", 8],
-["B_Kitbag_tan", 8],
-["B_LegStrapBag_black_F", 8],
-["B_LegStrapBag_coyote_F", 8],
-["B_LegStrapBag_olive_F", 8],
-["B_Messenger_Black_F", 8],
-["B_Messenger_Coyote_F", 8],
-["B_Messenger_Gray_F", 8],
-["B_Messenger_Olive_F", 8],
-["B_Mortar_01_support_F", 8],
-["B_Mortar_01_weapon_F", 8],
-["B_Parachute", 8],
-["B_RadioBag_01_mtp_F", 8],
-["B_RadioBag_01_tropic_F", 8],
-["B_RadioBag_01_wdl_F", 8],
-["B_SCBA_01_F", 8],
-["B_Static_Designator_01_weapon_F", 8],
-["B_TacticalPack_blk", 8],
-["B_TacticalPack_mcamo", 8],
-["B_TacticalPack_oli", 8],
-["B_TacticalPack_rgr", 8],
-["B_UAV_01_backpack_F", 8],
-["B_UAV_06_backpack_F", 8],
-["B_UAV_06_medical_backpack_F", 8],
-["B_UGV_02_Demining_backpack_F", 8],
-["B_UGV_02_Science_backpack_F", 8],
-["B_W_Static_Designator_01_weapon_F", 8],
-["C_UAV_06_backpack_F", 8],
-["C_UAV_06_medical_backpack_F", 8]
-];
+    // ========================================================================
+    // CATEGORY: BACKPACKS
+    // ========================================================================
+    
+    // ------------------------------------------------------------------------
+    // BACKPACKS - MEDITERRANEAN / DESERT
+    // ------------------------------------------------------------------------
+    ["B_AssaultPack_mcamo", 40, "WEST", ["Mediterranean", "Desert"]],
+    ["B_AssaultPack_cbr", 40, "WEST", ["Mediterranean", "Desert"]],
+    ["B_Kitbag_mcamo", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["B_Kitbag_cbr", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["B_Kitbag_tan", 30, "WEST", ["Mediterranean", "Desert"]],
+    ["B_TacticalPack_mcamo", 20, "WEST", ["Mediterranean", "Desert"]],
+    ["B_Carryall_mcamo", 15, "WEST", ["Mediterranean", "Desert"]],
+    ["B_Carryall_cbr", 15, "WEST", ["Mediterranean", "Desert"]],
+    ["B_Bergen_mcamo_F", 5, "WEST", ["Mediterranean", "Desert"]],
+    ["B_RadioBag_01_mtp_F", 10, "WEST", ["Mediterranean", "Desert"]],
 
-diag_log "QUARTERMASTER DATABASE: virtualArsenalTemplate.sqf successfully loaded.";
+    // ------------------------------------------------------------------------
+    // BACKPACKS - WOODLAND / JUNGLE
+    // ------------------------------------------------------------------------
+    ["B_AssaultPack_tna_F", 40, "WEST", ["Woodland", "Jungle"]],
+    ["B_AssaultPack_wdl_F", 40, "WEST", ["Woodland", "Jungle"]],
+    ["B_Kitbag_rgr", 30, "WEST", ["Woodland", "Jungle"]], // Ranger Green
+    ["B_TacticalPack_oli", 20, "WEST", ["Woodland", "Jungle"]],
+    ["B_TacticalPack_rgr", 20, "WEST", ["Woodland", "Jungle"]],
+    ["B_Carryall_oli", 15, "WEST", ["Woodland", "Jungle"]],
+    ["B_Carryall_green_F", 15, "WEST", ["Woodland", "Jungle"]],
+    ["B_Carryall_wdl_F", 15, "WEST", ["Woodland", "Jungle"]],
+    ["B_Bergen_tna_F", 5, "WEST", ["Woodland", "Jungle"]],
+    ["B_RadioBag_01_tropic_F", 10, "WEST", ["Woodland", "Jungle"]],
+    ["B_RadioBag_01_wdl_F", 10, "WEST", ["Woodland", "Jungle"]],
+
+    // ------------------------------------------------------------------------
+    // BACKPACKS - UNIVERSAL / BLACK / SPECIALTY
+    // ------------------------------------------------------------------------
+    ["B_AssaultPack_blk", 40, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_TacticalPack_blk", 20, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_Carryall_blk", 15, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_Parachute", 50, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_LegStrapBag_black_F", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_LegStrapBag_coyote_F", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_LegStrapBag_olive_F", 20, "ALL", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+
+    // ------------------------------------------------------------------------
+    // SUPPORT & STATIC WEAPON BAGS (UNIVERSAL TERRAIN)
+    // ------------------------------------------------------------------------
+    ["B_UAV_01_backpack_F", 5, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_UAV_06_backpack_F", 5, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_UAV_06_medical_backpack_F", 5, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_UGV_02_Demining_backpack_F", 5, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_HMG_01_weapon_F", 5, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_HMG_01_support_F", 5, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_HMG_01_high_weapon_F", 5, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_HMG_01_support_high_F", 5, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_GMG_01_weapon_F", 5, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_Mortar_01_weapon_F", 5, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_Mortar_01_support_F", 5, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_AT_01_weapon_F", 5, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]],
+    ["B_AA_01_weapon_F", 5, "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"]]
+];

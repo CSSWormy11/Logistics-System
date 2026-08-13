@@ -4,8 +4,8 @@
 // Description: Sorts blueprints dynamically into 7 precise tabs using native
 //              Arma 3 isKindOf engine inheritance logic.
 //              Actively filters out blueprints that belong to hostile factions,
-//              exceed the facility's base restriction tag, or lack a valid
-//              deployment pad at the current facility.
+//              exceed the facility's base restriction tag, lack a valid
+//              deployment pad, or do not match V8 biome/system parameters.
 // Called By: qm_quartermasterUI.hpp (Button Actions from Motorpool Menu)
 // ============================================================================
 
@@ -44,78 +44,97 @@ private _hasPlane = _hasUniversal || (_allGarageMarkers findIf { ["PLANE", _x] c
 private _hasHeli  = _hasUniversal || (_allGarageMarkers findIf { ["HELICOPTER", _x] call BIS_fnc_inString }) != -1 || (_allGarageMarkers findIf { ["AIR", _x] call BIS_fnc_inString }) != -1;
 private _hasGround = count _allGarageMarkers > 0;
 
+// --- V8 BIOME RETRIEVAL ---
+// Pull current terrain type once before the loop for optimized filtering
+private _currentTerrain = if (fileExists "fn_G_getTerrain.sqf") then { call compile preprocessFileLineNumbers "fn_G_getTerrain.sqf" } else { "ALL" };
+
 {
-    _x params ["_displayName", "_classname", "_massCost", ["_restrictionType", "ALL"], ["_faction", "ALL"], ["_vehSize", "M"]];
+    // Extract V8 Structure (7 Elements)
+    _x params ["_displayName", "_classnameArray", "_massCost", ["_restrictionType", "ALL"], ["_faction", "ALL"], ["_terrainBiomes", ["ALL"]], ["_allowedSystems", ["ALL"]]];
     
-    if (_faction == "ALL" || _faction == _playerFaction) then {
-        if (_restrictionType == "ALL" || (_restrictionType == "SB" && _isSB)) then {
-            
-            // --- ENGINE-NATIVE INHERITANCE CHECKS (STRICT OOP) ---
-            // Natively flags both UGVs and UAVs
-            private _isDrone = getNumber (configFile >> "CfgVehicles" >> _classname >> "isUav") == 1;
-            
-            private _isBoat    = _classname isKindOf "Ship";
-            private _isPlane   = _classname isKindOf "Plane";
-            private _isHeli    = _classname isKindOf "Helicopter";
-            private _isTracked = _classname isKindOf "Tank";
-            private _isWheeled = _classname isKindOf "Car" || _classname isKindOf "Motorcycle"; // Catches ATVs
-            
-            // Supply catch-all: If it's not a drone, and not a standard vehicle, it's a static supply object
-            private _isSupply  = !(_isBoat || _isPlane || _isHeli || _isTracked || _isWheeled || _isDrone);
+    // --- V8 METADATA FILTERING ---
+    // Validate Allowed Systems: Must contain "Quartermaster" or "ALL" bypass
+    private _validSystem = ("ALL" in _allowedSystems) || ("Quartermaster" in _allowedSystems);
+    
+    // Validate Terrain Biomes: Must contain current terrain or "ALL" bypass
+    private _validTerrain = ("ALL" in _terrainBiomes) || (_currentTerrain in _terrainBiomes);
+    
+    // Proceed only if V8 Metadata filters pass
+    if (_validSystem && _validTerrain) then {
+        
+        // Extract raw string from V8 nested array
+        private _classname = _classnameArray select 0;
 
-            // Requirement matching for physical pads
-            private _reqPad = "GROUND";
-            if (_isBoat) then { _reqPad = "BOAT"; }
-            else { if (_isPlane) then { _reqPad = "PLANE"; }
-            else { if (_isHeli) then { _reqPad = "HELICOPTER"; }; }; };
-
-            private _padExists = switch (_reqPad) do {
-                case "BOAT": { _hasBoat };
-                case "PLANE": { _hasPlane };
-                case "HELICOPTER": { _hasHeli };
-                default { _hasGround };
-            };
-
-            // Map UI Tab Index to Vehicle Category
-            private _tabValid = false;
-            switch (_tabIndex) do {
-                case 0: { _tabValid = _isWheeled && !_isDrone; };  // 0: Wheeled
-                case 1: { _tabValid = _isTracked && !_isDrone; };  // 1: Tracked
-                case 2: { _tabValid = _isHeli && !_isDrone; };     // 2: Helicopter
-                case 3: { _tabValid = _isPlane && !_isDrone; };    // 3: Plane
-                case 4: { _tabValid = _isBoat && !_isDrone; };     // 4: Boat
-                case 5: { _tabValid = _isDrone; };                 // 5: Drone
-                case 6: { _tabValid = _isSupply && !_isDrone; };   // 6: Supplies
-            };
-
-            if (_tabValid && _padExists) then {
+        if (_faction == "ALL" || _faction == _playerFaction) then {
+            if (_restrictionType == "ALL" || (_restrictionType == "SB" && _isSB)) then {
                 
-                // --- MULTI-RESOURCE UI FORMATTER ---
-                private _costStringArray = [];
-                {
-                    _x params ["_poolName", "_poolVal"];
-                    // Ignore anything 0, or astronomically high (like the 1,000,000,000 internal tank caps)
-                    if (_poolVal > 0 && _poolVal < 10000000) then { 
-                        private _shortName = switch (_poolName) do {
-                            case "Vehicle": { "Veh" };
-                            case "Cargo": { "Crg" };
-                            case "Ammo": { "Ammo" };
-                            case "Fuel": { "Fuel" };
-                            case "Medical": { "Med" };
-                            case "Repair": { "Rep" };
-                            case "Troops": { "Trp" };
-                            default { _poolName };
+                // --- ENGINE-NATIVE INHERITANCE CHECKS (STRICT OOP) ---
+                // Natively flags both UGVs and UAVs
+                private _isDrone = getNumber (configFile >> "CfgVehicles" >> _classname >> "isUav") == 1;
+                
+                private _isBoat    = _classname isKindOf "Ship";
+                private _isPlane   = _classname isKindOf "Plane";
+                private _isHeli    = _classname isKindOf "Helicopter";
+                private _isTracked = _classname isKindOf "Tank";
+                private _isWheeled = _classname isKindOf "Car" || _classname isKindOf "Motorcycle"; // Catches ATVs
+                
+                // Supply catch-all: If it's not a drone, and not a standard vehicle, it's a static supply object
+                private _isSupply  = !(_isBoat || _isPlane || _isHeli || _isTracked || _isWheeled || _isDrone);
+
+                // Requirement matching for physical pads
+                private _reqPad = "GROUND";
+                if (_isBoat) then { _reqPad = "BOAT"; }
+                else { if (_isPlane) then { _reqPad = "PLANE"; }
+                else { if (_isHeli) then { _reqPad = "HELICOPTER"; }; }; };
+
+                private _padExists = switch (_reqPad) do {
+                    case "BOAT": { _hasBoat };
+                    case "PLANE": { _hasPlane };
+                    case "HELICOPTER": { _hasHeli };
+                    default { _hasGround };
+                };
+
+                // Map UI Tab Index to Vehicle Category
+                private _tabValid = false;
+                switch (_tabIndex) do {
+                    case 0: { _tabValid = _isWheeled && !_isDrone; };  // 0: Wheeled
+                    case 1: { _tabValid = _isTracked && !_isDrone; };  // 1: Tracked
+                    case 2: { _tabValid = _isHeli && !_isDrone; };     // 2: Helicopter
+                    case 3: { _tabValid = _isPlane && !_isDrone; };    // 3: Plane
+                    case 4: { _tabValid = _isBoat && !_isDrone; };     // 4: Boat
+                    case 5: { _tabValid = _isDrone; };                 // 5: Drone
+                    case 6: { _tabValid = _isSupply && !_isDrone; };   // 6: Supplies
+                };
+
+                if (_tabValid && _padExists) then {
+                    
+                    // --- MULTI-RESOURCE UI FORMATTER ---
+                    private _costStringArray = [];
+                    {
+                        _x params ["_poolName", "_poolVal"];
+                        // Ignore anything 0, or astronomically high (like the 1,000,000,000 internal tank caps)
+                        if (_poolVal > 0 && _poolVal < 10000000) then { 
+                            private _shortName = switch (_poolName) do {
+                                case "Vehicle": { "Veh" };
+                                case "Cargo": { "Crg" };
+                                case "Ammo": { "Ammo" };
+                                case "Fuel": { "Fuel" };
+                                case "Medical": { "Med" };
+                                case "Repair": { "Rep" };
+                                case "Troops": { "Trp" };
+                                default { _poolName };
+                            };
+                            _costStringArray pushBack format ["%1 %2", round _poolVal, _shortName];
                         };
-                        _costStringArray pushBack format ["%1 %2", round _poolVal, _shortName];
-                    };
-                } forEach _massCost;
-                
-                private _costStr = _costStringArray joinString " | ";
-                if (_costStr == "") then { _costStr = "Free"; };
+                    } forEach _massCost;
+                    
+                    private _costStr = _costStringArray joinString " | ";
+                    if (_costStr == "") then { _costStr = "Free"; };
 
-                private _label = format ["[%2] - %1", _displayName, _costStr];
-                private _idx = _listBox lbAdd _label;
-                _listBox lbSetValue [_idx, _forEachIndex];
+                    private _label = format ["[%2] - %1", _displayName, _costStr];
+                    private _idx = _listBox lbAdd _label;
+                    _listBox lbSetValue [_idx, _forEachIndex];
+                };
             };
         };
     };

@@ -23,11 +23,18 @@ if (_mode == 0) exitWith {
     
     private _actionVal = _listBox lbValue _selIdx;
     private _blueprint = G_Individual_Blueprints select _actionVal;
-    _blueprint params ["_name", "_classname", "_cost"];
+    
+    // Exact extraction of the new V8 7-parameter template layout
+    _blueprint params ["_name", "_classnameArray", "_costArray", "_restriction", "_faction", "_terrainBiomes", "_allowedSystems"];
+    
+    // Un-nest the single string classname for the server spawner
+    private _classname = _classnameArray select 0;
 
     closeDialog 0;
     systemChat format ["[LOGISTICS REC-HUB]: Processing individual draft for %1...", _name];
-    [_baseKey, _classname, player, _cost, _name] remoteExec ["QM_fnc_serverCreateLocalUnit", 2];
+    
+    // V8 2D Cost Array is passed intact to the server executor
+    [_baseKey, _classname, player, _costArray, _name] remoteExec ["QM_fnc_serverCreateLocalUnit", 2];
 };
 
 // --- EXECUTION PATH B: QUICK-DRAFT GROUP TEMPLATES ---
@@ -38,9 +45,13 @@ if (_mode == 1) exitWith {
 
     private _actionVal = _listBox lbValue _selIdx;
     private _blueprint = G_Group_Blueprints select _actionVal;
-    _blueprint params ["_name", "_unitArray", "_cost"];
+    
+    // Exact extraction of the new V8 7-parameter template layout
+    _blueprint params ["_name", "_unitArray", "_costArray", "_restriction", "_faction", "_terrainBiomes", "_allowedSystems"];
 
     closeDialog 0;
     systemChat format ["[LOGISTICS REC-HUB]: Dispatching operational group template %1...", _name];
-    [_baseKey, _unitArray, player, _cost, _name] remoteExec ["QM_fnc_serverCreateLocalGroup", 2];
+    
+    // Because _unitArray is already an array of strings in V8, we can pass it natively
+    [_baseKey, _unitArray, player, _costArray, _name] remoteExec ["QM_fnc_serverCreateLocalGroup", 2];
 };

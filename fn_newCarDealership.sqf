@@ -23,8 +23,14 @@ if (_autoClose == 1) then { closeDialog 0; };
 // Re-map the selected category index threshold back to the G_Procureable_Vehicles lookup row
 private _vehicleConfig = G_Procureable_Vehicles select _actionValue;
 
-// Exact extraction of the new 6-parameter template layout
-_vehicleConfig params ["_name", "_classname", "_costArray", "_restriction", "_faction", "_vehSize"];
+// Exact extraction of the new V8 7-parameter template layout
+_vehicleConfig params ["_name", "_classnameArray", "_costArray", "_restriction", "_faction", "_terrainBiomes", "_allowedSystems"];
+
+// Un-nest the single string classname for the server spawner
+private _classname = _classnameArray select 0;
 
 private _baseKey = player getVariable ["QM_Current_Terminal_Base", ""];
-[_baseKey, _classname, player, _costArray, _vehSize] remoteExec ["QM_fnc_processGarageSpawn", 2];
+
+// V8 architecture drops the _vehSize parameter from the template. 
+// Defaulting to "M" to ensure QM_fnc_processGarageSpawn does not throw an undefined argument error.
+[_baseKey, _classname, player, _costArray, "M"] remoteExec ["QM_fnc_processGarageSpawn", 2];

@@ -32,5 +32,5 @@ if (_actionValue >= 0 && _actionValue < count G_Procureable_Vehicles) then {
     diag_log format ["[LOGISTICS MOTORPOOL]: Dispatched procurement allocation for %1 (%2 Points) at %3.", _name, _massCost, _baseKey];
     
     // Pass execution and the requested size tier to the server (Server handles pad routing automatically)
-    [_baseKey, _classname, player, _massCost, _vehSize] remoteExec ["QM_fnc_processGarageSpawn", 2];
+    [_baseKey, _classname, player, [["Vehicle", _massCost]], _vehSize] remoteExec ["QM_fnc_processGarageSpawn", 2];
 };

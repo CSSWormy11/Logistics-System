@@ -22,7 +22,7 @@ private _searchClasses = [
 ];
 
 // Ensure bases array has populated
-if (isNil "logisticsBases") exitWith { diag_log "DIAGNOSTICS ERROR: logisticsBases is not defined."; };
+waitUntil { !isNil "logisticsBases" };
 
 {
     private _baseKey = _x;
