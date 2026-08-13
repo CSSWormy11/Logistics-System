@@ -1,0 +1,63 @@
+// ============================================================================
+// MISSION HEADER & INTERFACE CONFIGURATIONS
+// File: description.ext
+// Description: Master table of contents for all mission parameters and UI.
+//              Overrides Eden Editor attributes to ensure mod consistency.
+// ============================================================================
+
+author = "JSHer";
+onLoadName = "Supply Usage Testing";
+onLoadMission = "Logistics and Quartermaster Core Framework Sandbox";
+
+// ============================================================================
+// SERVER MULTIPLAYER ENFORCEMENTS
+// ============================================================================
+disabledAI = 1;             // Prevents AI from taking empty player slots on disconnect
+joinUnassigned = 1;         // Forces players to pick a slot rather than auto-joining
+enableDebugConsole = 1;     // Allows admins to use the debug console
+
+// ============================================================================
+// RESPAWN ENFORCEMENTS
+// ============================================================================
+respawn = 3;                // 3 = "BASE" (Required for our scripted map markers)
+respawnDelay = 10;          // Seconds before a player can click spawn
+respawnOnStart = 1;         // 1 = Forces the Respawn Menu to open instantly on join
+respawnTemplates[] = {"MenuPosition"}; // Enables the visual map-click interface
+
+// ============================================================================
+// TASK MANAGEMENT ENFORCEMENTS (For Part 5 & 6)
+// ============================================================================
+taskManagement_markers2D = 1; // Show tasks on the 2D map
+taskManagement_markers3D = 1; // Show tasks floating in the 3D world
+taskManagement_propagate = 1; // Share tasks across the squad
+
+// ============================================================================
+// GARBAGE COLLECTION ENFORCEMENTS (CRITICAL FOR LOGISTICS)
+// ============================================================================
+// Prevents dead vehicles from permanently blocking the _Garage queueing system
+// and prevents dead bodies from piling up at the _Spawn tents.
+corpseManagerMode = 1;      // 1 = Manage all bodies globally
+corpseLimit = 15;           // Max number of bodies before deletion starts
+corpseRemovalMinTime = 60;  // Minimum time (seconds) a body stays
+corpseRemovalMaxTime = 300; // Maximum time (seconds) a body stays
+
+wreckManagerMode = 1;       // 1 = Manage all destroyed vehicles globally
+wreckLimit = 8;             // Max number of wrecks before deletion starts
+wreckRemovalMinTime = 120;  // Minimum time a wreck stays (2 mins)
+wreckRemovalMaxTime = 600;  // Maximum time a wreck stays (10 mins)
+
+// ============================================================================
+// 1. MASTER GUI BASE DEFINITIONS (UNIVERSAL)
+// ============================================================================
+// This file contains RscText, RscButton, RscListBox, RscCombo, etc.
+// Included first so all subsequent modules know how to draw basic UI elements.
+#include "defines.hpp"
+
+// ============================================================================
+// 2. MODULAR GUI DEFINITIONS (PLUG & PLAY)
+// ============================================================================
+// Part 2: Quartermaster Menus (Barracks, Factory, Admin Tablet)
+#include "qm_quartermasterUI.hpp"
+
+// Part 3C: Dynamic Pylon Aircraft Menus
+#include "qm_pylonMenu.hpp"
