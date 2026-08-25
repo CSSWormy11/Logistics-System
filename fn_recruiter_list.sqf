@@ -3,6 +3,7 @@
 // File: fn_recruiter_list.sqf
 // Description: Feeds configurations into Column 1 (Individual) and Column 2 (Group)
 //              of the recruitment UI. Updates title card with live manpower pool.
+//              V8 UPDATE: Now reads dynamically from the unified G_Procureable_Infantry array.
 // Called By: qm_quartermasterUI.hpp (CfgControlHubMenu onLoad event)
 // ============================================================================
 
@@ -17,100 +18,95 @@ private _troopSupplyPool = missionNamespace getVariable [format ["LogiScore_%1_T
 private _titleBox = _display displayCtrl 1000;
 _titleBox ctrlSetText format ["GARRISON INFANTRY MOBILIZATION (Current Base Manpower: %1 Personnel)", _troopSupplyPool];
 
-// --- V8 BIOME RETRIEVAL ---
-private _currentTerrain = if (fileExists "fn_G_getTerrain.sqf") then { call compile preprocessFileLineNumbers "fn_G_getTerrain.sqf" } else { "ALL" };
-
-// --- 1. POPULATE COLUMN 1: INDIVIDUAL BLUEPRINTS ( createUnit Matrix ) ---
+// --- INITIALIZE UI LISTBOXES ---
 private _listBox1 = _display displayCtrl 1500;
 lbClear _listBox1;
 
-// Reformatted hardcoded arrays to exact V8 7-Element Standards to ensure loop compatibility
-G_Individual_Blueprints = [
-    ["Rifleman Guard", ["B_Soldier_F"], [["Troops", 1]], "ALL", "WEST", ["ALL"], ["Quartermaster"]],
-    ["Combat Paramedic", ["B_medic_F"], [["Troops", 1]], "ALL", "WEST", ["ALL"], ["Quartermaster"]],
-    ["Light Machine Gunner", ["B_soldier_AR_F"], [["Troops", 1]], "ALL", "WEST", ["ALL"], ["Quartermaster"]],
-    ["Grenadier Specialist", ["B_Soldier_GL_F"], [["Troops", 1]], "ALL", "WEST", ["ALL"], ["Quartermaster"]],
-    ["Heavy Ammo Bearer", ["B_HeavyGunner_F"], [["Troops", 1]], "ALL", "WEST", ["ALL"], ["Quartermaster"]],
-    ["AT Missile Specialist", ["B_soldier_AT_F"], [["Troops", 1]], "ALL", "WEST", ["ALL"], ["Quartermaster"]],
-    ["Assistant AT Team", ["B_soldier_A_F"], [["Troops", 1]], "ALL", "WEST", ["ALL"], ["Quartermaster"]],
-    ["AA Missile Specialist", ["B_soldier_AA_F"], [["Troops", 1]], "ALL", "WEST", ["ALL"], ["Quartermaster"]],
-    ["Armored Vehicle Crewman", ["B_crew_F"], [["Troops", 1]], "ALL", "WEST", ["ALL"], ["Quartermaster"]],
-    ["Armored Vehicle Commander", ["B_officer_F"], [["Troops", 1]], "ALL", "WEST", ["ALL"], ["Quartermaster"]],
-    ["Helicopter Crew Chief", ["B_helicrew_F"], [["Troops", 1]], "ALL", "WEST", ["ALL"], ["Quartermaster"]],
-    ["Helicopter Pilot Element", ["B_helipilot_F"], [["Troops", 1]], "ALL", "WEST", ["ALL"], ["Quartermaster"]]
-];
-
-{
-    // Extract V8 Structure
-    _x params ["_name", "_classArray", "_costArray", ["_restriction", "ALL"], ["_faction", "WEST"], ["_terrainBiomes", ["ALL"]], ["_allowedSystems", ["Quartermaster"]]];
-    
-    // --- V8 METADATA FILTERING ---
-    private _validSystem = ("ALL" in _allowedSystems) || ("Quartermaster" in _allowedSystems);
-    private _validTerrain = ("ALL" in _terrainBiomes) || (_currentTerrain in _terrainBiomes);
-    
-    if (_validSystem && _validTerrain) then {
-        // Extract Troop point cost from the 2D V8 Cost Array
-        private _cost = 0;
-        { if ((_x select 0) == "Troops") then { _cost = _x select 1; }; } forEach _costArray;
-        
-        private _label = format ["[%1 Manpower] -> %2", _cost, _name];
-        private _idx = _listBox1 lbAdd _label;
-        _listBox1 lbSetValue [_idx, _forEachIndex];
-    };
-} forEach G_Individual_Blueprints;
-
-if (lbSize _listBox1 > 0) then { _listBox1 lbSetCurSel 0; };
-
-// --- 2. POPULATE COLUMN 2: GROUP TEMPLATES (Manual Classname Arrays) ---
 private _listBox2 = _display displayCtrl 1550;
 lbClear _listBox2;
 
-// Reformatted hardcoded arrays to exact V8 7-Element Standards to ensure loop compatibility
-G_Group_Blueprints = [
-    [
-        "BLUFOR Infantry Fireteam", 
-        ["B_Soldier_TL_F", "B_soldier_AR_F", "B_Soldier_GL_F", "B_Soldier_F"], 
-        [["Troops", 4]], "ALL", "WEST", ["ALL"], ["Quartermaster"]
-    ],
-    [
-        "BLUFOR Infantry Squad", 
-        ["B_Soldier_SL_F", "B_Soldier_TL_F", "B_soldier_AR_F", "B_Soldier_GL_F", "B_Soldier_TL_F", "B_soldier_AR_F", "B_soldier_LAT_F", "B_Soldier_F"], 
-        [["Troops", 8]], "ALL", "WEST", ["ALL"], ["Quartermaster"]
-    ],
-    [
-        "BLUFOR AT Support Section", 
-        ["B_Soldier_TL_F", "B_soldier_AT_F", "B_soldier_A_F", "B_soldier_AT_F", "B_soldier_A_F"], 
-        [["Troops", 5]], "ALL", "WEST", ["ALL"], ["Quartermaster"]
-    ],
-    [
-        "BLUFOR AA Support Section", 
-        ["B_Soldier_TL_F", "B_soldier_AA_F", "B_soldier_AAA_F", "B_soldier_AA_F", "B_soldier_AAA_F"], 
-        [["Troops", 5]], "ALL", "WEST", ["ALL"], ["Quartermaster"]
-    ],
-    [
-        "Standard Mechanized Crew Detail", 
-        ["B_crew_F", "B_crew_F", "B_crew_F", "B_officer_F"], 
-        [["Troops", 4]], "ALL", "WEST", ["ALL"], ["Quartermaster"]
-    ]
-];
+// ------------------------------------------------------------------------
+// V8 SYSTEM REQUIREMENT: Fetch metadata variables for filtering
+// ------------------------------------------------------------------------
+private _currentTerrain = call fn_G_getTerrain;
+private _playerFaction = str (side group player);
 
+// Base Tier evaluation for restriction checks
+private _isSB = (["SB", _baseKey] call BIS_fnc_inString);
+private _isFOB = (["FOB", _baseKey] call BIS_fnc_inString);
+
+// ------------------------------------------------------------------------
+// V8 MASTER UNIFIED ARRAY PARSING
+// How: Iterates through the global G_Procureable_Infantry templates.
+// Why: Replaces legacy hardcoded individual/group arrays to ensure total 
+//      synchronization with the World AI spawner templates.
+// ------------------------------------------------------------------------
 {
-    // Extract V8 Structure (Note: for groups, _unitArray naturally contains multiple strings)
-    _x params ["_name", "_unitArray", "_costArray", ["_restriction", "ALL"], ["_faction", "WEST"], ["_terrainBiomes", ["ALL"]], ["_allowedSystems", ["Quartermaster"]]];
-    
-    // --- V8 METADATA FILTERING ---
-    private _validSystem = ("ALL" in _allowedSystems) || ("Quartermaster" in _allowedSystems);
-    private _validTerrain = ("ALL" in _terrainBiomes) || (_currentTerrain in _terrainBiomes);
-    
-    if (_validSystem && _validTerrain) then {
-        // Extract Troop point cost from the 2D V8 Cost Array
-        private _cost = 0;
-        { if ((_x select 0) == "Troops") then { _cost = _x select 1; }; } forEach _costArray;
-        
-        private _label = format ["[%1 Troops] -> %2 Template", _cost, _name];
-        private _idx = _listBox2 lbAdd _label;
-        _listBox2 lbSetValue [_idx, _forEachIndex];
-    };
-} forEach G_Group_Blueprints;
+    // Unpack the new 7-parameter V8 array structure
+    _x params [
+        "_displayName", 
+        "_classArray", 
+        "_costArray", 
+        ["_restrictionType", "ALL"], 
+        ["_faction", "ALL"], 
+        ["_terrainArray", ["ALL"]], 
+        ["_systemsArray", ["Quartermaster"]]
+    ];
 
+    // ------------------------------------------------------------------------
+    // V8 METADATA FILTERING
+    // How: Verify the blueprint is authorized for the player's side, 
+    //      the current map's biome, and the Quartermaster UI system.
+    // Why: Prevents WorldAI assets or snow-camo troops from spawning incorrectly.
+    // ------------------------------------------------------------------------
+    private _validFaction = (_faction == "ALL" || _faction == _playerFaction);
+    private _validTerrain = ("ALL" in _terrainArray || _currentTerrain in _terrainArray);
+    private _validSystem  = ("ALL" in _systemsArray || "Quartermaster" in _systemsArray);
+    
+    // Evaluate if base has appropriate tier (SB allows FOB/SB restrictions, FOB allows FOB, ALL allows ALL)
+    private _validBaseTier = (_restrictionType == "ALL" || (_restrictionType == "SB" && _isSB) || (_restrictionType == "FOB" && (_isFOB || _isSB)));
+
+    if (_validFaction && _validTerrain && _validSystem && _validBaseTier) then {
+        
+        // --- MULTI-RESOURCE UI FORMATTER ---
+        // How: Loops through the V8 2D cost array to build the UI display label
+        // Why: Replaces legacy flat integer cost display, handling both Troops and Cargo mass.
+        private _costStringArray = [];
+        {
+            _x params ["_poolName", "_poolVal"];
+            if (_poolVal > 0) then { 
+                private _shortName = switch (_poolName) do {
+                    case "Troops": { "Trp" };
+                    case "Cargo": { "Crg" };
+                    case "Vehicle": { "Veh" };
+                    default { _poolName };
+                };
+                _costStringArray pushBack format ["%1 %2", round _poolVal, _shortName];
+            };
+        } forEach _costArray;
+        
+        private _costStr = _costStringArray joinString " | ";
+        if (_costStr == "") then { _costStr = "Free"; };
+
+        // ------------------------------------------------------------------------
+        // DYNAMIC COLUMN SORTING
+        // How: Checks the size of the classname array. If 1, it's an individual. 
+        //      If > 1, it's a pre-composed group/squad.
+        // Why: Eliminates the need for two separate configuration arrays.
+        // ------------------------------------------------------------------------
+        private _isGroup = (count _classArray > 1);
+        private _targetListBox = if (_isGroup) then { _listBox2 } else { _listBox1 };
+        
+        private _label = format ["[%1] -> %2", _costStr, _displayName];
+        if (_isGroup) then { _label = _label + " Template"; }; // Preserve legacy label style for groups
+
+        // Add to the appropriate column listbox and store the master array index
+        private _idx = _targetListBox lbAdd _label;
+        _targetListBox lbSetValue [_idx, _forEachIndex];
+    };
+
+} forEach G_Procureable_Infantry;
+
+// Auto-select first entries if lists are populated
+if (lbSize _listBox1 > 0) then { _listBox1 lbSetCurSel 0; };
 if (lbSize _listBox2 > 0) then { _listBox2 lbSetCurSel 0; };

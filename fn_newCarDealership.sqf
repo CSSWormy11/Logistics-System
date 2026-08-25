@@ -23,14 +23,34 @@ if (_autoClose == 1) then { closeDialog 0; };
 // Re-map the selected category index threshold back to the G_Procureable_Vehicles lookup row
 private _vehicleConfig = G_Procureable_Vehicles select _actionValue;
 
-// Exact extraction of the new V8 7-parameter template layout
-_vehicleConfig params ["_name", "_classnameArray", "_costArray", "_restriction", "_faction", "_terrainBiomes", "_allowedSystems"];
+// ------------------------------------------------------------------------
+// V8 TEMPLATE DATA EXTRACTION
+// RESTORED: Index 5 is now Index 7 (_vehSize) and is actively unpacked from the template.
+// Why: Captures the nested classname and the multi-resource 2D cost array. 
+//      Note: The legacy vehicle size tier has been deprecated in V8.
+// ------------------------------------------------------------------------
+_vehicleConfig params [
+    "_name", 
+    "_classArray", 
+    "_costArray", 
+    "_restriction", 
+    "_faction", 
+    //"_vehSize",
+    "_terrainBiomes", 
+    "_allowedSystems",
+    ["_vehSize", "OPEN"]
+    //"_vehSize"
+];
 
-// Un-nest the single string classname for the server spawner
-private _classname = _classnameArray select 0;
-
+// How: Extract the precise vehicle classname string from the nested V8 array
+// Why: The remote server spawner requires a flat string to execute createVehicle
+private _classname = _classArray select 0;
 private _baseKey = player getVariable ["QM_Current_Terminal_Base", ""];
 
-// V8 architecture drops the _vehSize parameter from the template. 
-// Defaulting to "M" to ensure QM_fnc_processGarageSpawn does not throw an undefined argument error.
-[_baseKey, _classname, player, _costArray, "M"] remoteExec ["QM_fnc_processGarageSpawn", 2];
+// ------------------------------------------------------------------------
+// SERVER DISPATCH
+// Pass the untouched 2D _costArray AND the _vehSize parameter to the server
+// Why: The server processes multi-pool point deductions dynamically by 
+//      looping through this array.
+// ------------------------------------------------------------------------
+[_baseKey, _classname, player, _costArray, _vehSize] remoteExec ["QM_fnc_processGarageSpawn", 2];

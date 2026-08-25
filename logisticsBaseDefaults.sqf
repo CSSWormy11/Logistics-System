@@ -22,13 +22,13 @@ logisticsBaseDefaults = [
     [
         "SB", 
         [
-            ["Cargo", 200000],   // 3 Heavy Cargo runs (198k actual)
-            ["Ammo", 300000],    // 3 Heavy Ammo runs (270k actual)
-            ["Fuel", 100000],    // 3 Heavy Fuel runs (27k actual)
-            ["Medical", 100000], // 3 Heavy Medical runs (48k actual based on 200/box)
-            ["Repair", 200000],  // Standard Baseline
-            ["Vehicle", 99999999], // Standard Baseline
-            ["Troops", 100]      // 3 Heavy Troop runs (45 actual personnel)
+            ["Cargo", 100000],
+            ["Ammo", 300000],
+            ["Fuel", 100000],
+            ["Medical", 100000],
+            ["Repair", 200000],
+            ["Vehicle", 2400000],
+            ["Troops", 100]
         ]
     ],
     [
@@ -39,7 +39,7 @@ logisticsBaseDefaults = [
             ["Fuel", 5000],
             ["Medical", 2000],
             ["Repair", 5000],
-            ["Vehicle", 3000],
+            ["Vehicle", 36000],
             ["Troops", 10]
         ]
     ]

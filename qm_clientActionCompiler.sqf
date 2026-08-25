@@ -3,6 +3,9 @@
 // File: qm_clientActionCompiler.sqf
 // Description: Binds interface entry points for Arsenals, Motorpool Menus,
 //              and vehicle returns directly to the terminal hub crate.
+//              *FIX*: Safely clears Virtual Arsenal namespaces using native BIS 
+//              functions to prevent array corruption and expected element errors.
+//              *UPDATE*: Removed all Virtual Garage functionality and actions.
 // Called By: init.sqf (Compiled during client initialization)
 // ============================================================================
 
@@ -38,28 +41,7 @@ QM_fnc_clientRegisterFlagActions = {
         5
     ];
 
-    // Action B: Standalone Virtual Garage Inspection Grid (Completely Separated)
-    _crate addAction [
-        "<t color='#00FFFF' font='RobotoCondensedBold'>[LOGISTICS HUB] Access Virtual Garage Simulation Grid</t>",
-        {
-            params ["_target", "_caller", "_actionId", "_arguments"];
-            _arguments params ["_bKey"];
-            
-            _caller setVariable ["QM_Current_Terminal_Box", _target];
-            _caller setVariable ["QM_Current_Terminal_Base", _bKey];
-            
-            if (fileExists "fn_openVirtualGarage.sqf") then { [] execVM "fn_openVirtualGarage.sqf"; };
-        },
-        [_baseKey],
-        4.5,
-        true,
-        true,
-        "",
-        "alive _target && {player distance _target < 5}",
-        5
-    ];
-
-    // Action C: Scrap / Recycle Nearest Vehicle on Pad
+    // Action B: Scrap / Recycle Nearest Vehicle on Pad
     _crate addAction [
         "<t color='#FFA500' font='RobotoCondensedBold'>[LOGISTICS HUB] Return Nearest Vehicle for Salvage</t>",
         {
@@ -97,20 +79,83 @@ QM_fnc_clientRegisterBarracksActions = {
             private _startingMass = loadAbs _caller;
             _caller setVariable ["QM_LocalTrade_InitialMass", _startingMass];
 
-            [missionNamespace, "virtual", true] call BIS_fnc_addVirtualWeaponCargo;
+            // ------------------------------------------------------------------------
+            // 1. SAFELY CLEAR ARSENAL MEMORY
+            // How: Pulls all raw classnames from the template arrays and uses the 
+            //      native BIS removal functions to securely wipe them from missionNamespace.
+            // Why: Using setVariable [] directly corrupts the BIS engine array structure.
+            //      This method clears enemy gear properly before we inject the filtered items.
+            // ------------------------------------------------------------------------
+            private _allWeapons = G_Allowed_Weapons apply { _x select 0 };
+            private _allMags = G_Allowed_Magazines apply { _x select 0 };
+            private _allItems = G_Allowed_Items apply { _x select 0 };
+            private _allBags = G_Allowed_Backpacks apply { _x select 0 };
 
-            private _vWeapons   = G_Allowed_Weapons apply { _x select 0 };
-            private _vMags      = G_Allowed_Magazines apply { _x select 0 };
-            private _vItems     = G_Allowed_Items apply { _x select 0 };
-            private _vBackpacks = G_Allowed_Backpacks apply { _x select 0 };
+            [missionNamespace, _allWeapons, false, false] call BIS_fnc_removeVirtualWeaponCargo;
+            [missionNamespace, _allMags, false, false] call BIS_fnc_removeVirtualMagazineCargo;
+            [missionNamespace, _allItems, false, false] call BIS_fnc_removeVirtualItemCargo;
+            [missionNamespace, _allBags, false, false] call BIS_fnc_removeVirtualBackpackCargo;
 
+            // Failsafe: Remove the wildcard string in case Eden Editor or another script injected it
+            [missionNamespace, ["%ALL"], false, false] call BIS_fnc_removeVirtualWeaponCargo;
+            [missionNamespace, ["%ALL"], false, false] call BIS_fnc_removeVirtualMagazineCargo;
+            [missionNamespace, ["%ALL"], false, false] call BIS_fnc_removeVirtualItemCargo;
+            [missionNamespace, ["%ALL"], false, false] call BIS_fnc_removeVirtualBackpackCargo;
+
+            // ------------------------------------------------------------------------
+            // 2. ESTABLISH DYNAMIC FILTERS
+            // ------------------------------------------------------------------------
+            // Fetch the caller's specific side and terrain to evaluate the gear template
+            private _playerFaction = toUpper (str playerSide);
+            private _currentTerrain = toUpper (call fn_G_getTerrain);
+
+            private _vWeapons   = [];
+            private _vMags      = [];
+            private _vItems     = [];
+            private _vBackpacks = [];
+
+            // ------------------------------------------------------------------------
+            // 3. INLINE PARSER FUNCTION
+            // How: Iterates through the given master array and validates index [2] and [3].
+            // Why: Stops raw array dumping and strictly enforces whitelist constraints based
+            //      on the player's active Faction and Terrain Biome.
+            // ------------------------------------------------------------------------
+            private _fnc_filterGear = {
+                params ["_sourceArray", "_targetArray"];
+                if (isNil "_sourceArray") exitWith {};
+
+                {
+                    _x params ["_classname", "_stockQty", ["_faction", "ALL"], ["_terrainBiomes", ["ALL"]]];
+                    
+                    // Logic Gate: Verify Faction and Terrain permissions
+                    private _validFaction = (toUpper _faction == "ALL" || toUpper _faction == _playerFaction);
+                    private _terrainUpper = _terrainBiomes apply { toUpper _x };
+                    private _validTerrain = ("ALL" in _terrainUpper || _currentTerrain in _terrainUpper);
+                    
+                    if (_validFaction && _validTerrain) then {
+                        _targetArray pushBackUnique _classname;
+                    };
+                } forEach _sourceArray;
+            };
+
+            // Process all templates through the filtering gate
+            [G_Allowed_Weapons, _vWeapons] call _fnc_filterGear;
+            [G_Allowed_Magazines, _vMags] call _fnc_filterGear;
+            [G_Allowed_Items, _vItems] call _fnc_filterGear;
+            [G_Allowed_Backpacks, _vBackpacks] call _fnc_filterGear;
+
+            // ------------------------------------------------------------------------
+            // 4. INJECT FILTERED DATA
+            // ------------------------------------------------------------------------
             [missionNamespace, _vWeapons, false, false] call BIS_fnc_addVirtualWeaponCargo;
             [missionNamespace, _vMags, false, false] call BIS_fnc_addVirtualMagazineCargo;
             [missionNamespace, _vItems, false, false] call BIS_fnc_addVirtualItemCargo;
             [missionNamespace, _vBackpacks, false, false] call BIS_fnc_addVirtualBackpackCargo;
 
+            // Launch the BIS Arsenal bound to the dynamically updated namespace
             ["Open", [false, _target, _caller]] call BIS_fnc_arsenal;
 
+            // Await closure to execute mass transaction logs
             [_target, _caller] spawn {
                 params ["_tgt", "_unit"];
                 waitUntil { isNull (uiNamespace getVariable ["RscDisplayArsenal", displayNull]) };

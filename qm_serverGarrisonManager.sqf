@@ -6,7 +6,9 @@
 //              *FIX*: Handled stringent Type Checks to prevent string mapping crashes
 //              *FIX*: Stopped Cargo Houses from auto-spawning on markers.
 //              *FIX*: Abandoned V_Garage processing to reduce map clutter.
-//              *NEW*: Evaluates and logs structure bounding boxes at mission start.
+//              *V8*: Now enforces 4-index Terrain/Faction filtering on physical crates.
+//              *CLEANUP*: ALL Marker and Bounding Box debugging traces removed.
+//              *NEW*: Physical loot debug trace added.
 // Called By: init.sqf (Executed during server initialization)
 // ============================================================================
 
@@ -24,33 +26,11 @@ private _structuralPads = [
     "Land_Destroyer_01_Boat_Rack_01_F", "Land_Boat_Rack_01_F", "Land_BoatRack_01_F"
 ];
 
-// --- MISSION STARTUP: STRUCTURAL BOUNDING BOX LOGGER ---
-private _fnc_logStructureData = {
-    params ["_markerName", "_pos", "_obj"];
-    if (_markerName == "") exitWith {};
-    
-    diag_log format ["--- STARTUP EVALUATION: MARKER '%1' ---", _markerName];
-    diag_log format ["Marker Position (AGL): %1", _pos];
-    
-    // Ignore logging dimensions for things we just spawned dynamically (like empty helipads or small boxes)
-    if (!isNull _obj && {!(typeOf _obj in _terminalClasses) && !(typeOf _obj in _spawnClasses) && typeOf _obj != "Land_HelipadEmpty_F"}) then {
-        diag_log format ["Tied to Structure: True (%1)", typeOf _obj];
-        private _bbr = boundingBoxReal _obj;
-        private _p1 = _bbr select 0;
-        private _p2 = _bbr select 1;
-        private _maxWidth = abs ((_p2 select 0) - (_p1 select 0));
-        private _maxLength = abs ((_p2 select 1) - (_p1 select 1));
-        private _maxHeight = abs ((_p2 select 2) - (_p1 select 2));
-        
-        diag_log format ["Structure Dimensions (WxLxH): %1m x %2m x %3m", _maxWidth, _maxLength, _maxHeight];
-        diag_log format ["Front-Left Corner (Local): %1", _p1];
-        diag_log format ["Back-Right Corner (Local): %1", _p2];
-        diag_log format ["Safest Calculated Center (ASL): %1", getPosASL _obj];
-    } else {
-        diag_log "Tied to Structure: False (No pre-existing structures detected. Utilizing raw marker coordinates).";
-    };
-    diag_log "--------------------------------------------------";
-};
+// ----------------------------------------------------------------------------
+// V8 SYSTEM REQUIREMENT: Fetch metadata variables for filtering physical crate loot
+// ----------------------------------------------------------------------------
+private _currentTerrain = toUpper (call fn_G_getTerrain);
+private _serverFaction = toUpper (missionNamespace getVariable ["QM_ServerFaction", "WEST"]); 
 
 // --- ROBUST SPAWN HELPER (Prevents Water Death & Snaps to Carrier Decks) ---
 private _fnc_spawnSafely = {
@@ -106,9 +86,6 @@ while {true} do {
             };
             
             if (_type == "OBJECT") then { _activeHub = _entity; };
-            
-            // LOG EVALUATION
-            [_identityName, _pos, _activeHub] call _fnc_logStructureData;
 
             // --- STEP B: INITIALIZE THE HUB ---
             if (!isNull _activeHub && alive _activeHub) then {
@@ -120,10 +97,40 @@ while {true} do {
                     clearWeaponCargoGlobal _activeHub; clearMagazineCargoGlobal _activeHub; clearItemCargoGlobal _activeHub; clearBackpackCargoGlobal _activeHub;
                     
                     if (!isNil "G_Allowed_Weapons") then {
-                        { _activeHub addWeaponCargoGlobal [_x select 0, _x select 1]; } forEach G_Allowed_Weapons;
-                        { _activeHub addMagazineCargoGlobal [_x select 0, _x select 1]; } forEach G_Allowed_Magazines;
-                        { _activeHub addItemCargoGlobal [_x select 0, _x select 1]; } forEach G_Allowed_Items;
-                        { _activeHub addBackpackCargoGlobal [_x select 0, _x select 1]; } forEach G_Allowed_Backpacks;
+                        // ------------------------------------------------------------------------
+                        // V8 DATA EXTRACTION (PHYSICAL CRATES)
+                        // ------------------------------------------------------------------------
+                        private _fnc_populatePhysicalCrate = {
+                            params ["_crate", "_array", "_type"];
+                            private _addedCount = 0;
+                            {
+                                _x params ["_classname", "_stockQty", ["_faction", "ALL"], ["_terrainBiomes", ["ALL"]]];
+                                
+                                private _terrainUpper = _terrainBiomes apply { toUpper _x };
+                                private _validFaction = (toUpper _faction == "ALL" || toUpper _faction == _serverFaction);
+                                private _validTerrain = ("ALL" in _terrainUpper || _currentTerrain in _terrainUpper);
+                                
+                                if (_validFaction && _validTerrain) then {
+                                    switch (_type) do {
+                                        case "WEAPON": { _crate addWeaponCargoGlobal [_classname, _stockQty]; };
+                                        case "MAGAZINE": { _crate addMagazineCargoGlobal [_classname, _stockQty]; };
+                                        case "ITEM": { _crate addItemCargoGlobal [_classname, _stockQty]; };
+                                        case "BACKPACK": { _crate addBackpackCargoGlobal [_classname, _stockQty]; };
+                                    };
+                                    _addedCount = _addedCount + 1;
+                                };
+                            } forEach _array;
+                            
+                            diag_log format ["SERVER PHYSICAL LOOT: Added %1 %2s to %3", _addedCount, _type, _baseKey];
+                        };
+
+                        diag_log format ["=========================================="];
+                        diag_log format ["SERVER PHYSICAL LOOT: Populating Base '%1'", _baseKey];
+                        [_activeHub, G_Allowed_Weapons, "WEAPON"] call _fnc_populatePhysicalCrate;
+                        [_activeHub, G_Allowed_Magazines, "MAGAZINE"] call _fnc_populatePhysicalCrate;
+                        [_activeHub, G_Allowed_Items, "ITEM"] call _fnc_populatePhysicalCrate;
+                        [_activeHub, G_Allowed_Backpacks, "BACKPACK"] call _fnc_populatePhysicalCrate;
+                        diag_log format ["=========================================="];
                     };
                 };
 
@@ -152,10 +159,6 @@ while {true} do {
                     missionNamespace setVariable [_identityName, _linkedStructure, true]; 
                 };
             };
-
-            // LOG EVALUATION
-            [_identityName, _pos, _linkedStructure] call _fnc_logStructureData;
-
         } forEach _spawns;
 
         // ====================================================================
@@ -181,9 +184,6 @@ while {true} do {
             };
             
             missionNamespace setVariable [_markerName, _pad, true];
-
-            // LOG EVALUATION
-            [_markerName, _pos, _pad] call _fnc_logStructureData;
 
         } forEach _allGarages;
 
