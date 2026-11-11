@@ -22,13 +22,13 @@ logisticsBaseDefaults = [
     [
         "SB", 
         [
-            ["Cargo", 100000],
+            ["Cargo", 300000],
             ["Ammo", 300000],
             ["Fuel", 100000],
             ["Medical", 100000],
             ["Repair", 200000],
             ["Vehicle", 2400000],
-            ["Troops", 100]
+            ["Troops", 256]
         ]
     ],
     [

@@ -30,11 +30,11 @@ if (_closestBase == "" || _shortestDistance > 250) exitWith {};
 
 systemChat format ["Welcome back. Deployment authenticated at %1.", _closestBase];
 
-// --- STEP 2: INDOOR STRUCTURAL PLACEMENT (Barracks Whitelist Only) ---
-private _basePos = getMarkerPos _closestBase;
-private _allowedBarracksTypes = ["Land_Cargo_House_V3_F"];
+// --- STEP 2: INDOOR STRUCTURAL PLACEMENT (If Cargo House / Barracks Nearby) ---
+private _spawnPosASL = getPosASL _newUnit;
+private _allowedBarracksTypes = ["Land_Cargo_House_V1_F", "Land_Cargo_House_V3_F"];
 
-private _nearObjects = nearestObjects [_basePos, ["AllVehicles", "Static", "Thing", "Building"], 100];
+private _nearObjects = nearestObjects [_newUnit, ["Building", "Static", "Thing"], 40];
 private _validBuildings = _nearObjects select {
     (typeOf _x) in _allowedBarracksTypes && alive _x
 };
@@ -63,6 +63,7 @@ if (count _validBuildings > 0) then {
 };
 
 if (!_spawnedSafe) then {
-    _newUnit setPos [_basePos select 0, _basePos select 1, 0];
-    systemChat format ["Welcome back. Deployed in open camp yard at %1.", _closestBase];
+    // Keep the exact 3D ASL position of the _Spawn object the engine placed the player onto
+    _newUnit setPosASL _spawnPosASL;
+    systemChat format ["Welcome back. Deployed at %1.", _closestBase];
 };

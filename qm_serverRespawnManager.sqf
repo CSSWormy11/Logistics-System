@@ -45,77 +45,19 @@ while {true} do {
                     format ["%1 (Troops: %2)", _baseKey, _currentTroops]
                 };
 
-                // Use the universal helper to find all _Spawn locations (objects or markers)
+                // Find all editor-placed 3D _Spawn objects for this base
                 private _locations = [_baseKey, "Spawn"] call QM_fnc_getLocationsByPrefix;
                 private _newIDs = [];
 
                 if (count _locations > 0) then {
-                    // Create a separate respawn point for every specific location placed
                     {
                         _x params ["_entity", "_pos", "_dir", "_type", "_identityName"];
-                        
-                        private _markerText = "";
-                        if (_type == "MARKER") then { 
-                            _markerText = markerText _entity; 
-                        } else { 
-                            _markerText = getText(configFile >> "CfgVehicles" >> typeOf _entity >> "displayName"); 
+                        if (_entity isEqualType objNull && { !isNull _entity }) then {
+                            private _finalString = format ["%1 (%2)", _displayString, _identityName];
+                            private _rID = [west, _entity, _finalString] call BIS_fnc_addRespawnPosition;
+                            _newIDs pushBack _rID;
                         };
-
-                        private _finalString = if (_markerText != "") then { format ["%1 - %2", _displayString, _markerText] } else { format ["%1 (%2)", _displayString, _identityName] };
-                        
-                        // --- CARRIER DECK FIX: Convert 2D Markers into 3D Physical Objects ---
-                        // Markers default to sea-level (Z=0). This traces a line from the sky to find the flight deck 
-                        // and places a physical invisible object there for players to safely spawn onto.
-                        private _spawnTarget = _entity;
-                        if (_type == "MARKER") then {
-                            private _helperVarName = format ["QM_SpawnHelper_%1", _identityName];
-                            private _helperObj = missionNamespace getVariable [_helperVarName, objNull];
-                            
-                            if (isNull _helperObj) then {
-                                _helperObj = createVehicle ["Land_HelipadEmpty_F", [0,0,0], [], 0, "CAN_COLLIDE"];
-                                
-                                private _startPos = [_pos select 0, _pos select 1, 150];
-                                private _endPos = [_pos select 0, _pos select 1, -10];
-                                private _intersects = lineIntersectsSurfaces [_startPos, _endPos, objNull, objNull, true, 1, "GEOM", "NONE"];
-                                
-                                if (count _intersects > 0) then {
-                                    _helperObj setPosASL ((_intersects select 0) select 0);
-                                } else {
-                                    _helperObj setPosATL [_pos select 0, _pos select 1, 0.1];
-                                };
-                                _helperObj setDir _dir;
-                                missionNamespace setVariable [_helperVarName, _helperObj, true];
-                            };
-                            _spawnTarget = _helperObj;
-                        };
-
-                        // BIS_fnc_addRespawnPosition fully accepts physical objects!
-                        private _rID = [west, _spawnTarget, _finalString] call BIS_fnc_addRespawnPosition;
-                        _newIDs pushBack _rID;
                     } forEach _locations;
-                } else {
-                    // Fallback to the center of the base if no specific spawn tents/markers were placed
-                    private _helperVarName = format ["QM_SpawnHelper_Fallback_%1", _baseKey];
-                    private _helperObj = missionNamespace getVariable [_helperVarName, objNull];
-                    
-                    if (isNull _helperObj) then {
-                        private _pos = getMarkerPos _baseKey;
-                        _helperObj = createVehicle ["Land_HelipadEmpty_F", [0,0,0], [], 0, "CAN_COLLIDE"];
-                        
-                        private _startPos = [_pos select 0, _pos select 1, 150];
-                        private _endPos = [_pos select 0, _pos select 1, -10];
-                        private _intersects = lineIntersectsSurfaces [_startPos, _endPos, objNull, objNull, true, 1, "GEOM", "NONE"];
-                        
-                        if (count _intersects > 0) then {
-                            _helperObj setPosASL ((_intersects select 0) select 0);
-                        } else {
-                            _helperObj setPosATL [_pos select 0, _pos select 1, 0.1];
-                        };
-                        missionNamespace setVariable [_helperVarName, _helperObj, true];
-                    };
-
-                    private _rID = [west, _helperObj, _displayString] call BIS_fnc_addRespawnPosition;
-                    _newIDs pushBack _rID;
                 };
 
                 // Save to memory

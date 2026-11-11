@@ -22,16 +22,16 @@ logisticsVehicleRoles = [
     // =====================================================================
     // STRATEGIC/TACTICAL HAULERS (Bulk Hub Pipelines / Heavy Slingloaders / 16+ Troops / Front-line FOB Supply Lines / Final Mile Assets)
     // =====================================================================
-    ["B_Truck_01_flatbed_F", ["Tactical", "Strategic", "CLT"]],              // HEMTT Flatbed (Sand) - Heavy Slingload Certified
-    ["B_T_Truck_01_flatbed_F", ["Tactical", "Strategic", "CLT"]],            // HEMTT Flatbed (Jungle) - Heavy Slingload Certified
+    ["B_Truck_01_flatbed_F", ["Strategic", "Tactical", "CLT"]],              // HEMTT Flatbed (Sand) - Heavy Slingload Certified
+    ["B_T_Truck_01_flatbed_F", ["Strategic", "Tactical", "CLT"]],            // HEMTT Flatbed (Jungle) - Heavy Slingload Certified
     
-    ["B_Truck_01_transport_F", ["Tactical", "Strategic", "CLT"]],            // HEMTT Transport (Sand) - High Capacity (17 Troops)
-    ["B_T_Truck_01_transport_F", ["Tactical", "Strategic", "CLT"]],          // HEMTT Transport (Jungle) - High Capacity (17 Troops)
-    ["B_Truck_01_covered_F", ["Tactical", "Strategic", "CLT"]],              // HEMTT Transport (Covered - Sand) - High Capacity (17 Troops)
-    ["B_T_Truck_01_covered_F", ["Tactical", "Strategic", "CLT"]],            // HEMTT Transport (Covered - Jungle) - High Capacity (17 Troops)
+    ["B_Truck_01_transport_F", ["Strategic", "Tactical", "CLT"]],            // HEMTT Transport (Sand) - High Capacity (17 Troops)
+    ["B_T_Truck_01_transport_F", ["Strategic", "Tactical", "CLT"]],          // HEMTT Transport (Jungle) - High Capacity (17 Troops)
+    ["B_Truck_01_covered_F", ["Strategic", "Tactical", "CLT"]],              // HEMTT Transport (Covered - Sand) - High Capacity (17 Troops)
+    ["B_T_Truck_01_covered_F", ["Strategic", "Tactical", "CLT"]],            // HEMTT Transport (Covered - Jungle) - High Capacity (17 Troops)
     
-    ["B_Heli_Transport_03_F", ["Tactical", "Strategic", "CLT"]],             // Huron (Armed) - Heavy Slingload / 16 Troops
-    ["B_Heli_Transport_03_unarmed_F", ["Tactical", "Strategic", "CLT"]],     // Huron (Unarmed) - Heavy Slingload / 18 Troops
+    ["B_Heli_Transport_03_F", ["Strategic", "Tactical", "CLT"]],             // Huron (Armed) - Heavy Slingload / 16 Troops
+    ["B_Heli_Transport_03_unarmed_F", ["Strategic", "Tactical", "CLT"]],     // Huron (Unarmed) - Heavy Slingload / 18 Troops
     
     // =====================================================================
     // TACTICAL HAULERS (Front-line FOB Supply Lines / Final Mile Assets)

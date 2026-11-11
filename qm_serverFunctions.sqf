@@ -39,6 +39,13 @@ QM_fnc_processInventoryTransaction = {
     };
 };
 
+QM_fnc_normalizePoolName = {
+    params [["_poolName", "", [""]]];
+    if (toUpper _poolName in ["VEHICLE", "VEHICLES"]) exitWith { "Vehicle" };
+    if (toUpper _poolName in ["TROOP", "TROOPS"]) exitWith { "Troops" };
+    _poolName
+};
+
 QM_fnc_serverVehicleSale = {
     params [["_baseKey", "", [""]], ["_vehicle", objNull, [objNull]], ["_playerUnit", objNull, [objNull]]];
     if (_baseKey == "" || isNull _vehicle || isNull _playerUnit) exitWith {};
@@ -50,8 +57,9 @@ QM_fnc_serverVehicleSale = {
         private _costArray = (G_Procureable_Vehicles select _blueprintIdx) select 2;
         
         {
-            _x params ["_poolName", "_poolCost"];
-            if (_poolCost > 0 && _poolCost < 10000000) then {
+            _x params ["_rawPoolName", "_poolCost"];
+            private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
+            if (_poolCost > 0 && _poolCost < 1000000) then {
                 private _vehVar = format ["LogiScore_%1_%2", _baseKey, _poolName];
                 private _currentPool = missionNamespace getVariable [_vehVar, 0];
                 if (_currentPool != -1) then {
@@ -68,6 +76,7 @@ QM_fnc_serverVehicleSale = {
     };
 
     if (!isNil "QM_CAP_fnc_unregisterVehicleAsset") then { [_vehicle] call QM_CAP_fnc_unregisterVehicleAsset; };
+    { _vehicle deleteVehicleCrew _x; } forEach (crew _vehicle);
     deleteVehicle _vehicle;
 };
 
@@ -78,7 +87,8 @@ QM_fnc_serverCreateLocalUnit = {
     private _canAfford = true;
     private _missingPool = "";
     {
-        _x params ["_poolName", "_poolCost"];
+        _x params ["_rawPoolName", "_poolCost"];
+        private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
         if (_poolCost > 0) then {
             private _poolVar = format ["LogiScore_%1_%2", _baseKey, _poolName];
             private _currentPool = missionNamespace getVariable [_poolVar, 0];
@@ -93,8 +103,14 @@ QM_fnc_serverCreateLocalUnit = {
         [format ["RECRUITER: Mobilization halted. Base '%1' resources depleted.", _missingPool]] remoteExec ["systemChat", _playerUnit];
     };
 
+    private _locations = [_baseKey, "Spawn"] call QM_fnc_getLocationsByPrefix;
+    if (count _locations == 0) exitWith {
+        [format ["RECRUITER: Mobilization halted. No '%1_Spawn' 3D objects found at this base.", _baseKey]] remoteExec ["systemChat", _playerUnit];
+    };
+
     {
-        _x params ["_poolName", "_poolCost"];
+        _x params ["_rawPoolName", "_poolCost"];
+        private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
         if (_poolCost > 0) then {
             private _poolVar = format ["LogiScore_%1_%2", _baseKey, _poolName];
             private _currentPool = missionNamespace getVariable [_poolVar, 0];
@@ -102,28 +118,16 @@ QM_fnc_serverCreateLocalUnit = {
         };
     } forEach _costArray;
 
-    private _locations = [_baseKey, "Spawn"] call QM_fnc_getLocationsByPrefix;
-    private _spawnPosASL = [];
-
-    if (count _locations > 0) then {
-        private _sortedLocations = _locations apply { [(_x select 1) distance2D _playerUnit, _x] };
-        _sortedLocations sort true;
-        private _padObj = missionNamespace getVariable [((_sortedLocations select 0) select 1) select 4, objNull];
-        private _mName = ((_sortedLocations select 0) select 1) select 4;
-        _spawnPosASL = if (!isNull _padObj) then { getPosASL _padObj } else { AGLToASL getMarkerPos _mName };
-    } else {
-        _spawnPosASL = AGLToASL ((getPosATL _playerUnit) vectorAdd [sin (getDir _playerUnit - 180) * 5, cos (getDir _playerUnit - 180) * 5, 0.2]);
-    };
-
-    private _startPos = [(_spawnPosASL select 0), (_spawnPosASL select 1), (_spawnPosASL select 2) + 150];
-    private _endPos = [(_spawnPosASL select 0), (_spawnPosASL select 1), (_spawnPosASL select 2) - 50];
-    private _intersects = lineIntersectsSurfaces [_startPos, _endPos, objNull, objNull, true, 1, "GEOM", "NONE"];
-    if (count _intersects > 0) then {
-        _spawnPosASL = (_intersects select 0) select 0;
-    };
+    private _sortedLocations = _locations apply { [(_x select 0) distance2D _playerUnit, _x] };
+    _sortedLocations sort true;
+    private _bestLoc = (_sortedLocations select 0) select 1;
+    private _padObj = _bestLoc select 0;
+    private _spawnPosASL = getPosASL _padObj;
+    private _spawnDir = getDir _padObj;
 
     private _group = group _playerUnit;
     private _newUnit = _group createUnit [_classname, ASLToAGL _spawnPosASL, [], 0, "CAN_COLLIDE"];
+    _newUnit setDir _spawnDir;
     _newUnit setPosASL _spawnPosASL;
     
     [format ["BARRACKS: %1 authenticated. Drafted into your immediate squad.", _name]] remoteExec ["systemChat", _playerUnit];
@@ -136,7 +140,8 @@ QM_fnc_serverCreateLocalGroup = {
     private _canAfford = true;
     private _missingPool = "";
     {
-        _x params ["_poolName", "_poolCost"];
+        _x params ["_rawPoolName", "_poolCost"];
+        private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
         if (_poolCost > 0) then {
             private _poolVar = format ["LogiScore_%1_%2", _baseKey, _poolName];
             private _currentPool = missionNamespace getVariable [_poolVar, 0];
@@ -151,8 +156,14 @@ QM_fnc_serverCreateLocalGroup = {
         [format ["RECRUITER: Deployment halted. Insufficient base '%1' assets.", _missingPool]] remoteExec ["systemChat", _playerUnit];
     };
 
+    private _locations = [_baseKey, "Spawn"] call QM_fnc_getLocationsByPrefix;
+    if (count _locations == 0) exitWith {
+        [format ["RECRUITER: Deployment halted. No '%1_Spawn' 3D objects found at this base.", _baseKey]] remoteExec ["systemChat", _playerUnit];
+    };
+
     {
-        _x params ["_poolName", "_poolCost"];
+        _x params ["_rawPoolName", "_poolCost"];
+        private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
         if (_poolCost > 0) then {
             private _poolVar = format ["LogiScore_%1_%2", _baseKey, _poolName];
             private _currentPool = missionNamespace getVariable [_poolVar, 0];
@@ -160,30 +171,18 @@ QM_fnc_serverCreateLocalGroup = {
         };
     } forEach _costArray;
 
-    private _locations = [_baseKey, "Spawn"] call QM_fnc_getLocationsByPrefix;
-    private _spawnPosASL = [];
-
-    if (count _locations > 0) then {
-        private _sortedLocations = _locations apply { [(_x select 1) distance2D _playerUnit, _x] };
-        _sortedLocations sort true;
-        private _padObj = missionNamespace getVariable [((_sortedLocations select 0) select 1) select 4, objNull];
-        private _mName = ((_sortedLocations select 0) select 1) select 4;
-        _spawnPosASL = if (!isNull _padObj) then { getPosASL _padObj } else { AGLToASL getMarkerPos _mName };
-    } else {
-        _spawnPosASL = AGLToASL ((getPosATL _playerUnit) vectorAdd [sin (getDir _playerUnit - 180) * 6, cos (getDir _playerUnit - 180) * 6, 0.2]);
-    };
-
-    private _startPos = [(_spawnPosASL select 0), (_spawnPosASL select 1), (_spawnPosASL select 2) + 150];
-    private _endPos = [(_spawnPosASL select 0), (_spawnPosASL select 1), (_spawnPosASL select 2) - 50];
-    private _intersects = lineIntersectsSurfaces [_startPos, _endPos, objNull, objNull, true, 1, "GEOM", "NONE"];
-    if (count _intersects > 0) then {
-        _spawnPosASL = (_intersects select 0) select 0;
-    };
+    private _sortedLocations = _locations apply { [(_x select 0) distance2D _playerUnit, _x] };
+    _sortedLocations sort true;
+    private _bestLoc = (_sortedLocations select 0) select 1;
+    private _padObj = _bestLoc select 0;
+    private _spawnPosASL = getPosASL _padObj;
+    private _spawnDir = getDir _padObj;
 
     private _spawnedUnits = [];
     private _group = group _playerUnit;
     {
         private _newUnit = _group createUnit [_x, ASLToAGL _spawnPosASL, [], 0, "CAN_COLLIDE"];
+        _newUnit setDir _spawnDir;
         _newUnit setPosASL _spawnPosASL;
         _spawnedUnits pushBack _newUnit;
     } forEach _unitArray;
@@ -194,31 +193,95 @@ QM_fnc_serverCreateLocalGroup = {
 // -----------------------------------------------------------------------
 // --- Vehicle Cap System (QM_CAP) ---
 // -----------------------------------------------------------------------
-QM_CAP_ActiveRegistry = []; { QM_CAP_ActiveRegistry pushBack [_x select 0, []]; } forEach QM_CAP_ConfigMatrix;
+QM_CAP_ActiveRegistry = [];
+{
+    private _family = _x select 0;
+    if ((QM_CAP_ActiveRegistry findIf { (_x select 0) == _family }) == -1) then {
+        QM_CAP_ActiveRegistry pushBack [_family, []];
+    };
+} forEach QM_CAP_ConfigMatrix;
 
 QM_CAP_fnc_checkCurrentActiveCount = {
-    params ["_classname"]; private _p = ""; private _m = -1;
-    { if (_classname isKindOf (_x select 0)) exitWith { _p = _x select 0; _m = _x select 1; }; } forEach QM_CAP_ConfigMatrix;
-    if (_p == "") exitWith { [true, 0, -1] };
-    private _idx = QM_CAP_ActiveRegistry findIf {(_x select 0) == _p};
-    private _list = ((QM_CAP_ActiveRegistry select _idx) select 1) select {!isNull _x && alive _x};
-    QM_CAP_ActiveRegistry select _idx set [1, _list];
-    [((count _list) < _m), count _list, _m]
+    params ["_classname"];
+    private _canSpawn = true;
+    private _activeCount = 0;
+    private _maxAllowed = -1;
+    private _limitingFamily = "";
+
+    {
+        _x params ["_family", "_limit"];
+        if (_limit >= 0 && { _classname isKindOf _family }) then {
+            private _idx = QM_CAP_ActiveRegistry findIf { (_x select 0) == _family };
+            if (_idx != -1) then {
+                private _list = ((QM_CAP_ActiveRegistry select _idx) select 1) select { !isNull _x && alive _x };
+                (QM_CAP_ActiveRegistry select _idx) set [1, _list];
+
+                private _curCount = count _list;
+                _activeCount = _curCount;
+                _maxAllowed = _limit;
+                _limitingFamily = _family;
+
+                if (_curCount >= _limit) exitWith {
+                    _canSpawn = false;
+                };
+            };
+        };
+        if (!_canSpawn) exitWith {};
+    } forEach QM_CAP_ConfigMatrix;
+
+    [_canSpawn, _activeCount, _maxAllowed, _limitingFamily]
 };
 
 QM_CAP_fnc_registerNewVehicle = {
-    params ["_obj", "_class"]; private _p = ""; { if (_class isKindOf (_x select 0)) exitWith { _p = _x select 0; }; } forEach QM_CAP_ConfigMatrix;
-    if (_p == "") exitWith {}; private _idx = QM_CAP_ActiveRegistry findIf {(_x select 0) == _p};
-    private _list = (QM_CAP_ActiveRegistry select _idx) select 1; _list pushBack _obj; QM_CAP_ActiveRegistry select _idx set [1, _list];
-    _obj setVariable ["QM_CAP_MyParentFamily", _p];
-    _obj addEventHandler ["Killed", { [_this select 0] call QM_CAP_fnc_unregisterVehicleAsset; }];
-    _obj addEventHandler ["Deleted", { [_this select 0] call QM_CAP_fnc_unregisterVehicleAsset; }];
+    params ["_obj", "_class"];
+    if (isNull _obj || _class == "") exitWith {};
+
+    private _matchedFamilies = [];
+    {
+        private _family = _x select 0;
+        if (_class isKindOf _family) then {
+            private _list = (_x select 1) select { !isNull _x && alive _x };
+            _list pushBackUnique _obj;
+            _x set [1, _list];
+            _matchedFamilies pushBackUnique _family;
+        };
+    } forEach QM_CAP_ActiveRegistry;
+
+    if (count _matchedFamilies == 0) exitWith {};
+
+    _obj setVariable ["QM_CAP_MyParentFamilies", _matchedFamilies];
+    _obj setVariable ["QM_CAP_MyParentFamily", _matchedFamilies select (count _matchedFamilies - 1)];
+
+    if !(_obj getVariable ["QM_CAP_HasHandlers", false]) then {
+        _obj setVariable ["QM_CAP_HasHandlers", true];
+        _obj addEventHandler ["Killed", { [_this select 0] call QM_CAP_fnc_unregisterVehicleAsset; }];
+        _obj addEventHandler ["Deleted", { [_this select 0] call QM_CAP_fnc_unregisterVehicleAsset; }];
+    };
 };
 
 QM_CAP_fnc_unregisterVehicleAsset = {
-    params ["_obj"]; if (isNull _obj) exitWith {}; private _p = _obj getVariable ["QM_CAP_MyParentFamily", ""]; if (_p == "") exitWith {};
-    private _idx = QM_CAP_ActiveRegistry findIf {(_x select 0) == _p};
-    if (_idx != -1) then { QM_CAP_ActiveRegistry select _idx set [1, ((QM_CAP_ActiveRegistry select _idx) select 1) - [_obj]]; };
+    params ["_obj"];
+    if (isNull _obj) exitWith {};
+
+    private _families = _obj getVariable ["QM_CAP_MyParentFamilies", []];
+    private _singleFamily = _obj getVariable ["QM_CAP_MyParentFamily", ""];
+    if (count _families == 0 && _singleFamily != "") then {
+        _families = [_singleFamily];
+    };
+
+    if (count _families > 0) then {
+        {
+            private _family = _x;
+            private _idx = QM_CAP_ActiveRegistry findIf { (_x select 0) == _family };
+            if (_idx != -1) then {
+                (QM_CAP_ActiveRegistry select _idx) set [1, ((QM_CAP_ActiveRegistry select _idx) select 1) - [_obj, objNull]];
+            };
+        } forEach _families;
+    } else {
+        {
+            _x set [1, (_x select 1) - [_obj, objNull]];
+        } forEach QM_CAP_ActiveRegistry;
+    };
 };
 
 // -----------------------------------------------------------------------
@@ -252,8 +315,9 @@ QM_fnc_processGarageSpawn = {
     private _canAfford = true;
     private _missingPool = "";
     {
-        _x params ["_poolName", "_poolCost"];
-        if (_poolCost > 0 && _poolCost < 10000000) then {
+        _x params ["_rawPoolName", "_poolCost"];
+        private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
+        if (_poolCost > 0 && _poolCost < 1000000) then {
             private _poolVar = format ["LogiScore_%1_%2", _baseKey, _poolName];
             private _currentPool = missionNamespace getVariable [_poolVar, 0];
             if (_currentPool != -1 && _currentPool < _poolCost) exitWith {
@@ -285,19 +349,26 @@ QM_fnc_processGarageSpawn = {
     private _allowedSuffixes = [];
     {
         _allowedSuffixes pushBack format ["Garage_%1_%2", _typeSuffix, _x];
+        if (_typeSuffix == "HELICOPTER") then { _allowedSuffixes pushBack format ["Garage_HELI_%1", _x]; };
         if (_typeSuffix in ["PLANE", "HELICOPTER"]) then { _allowedSuffixes pushBack format ["Garage_AIR_%1", _x]; };
         _allowedSuffixes pushBack format ["Garage_%1", _x]; 
     } forEach _validSizes;
     
     _allowedSuffixes pushBack format ["Garage_%1", _typeSuffix]; 
+    if (_typeSuffix == "HELICOPTER") then { _allowedSuffixes pushBack "Garage_HELI"; };
     if (_typeSuffix in ["PLANE", "HELICOPTER"]) then { _allowedSuffixes pushBack "Garage_AIR"; };
     _allowedSuffixes pushBack "Garage"; 
 
     private _locations = [];
     private _allBaseGarages = [];
     private _searchStr = toUpper format ["%1_Garage", _baseKey];
-    
-    { if ((toUpper _x) find _searchStr == 0) then { _allBaseGarages pushBackUnique _x; }; } forEach allMapMarkers;
+
+    {
+        if ((toUpper _x) find _searchStr == 0) then {
+            private _val = missionNamespace getVariable [_x, objNull];
+            if (_val isEqualType objNull && { !isNull _val }) then { _allBaseGarages pushBackUnique _x; };
+        };
+    } forEach (allVariables missionNamespace);
 
     {
         private _mName = _x;
@@ -315,26 +386,28 @@ QM_fnc_processGarageSpawn = {
         } forEach _allowedSuffixes;
 
         if (_isValid) then {
-            private _padObj = missionNamespace getVariable [_mName, objNull];
-            private _pos = if (!isNull _padObj) then { getPosATL _padObj } else { getMarkerPos _mName };
-            private _dir = if (!isNull _padObj) then { getDir _padObj } else { markerDir _mName };
-            private _type = if (!isNull _padObj) then { "OBJECT" } else { "MARKER" };
-            
-            _locations pushBack [_padObj, _pos, _dir, _type, _mName];
+            private _rawVar = missionNamespace getVariable [_mName, objNull];
+            private _padObj = if (_rawVar isEqualType objNull) then { _rawVar } else { objNull };
+            if (!isNull _padObj) then {
+                private _posASL = getPosASL _padObj;
+                private _dir = getDir _padObj;
+                _locations pushBack [_padObj, _posASL, _dir, "OBJECT", _mName];
+            };
         };
     } forEach _allBaseGarages;
 
     if (count _locations == 0) exitWith {
-        [format ["MECHANIC: Deployment failed. No suitable %1 or Universal assembly pads detected.", _typeSuffix]] remoteExec ["systemChat", _clientPlayer];
+        [format ["MECHANIC: Deployment failed. No suitable %1 or Universal 3D assembly pads detected.", _typeSuffix]] remoteExec ["systemChat", _clientPlayer];
     };
 
-    private _sortedLocations = _locations apply { [(_x select 1) distance2D _clientPlayer, _x] };
+    private _sortedLocations = _locations apply { [(_x select 0) distance2D _clientPlayer, _x] };
     _sortedLocations sort true;
     _locations = _sortedLocations apply { _x select 1 }; 
 
     {
-        _x params ["_poolName", "_poolCost"];
-        if (_poolCost > 0 && _poolCost < 10000000) then {
+        _x params ["_rawPoolName", "_poolCost"];
+        private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
+        if (_poolCost > 0 && _poolCost < 1000000) then {
             private _poolVar = format ["LogiScore_%1_%2", _baseKey, _poolName];
             private _currentPool = missionNamespace getVariable [_poolVar, 0];
             if (_currentPool != -1) then { missionNamespace setVariable [_poolVar, (_currentPool - _poolCost) max 0, true]; };
@@ -354,16 +427,19 @@ QM_fnc_processGarageSpawn = {
             private _selectedLocation = [];
             
             {
-                private _name = _x select 4;
-                private _mPos = _x select 1;
+                private _padObj = _x select 0;
+                private _padPosAGL = ASLToAGL (_x select 1);
                 
-                private _checkPos = [_mPos select 0, _mPos select 1, 10]; 
-                private _blockingEntities = nearestObjects [_checkPos, ["LandVehicle", "Air", "Ship"], 30];
+                // If this pad is itself a Boat Rack with cargo already loaded, treat as occupied
+                if (count (getVehicleCargo _padObj) > 0) then { continue };
+
+                private _blockingEntities = nearestObjects [_padPosAGL, ["LandVehicle", "Air", "Ship"], 30];
                 
                 private _aliveBlockers = _blockingEntities select { 
                     alive _x && 
                     {_x != _player} && 
-                    {(_x distance _checkPos) < (((sizeOf typeOf _x) * 0.5) + _spawnVehRadius + 1)}
+                    {_x != _padObj} &&
+                    {(_x distance _padObj) < (((sizeOf typeOf _x) * 0.5) + _spawnVehRadius + 1)}
                 };
                 
                 if (count _aliveBlockers == 0) exitWith { _selectedLocation = _x; };
@@ -371,36 +447,35 @@ QM_fnc_processGarageSpawn = {
 
             if (count _selectedLocation > 0) then {
                 _spawned = true;
-                private _baseSpawnPos = _selectedLocation select 1;
+                private _padObj = _selectedLocation select 0;
+                private _baseSpawnPosASL = _selectedLocation select 1;
                 private _dir = _selectedLocation select 2;
-                private _padObj = missionNamespace getVariable [(_selectedLocation select 4), objNull];
                 private _veh = objNull;
 
                 if (_typeSuffix == "BOAT") then {
-                    private _racks = nearestObjects [_baseSpawnPos, ["Land_Destroyer_01_Boat_Rack_01_F", "Land_Boat_Rack_01_F", "Land_BoatRack_01_F"], 20];
-                    private _validRack = objNull;
-                    { if (count (getVehicleCargo _x) == 0) exitWith { _validRack = _x; }; } forEach _racks;
+                    _veh = createVehicle [_class, [0,0,200], [], 0, "NONE"];
+                    private _loadedIntoRack = false;
 
-                    if (!isNull _validRack) then {
-                        _veh = createVehicle [_class, [0,0,200], [], 0, "NONE"];
-                        _validRack setVehicleCargo _veh;
-                        systemChat "MECHANIC: Boat loaded into active deployment rack.";
-                    } else {
-                        _veh = createVehicle [_class, [0,0,500], [], 0, "NONE"]; 
-                        _veh setDir _dir;
-                        
-                        if (!isNull _padObj) then { 
-                            _veh setPosASL (getPosASL _padObj); 
-                        } else { 
-                            private _startPos = [_baseSpawnPos select 0, _baseSpawnPos select 1, 150];
-                            private _endPos = [_baseSpawnPos select 0, _baseSpawnPos select 1, -10];
-                            private _intersects = lineIntersectsSurfaces [_startPos, _endPos, objNull, objNull, true, 1, "GEOM", "NONE"];
-                            if (count _intersects > 0) then {
-                                _veh setPosASL ((_intersects select 0) select 0);
-                            } else {
-                                _veh setPosATL [_baseSpawnPos select 0, _baseSpawnPos select 1, 0.5]; 
-                            };
+                    // 1. Check if the pad object itself can carry the boat (e.g. Boat Rack named <Base>_Garage_Boat_...)
+                    if (((_padObj canVehicleCargo _veh) select 0) && { count (getVehicleCargo _padObj) == 0 }) then {
+                        _loadedIntoRack = _padObj setVehicleCargo _veh;
+                    };
+
+                    // 2. Otherwise check for an adjacent Boat Rack within 20m of the pad object
+                    if (!_loadedIntoRack) then {
+                        private _racks = nearestObjects [ASLToAGL _baseSpawnPosASL, ["Land_Destroyer_01_Boat_Rack_01_F", "Land_Boat_Rack_01_F", "Land_BoatRack_01_F"], 20];
+                        private _validRack = objNull;
+                        { if (count (getVehicleCargo _x) == 0 && { (_x canVehicleCargo _veh) select 0 }) exitWith { _validRack = _x; }; } forEach _racks;
+                        if (!isNull _validRack) then {
+                            _loadedIntoRack = _validRack setVehicleCargo _veh;
                         };
+                    };
+
+                    if (_loadedIntoRack) then {
+                        ["MECHANIC: Boat loaded into active deployment rack."] remoteExec ["systemChat", _player];
+                    } else {
+                        _veh setDir _dir;
+                        _veh setPosASL _baseSpawnPosASL;
                     };
                 } else {
                     _veh = createVehicle [_class, [0,0,500], [], 0, "NONE"]; 
@@ -411,24 +486,13 @@ QM_fnc_processGarageSpawn = {
                         { _veh animateSource [_x, 1, true]; } forEach _foldAnims;
                     };
 
-                    if (!isNull _padObj) then { 
-                        _veh setPosASL (getPosASL _padObj); 
-                    } else { 
-                        private _startPos = [_baseSpawnPos select 0, _baseSpawnPos select 1, 150];
-                        private _endPos = [_baseSpawnPos select 0, _baseSpawnPos select 1, -10];
-                        private _intersects = lineIntersectsSurfaces [_startPos, _endPos, objNull, objNull, true, 1, "GEOM", "NONE"];
-                        if (count _intersects > 0) then {
-                            _veh setPosASL ((_intersects select 0) select 0);
-                        } else {
-                            _veh setPosATL [_baseSpawnPos select 0, _baseSpawnPos select 1, 0.2]; 
-                        };
-                    };
+                    _veh setPosASL _baseSpawnPosASL;
                 };
                 
                 private _isUAV = getNumber (configFile >> "CfgVehicles" >> _class >> "isUav") == 1;
                 if (_isUAV) then {
                     createVehicleCrew _veh;
-                    systemChat "MECHANIC: Autonomous drone control link established.";
+                    ["MECHANIC: Autonomous drone control link established."] remoteExec ["systemChat", _player];
                 };
 
                 _veh setVariable ["QM_Spawn_CostArray", _costArray];
@@ -444,8 +508,9 @@ QM_fnc_processGarageSpawn = {
                         private _bKey = _unit getVariable ["QM_Spawn_BaseKey", ""];
                         
                         {
-                            _x params ["_poolName", "_poolCost"];
-                            if (_poolCost > 0 && _poolCost < 10000000) then {
+                            _x params ["_rawPoolName", "_poolCost"];
+                            private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
+                            if (_poolCost > 0 && _poolCost < 1000000) then {
                                 private _v = format ["LogiScore_%1_%2", _bKey, _poolName];
                                 private _pool = missionNamespace getVariable [_v, 0];
                                 if (_pool != -1) then { missionNamespace setVariable [_v, _pool + _poolCost, true]; };
@@ -468,8 +533,9 @@ QM_fnc_processGarageSpawn = {
         if (!_spawned) then {
             ["MECHANIC: Garage pads were blocked for too long. Order cancelled and points refunded."] remoteExec ["systemChat", _player];
             {
-                _x params ["_poolName", "_poolCost"];
-                if (_poolCost > 0 && _poolCost < 10000000) then {
+                _x params ["_rawPoolName", "_poolCost"];
+                private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
+                if (_poolCost > 0 && _poolCost < 1000000) then {
                     private _v = format ["LogiScore_%1_%2", _bKey, _poolName];
                     private _pool = missionNamespace getVariable [_v, 0];
                     if (_pool != -1) then { missionNamespace setVariable [_v, _pool + _poolCost, true]; };
@@ -534,6 +600,11 @@ QM_fnc_serverR4CCreateVehicleCrew = {
         missionNamespace setVariable [_troopVar, _newTroopValue, true];
     };
 
-    (group _playerUnit) createVehicleCrew _vehicle;
+    private _existingCrew = crew _vehicle;
+    createVehicleCrew _vehicle;
+    private _newCrew = (crew _vehicle) - _existingCrew;
+    if (!isNull _playerUnit && count _newCrew > 0) then {
+        _newCrew joinSilent (group _playerUnit);
+    };
     [format ["R4-C CREW: %1 personnel deployed.", _missingSeatCount]] remoteExec ["systemChat", _playerUnit];
 };

@@ -19,11 +19,14 @@ QM_fnc_getNearbyAmmoSource = {
     private _triggers = allMissionObjects "EmptyDetector";
     {
         private _tName = vehicleVarName _x;
-        if (["_service", _tName] call BIS_fnc_inString) then {
+        private _tLower = toLowerANSI _tName;
+        private _idx = _tLower find "_service";
+        if (_idx != -1) then {
             if (_veh inArea _x || _veh distance2D _x < 40) then {
-                private _idx = _tName find "_service";
                 private _potBase = _tName select [0, _idx];
-                if (["SB", _potBase] call BIS_fnc_inString) then { _foundBase = _potBase; };
+                if (_potBase in logisticsBases || { ["SB", _potBase] call BIS_fnc_inString } || { ["FOB", _potBase] call BIS_fnc_inString } || { ["MSR", _potBase] call BIS_fnc_inString }) then {
+                    _foundBase = _potBase;
+                };
             };
         };
         if (_foundBase != "") exitWith {};
@@ -34,10 +37,13 @@ QM_fnc_getNearbyAmmoSource = {
     private _nearEnts = nearestObjects [_veh, ["AllVehicles","ReammoBox_F","ThingX","Building"], 40];
     {
         private _varName = vehicleVarName _x;
-        if (["_ammo", _varName] call BIS_fnc_inString) then {
-            private _idx = _varName find "_ammo";
+        private _vLower = toLowerANSI _varName;
+        private _idx = _vLower find "_ammo";
+        if (_idx != -1) then {
             private _potBase = _varName select [0, _idx];
-            if (["SB", _potBase] call BIS_fnc_inString) then { _foundBase = _potBase; };
+            if (_potBase in logisticsBases || { ["SB", _potBase] call BIS_fnc_inString } || { ["FOB", _potBase] call BIS_fnc_inString } || { ["MSR", _potBase] call BIS_fnc_inString }) then {
+                _foundBase = _potBase;
+            };
         };
         if (_foundBase != "") exitWith {};
     } forEach _nearEnts;
@@ -51,7 +57,8 @@ QM_fnc_canOpenPylonMenu = {
     if (isNull _veh || {!(_veh isKindOf "Air")} || {speed _veh > 1} || {(_unit distance _veh > 12)}) exitWith {false};
     private _base = [_veh] call QM_fnc_getNearbyAmmoSource;
     if (_base == "") exitWith {false};
-    (missionNamespace getVariable [format["LogiScore_%1_Ammo", _base], 0] > 0)
+    private _ammoPool = missionNamespace getVariable [format["LogiScore_%1_Ammo", _base], 0];
+    (_ammoPool > 0 || _ammoPool == -1)
 };
 
 QM_fnc_addPylonAction = {
