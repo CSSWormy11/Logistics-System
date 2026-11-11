@@ -63,9 +63,9 @@ fn_G_getTerrain = {
 };
 
 // QM_fnc_getLocationsByPrefix
-// Purpose: Scans for mission-maker placed objects (by variable name) OR map markers.
-//          Checks for un-numbered (e.g. SB_Garage) and numbered up to 20 (e.g. SB_Garage_1).
-// Returns: Array of arrays -> [[Entity/Name, Position, Direction, "OBJECT"|"MARKER", OriginalName], ...]
+// Purpose: Scans strictly for mission-maker placed 3D objects (by variable name)
+//          matching <BaseKey>_<typeSuffix> (un-numbered or numbered 1..100).
+// Returns: Array of arrays -> [[Object, PositionASL, Direction, "OBJECT", OriginalName], ...]
 QM_fnc_getLocationsByPrefix = {
     params ["_baseKey", "_typeSuffix"];
     private _found = [];
@@ -77,18 +77,14 @@ QM_fnc_getLocationsByPrefix = {
         private _safeObj = if (_obj isEqualType objNull) then { _obj } else { objNull };
         
         if (!isNull _safeObj) then {
-            _found pushBack [_safeObj, getPosATL _safeObj, getDir _safeObj, "OBJECT", _name];
-        } else {
-            if (getMarkerColor _name != "") then {
-                _found pushBack [_name, getMarkerPos _name, markerDir _name, "MARKER", _name];
-            };
+            _found pushBack [_safeObj, getPosASL _safeObj, getDir _safeObj, "OBJECT", _name];
         };
     };
 
-    // Check base suffix without numbers (e.g. SB_Garage)
+    // Check base suffix without numbers (e.g. SB_Arsenal)
     [format ["%1_%2", _baseKey, _typeSuffix]] call _checkAndAdd;
 
-    // Check numbered suffixes 1 through 100 (e.g. SB_Garage_1, SB_Garage_2)
+    // Check numbered suffixes 1 through 100 (e.g. SB_Arsenal_1, SB_Spawn_2)
     for "_i" from 1 to 100 do {
         [format ["%1_%2_%3", _baseKey, _typeSuffix, _i]] call _checkAndAdd;
     };

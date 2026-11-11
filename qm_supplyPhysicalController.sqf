@@ -30,12 +30,14 @@ private _infrastructureBlueprints = createHashMap;
         
         {
             private _objName = vehicleVarName _x;
-            if (_objName != "" && { _objName select [0, count _base] == _base }) then {
+            private _objLower = toLowerANSI _objName;
+            private _baseLower = toLowerANSI _base;
+            if (_objName != "" && { _objLower find (_baseLower + "_") == 0 }) then {
                 
                 private _supplyLane = "";
-                if ("_fuel" in _objName) then { _supplyLane = "Fuel"; };
-                if ("_ammo" in _objName) then { _supplyLane = "Ammo"; };
-                if ("_repair" in _objName) then { _supplyLane = "Repair"; };
+                if ("_fuel" in _objLower) then { _supplyLane = "Fuel"; };
+                if ("_ammo" in _objLower) then { _supplyLane = "Ammo"; };
+                if ("_repair" in _objLower) then { _supplyLane = "Repair"; };
                 
                 if (_supplyLane != "") then {
                     _infrastructureBlueprints set [_objName, [_x, _supplyLane, _base]];
@@ -46,8 +48,8 @@ private _infrastructureBlueprints = createHashMap;
                     private _poolVar = format ["LogiScore_%1_%2", _base, _supplyLane];
                     private _currentPoolVal = missionNamespace getVariable [_poolVar, 0];
                     
-                    // Force the object to be capable of providing native service if base has points
-                    private _startState = if (_currentPoolVal > 0) then { 1.0 } else { 0.0 };
+                    // Force the object to be capable of providing native service if base has points (or infinite -1)
+                    private _startState = if (_currentPoolVal > 0 || _currentPoolVal == -1) then { 1.0 } else { 0.0 };
                     switch (_supplyLane) do {
                         case "Fuel": { _x setFuelCargo _startState; };
                         case "Ammo": { _x setAmmoCargo _startState; };
@@ -80,14 +82,14 @@ while {true} do {
             private _poolVar = format ["LogiScore_%1_%2", _baseKey, _lane];
             private _currentMasterPool = missionNamespace getVariable [_poolVar, 0];
             
-            // Turn container off/on based on base funds
-            if (_currentMasterPool <= 0) then {
+            // Turn container off/on based on base funds (-1 = infinite)
+            if (_currentMasterPool <= 0 && _currentMasterPool != -1) then {
                 switch (_lane) do { case "Fuel": { _obj setFuelCargo 0; }; case "Ammo": { _obj setAmmoCargo 0; }; case "Repair": { _obj setRepairCargo 0; }; };
             } else {
                 switch (_lane) do { case "Fuel": { _obj setFuelCargo 1; }; case "Ammo": { _obj setAmmoCargo 1; }; case "Repair": { _obj setRepairCargo 1; }; };
                 
                 // Track vehicles within 20m of the active container
-                private _nearVehs = _obj nearEntities [["LandVehicle", "Air"], 20];
+                private _nearVehs = _obj nearEntities [["LandVehicle", "Air", "Ship"], 20];
                 {
                     private _v = _x;
                     // Only track vehicles that are stationary (getting serviced)
@@ -105,8 +107,10 @@ while {true} do {
                             if (_cDam < _lDam) then { // Vehicle health went UP natively
                                 private _cost = ceil ((_lDam - _cDam) * 2000); // 2000 pts per 100% repair
                                 if (_cost > 0) then {
-                                    _currentMasterPool = (_currentMasterPool - _cost) max 0;
-                                    missionNamespace setVariable [_poolVar, _currentMasterPool, true];
+                                    if (_currentMasterPool != -1) then {
+                                        _currentMasterPool = (_currentMasterPool - _cost) max 0;
+                                        missionNamespace setVariable [_poolVar, _currentMasterPool, true];
+                                    };
                                     diag_log format ["QM HYBRID SYNC: Base %1 billed %2 pts for %3 Repair.", _baseKey, _cost, typeOf _v];
                                 };
                             };
@@ -120,8 +124,10 @@ while {true} do {
                             if (_cFuel > _lFuel) then { // Vehicle fuel went UP natively
                                 private _cost = ceil ((_cFuel - _lFuel) * 100); // 100 pts per 100% fuel
                                 if (_cost > 0) then {
-                                    _currentMasterPool = (_currentMasterPool - _cost) max 0;
-                                    missionNamespace setVariable [_poolVar, _currentMasterPool, true];
+                                    if (_currentMasterPool != -1) then {
+                                        _currentMasterPool = (_currentMasterPool - _cost) max 0;
+                                        missionNamespace setVariable [_poolVar, _currentMasterPool, true];
+                                    };
                                     diag_log format ["QM HYBRID SYNC: Base %1 billed %2 pts for %3 Refuel.", _baseKey, _cost, typeOf _v];
                                 };
                             };
@@ -135,8 +141,10 @@ while {true} do {
                             
                             if (_cAmmo > _lAmmo) then { // Vehicle received new bullets natively
                                 private _cost = 5; // Flat fee per magazine insertion tick
-                                _currentMasterPool = (_currentMasterPool - _cost) max 0;
-                                missionNamespace setVariable [_poolVar, _currentMasterPool, true];
+                                if (_currentMasterPool != -1) then {
+                                    _currentMasterPool = (_currentMasterPool - _cost) max 0;
+                                    missionNamespace setVariable [_poolVar, _currentMasterPool, true];
+                                };
                                 diag_log format ["QM HYBRID SYNC: Base %1 billed %2 pts for %3 Rearm.", _baseKey, _cost, typeOf _v];
                             };
                             _vState set ["ammo", _cAmmo];

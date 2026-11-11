@@ -268,19 +268,27 @@ _btnApply ctrlAddEventHandler ["ButtonClick", {
 
     private _netCost = _newWeight - _oldWeight;
 
-    if (_netCost > 0 && _currentPool < _netCost) exitWith { 
+    if (_netCost > 0 && _currentPool != -1 && _currentPool < _netCost) exitWith { 
         systemChat format ["R4-C: Insufficient Ammo at %1. Net requirement is %2 kg, but ledger only holds %3.", _baseKey, _netCost, _currentPool]; 
     };
 
     if (_netCost != 0) then {
-        missionNamespace setVariable [_poolVar, (_currentPool - _netCost) max 0, true];
+        if (_currentPool != -1) then {
+            missionNamespace setVariable [_poolVar, (_currentPool - _netCost) max 0, true];
+        };
         if (_netCost > 0) then { systemChat format ["R4-C: Pylon %1 updated. Billed %2 kg of Ammo.", _pylonIndex, _netCost]; } 
         else { systemChat format ["R4-C: Pylon %1 updated. Refunded %2 kg of Ammo.", _pylonIndex, abs _netCost]; };
     } else {
         systemChat format ["R4-C: Pylon %1 swapped successfully. Ordnance weights are equal.", _pylonIndex];
     };
 
-    _veh setPylonLoadout [_pylonIndex, _selectedMagClass, true];
+    private _pylonInfo = getAllPylonsInfo _veh;
+    private _turretPath = [];
+    {
+        if ((_x select 0) == _pylonIndex) exitWith { _turretPath = _x select 2; };
+    } forEach _pylonInfo;
+
+    [_veh, [_pylonIndex, _selectedMagClass, true, _turretPath]] remoteExec ["setPylonLoadout", _veh];
     playSound "3DEN_notificationDefault";
 
     (_display displayCtrl 8102) ctrlSetText (if (_selectedMagClass == "") then { "< EMPTY PYLON >" } else { getText (configFile >> "CfgMagazines" >> _selectedMagClass >> "displayName") });

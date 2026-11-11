@@ -48,6 +48,7 @@ QM_fnc_clientRegisterFlagActions = {
             params ["_target", "_caller", "_actionId", "_arguments"];
             _arguments params ["_bKey"];
             
+            _caller setVariable ["QM_Current_Terminal_Box", _target];
             _caller setVariable ["QM_Current_Terminal_Base", _bKey];
             if (fileExists "fn_usedCarSalesman.sqf") then { [] execVM "fn_usedCarSalesman.sqf"; };
         },

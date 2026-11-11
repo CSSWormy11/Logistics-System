@@ -43,8 +43,6 @@ private _prefixUpper = toUpper format ["%1_Garage", _baseKey];
 private _prefixLen = count _prefixUpper;
 
 private _allGarages = [];
-{ if ((toUpper _x) find _prefixUpper == 0) then { _allGarages pushBackUnique _x; }; } forEach allMapMarkers;
-
 {
     if ((toUpper _x) find _prefixUpper == 0) then {
         private _val = missionNamespace getVariable [_x, objNull];
@@ -146,19 +144,28 @@ private _allGarages = [];
             case "OPEN": { _reqSz = 6; };
         };
 
-        // --- Core Template Filters ---
-        private _validSystem = ("ALL" in _systemsArray || "Quartermaster" in _systemsArray);
+        // --- Core Template Filters (Case-Insensitive) ---
+        private _systemsUpper = _systemsArray apply { toUpper _x };
+        private _validSystem = ("ALL" in _systemsUpper || "QUARTERMASTER" in _systemsUpper);
         private _validFaction = (toUpper _faction == "ALL" || toUpper _faction == _playerFaction);
         private _terrainUpper = _terrainArray apply { toUpper _x };
         private _validTerrain = ("ALL" in _terrainUpper || _currentTerrain in _terrainUpper);
         
-        // Base Restriction explicitly handled by Booleans
+        // Base Restriction ("ALL"/"BOTH" = SB or FOB, "SB" = SB only, "FOB" = FOB only, or Array of allowed tiers/base names)
         private _validBaseRestriction = false;
-        private _restUpper = toUpper _restrictionType;
-        
-        if (_restUpper == "ALL") then { _validBaseRestriction = true; };
-        if (_restUpper == "SB" && _isSB) then { _validBaseRestriction = true; };
-        if (_restUpper == "FOB" && _isFOB) then { _validBaseRestriction = true; };
+        if (_restrictionType isEqualType []) then {
+            private _restList = _restrictionType apply { toUpper _x };
+            if ("ALL" in _restList || "BOTH" in _restList) then { _validBaseRestriction = (_isSB || _isFOB); };
+            if ("SB" in _restList && _isSB) then { _validBaseRestriction = true; };
+            if ("FOB" in _restList && _isFOB) then { _validBaseRestriction = true; };
+            if (_bkUpper in _restList) then { _validBaseRestriction = true; };
+        } else {
+            private _restUpper = toUpper _restrictionType;
+            if (_restUpper in ["ALL", "BOTH"]) then { _validBaseRestriction = (_isSB || _isFOB); };
+            if (_restUpper == "SB" && _isSB) then { _validBaseRestriction = true; };
+            if (_restUpper == "FOB" && _isFOB) then { _validBaseRestriction = true; };
+            if (_restUpper == _bkUpper) then { _validBaseRestriction = true; };
+        };
         
         // --- Infrastructure Fit Check ---
         private _canFit = false;
@@ -202,7 +209,7 @@ private _allGarages = [];
                 private _costStringArray = [];
                 {
                     _x params ["_poolName", "_poolVal"];
-                    if (_poolVal > 0 && _poolVal < 10000000) then { 
+                    if (_poolVal > 0 && _poolVal < 1000000) then { 
                         private _shortName = switch (_poolName) do {
                             case "Vehicle": { "Veh" }; case "Cargo": { "Crg" }; case "Ammo": { "Ammo" };
                             case "Fuel": { "Fuel" }; case "Medical": { "Med" }; case "Repair": { "Rep" };

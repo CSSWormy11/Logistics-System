@@ -28,12 +28,13 @@ lbClear _listBox2;
 // ------------------------------------------------------------------------
 // V8 SYSTEM REQUIREMENT: Fetch metadata variables for filtering
 // ------------------------------------------------------------------------
-private _currentTerrain = call fn_G_getTerrain;
-private _playerFaction = str (side group player);
+private _currentTerrain = toUpper (call fn_G_getTerrain);
+private _playerFaction = toUpper (str (side group player));
 
 // Base Tier evaluation for restriction checks
-private _isSB = (["SB", _baseKey] call BIS_fnc_inString);
-private _isFOB = (["FOB", _baseKey] call BIS_fnc_inString);
+private _bkUpper = toUpper _baseKey;
+private _isSB = (_bkUpper find "SB" >= 0);
+private _isFOB = (_bkUpper find "FOB" >= 0);
 
 // ------------------------------------------------------------------------
 // V8 MASTER UNIFIED ARRAY PARSING
@@ -59,12 +60,29 @@ private _isFOB = (["FOB", _baseKey] call BIS_fnc_inString);
     //      the current map's biome, and the Quartermaster UI system.
     // Why: Prevents WorldAI assets or snow-camo troops from spawning incorrectly.
     // ------------------------------------------------------------------------
-    private _validFaction = (_faction == "ALL" || _faction == _playerFaction);
-    private _validTerrain = ("ALL" in _terrainArray || _currentTerrain in _terrainArray);
-    private _validSystem  = ("ALL" in _systemsArray || "Quartermaster" in _systemsArray);
+    private _factionUpper = toUpper _faction;
+    private _terrainUpper = _terrainArray apply { toUpper _x };
+    private _systemsUpper = _systemsArray apply { toUpper _x };
+
+    private _validFaction = (_factionUpper == "ALL" || _factionUpper == _playerFaction);
+    private _validTerrain = ("ALL" in _terrainUpper || _currentTerrain in _terrainUpper);
+    private _validSystem  = ("ALL" in _systemsUpper || "QUARTERMASTER" in _systemsUpper);
     
-    // Evaluate if base has appropriate tier (SB allows FOB/SB restrictions, FOB allows FOB, ALL allows ALL)
-    private _validBaseTier = (_restrictionType == "ALL" || (_restrictionType == "SB" && _isSB) || (_restrictionType == "FOB" && (_isFOB || _isSB)));
+    // Evaluate if base has appropriate tier ("ALL"/"BOTH" = SB or FOB, "SB" = SB only, "FOB" = FOB only, or Array of allowed tiers/base names)
+    private _validBaseTier = false;
+    if (_restrictionType isEqualType []) then {
+        private _restList = _restrictionType apply { toUpper _x };
+        if ("ALL" in _restList || "BOTH" in _restList) then { _validBaseTier = (_isSB || _isFOB); };
+        if ("SB" in _restList && _isSB) then { _validBaseTier = true; };
+        if ("FOB" in _restList && _isFOB) then { _validBaseTier = true; };
+        if (_bkUpper in _restList) then { _validBaseTier = true; };
+    } else {
+        private _restUpper = toUpper _restrictionType;
+        if (_restUpper in ["ALL", "BOTH"]) then { _validBaseTier = (_isSB || _isFOB); };
+        if (_restUpper == "SB" && _isSB) then { _validBaseTier = true; };
+        if (_restUpper == "FOB" && _isFOB) then { _validBaseTier = true; };
+        if (_restUpper == _bkUpper) then { _validBaseTier = true; };
+    };
 
     if (_validFaction && _validTerrain && _validSystem && _validBaseTier) then {
         

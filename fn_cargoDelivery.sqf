@@ -10,10 +10,16 @@
 
 params ["_triggerArea", "_baseKey"];
 
+// Strip any trailing "_dropoff" (and optional index) if passed a raw trigger name like "FOB1_dropoff" or "SB_Carrier_dropoff_1"
+private _dropoffIdx = (toLowerANSI _baseKey) find "_dropoff";
+if (_dropoffIdx != -1) then {
+    _baseKey = _baseKey select [0, _dropoffIdx];
+};
+
 if (_triggerArea getVariable ["isProcessingLogistics", false]) exitWith {};
 _triggerArea setVariable ["isProcessingLogistics", true];
 
-private _isMSR = "MSR" in _baseKey;
+private _isMSR = "MSR" in (toUpper _baseKey);
 private _hasGreetedDriver = false;
 
 while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
@@ -31,11 +37,19 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
     };
 
     // --- PROXIMITY ARRIVAL GUIDANCE ---
-    if (!_hasGreetedDriver && speed _activeTruck == 0) then {
+    if (!_hasGreetedDriver && abs (speed _activeTruck) < 1) then {
         private _templateIndex = allowedLogisticsVehicles find (typeOf _activeTruck);
-        private _allVehicleSupplies = (logisticsCargoTemplates # _templateIndex) # 1;
         private _cargoList = [];
-        { if (_x # 0 == _currentLoadedType) exitWith { _cargoList = _x # 1; }; } forEach _allVehicleSupplies;
+        if (_templateIndex != -1) then {
+            private _entry = logisticsCargoTemplates # _templateIndex;
+            private _allVehicleSupplies = if (count _entry > 2 && { (_entry # 2) isEqualType [] }) then { _entry # 2 } else { _entry # 1 };
+            if (_allVehicleSupplies isEqualType []) then {
+                { if (_x # 0 == _currentLoadedType) exitWith { _cargoList = _x # 1; }; } forEach _allVehicleSupplies;
+                if (count _cargoList > 0 && { (_cargoList # 0) isEqualType [] }) then {
+                    _cargoList = (_cargoList # 0) # 1;
+                };
+            };
+        };
         
         private _displayAssetName = "Supplies";
         if (count _cargoList > 0) then {
@@ -43,7 +57,13 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
         };
 
         private _cleanBase = _baseKey splitString "_" joinString " ";
-        systemChat format ["[LOGISTICS CAPTAIN]: Welcome to %1 terminal. Unload the [%2] here to register points.", _cleanBase, _displayAssetName];
+        private _driver = driver _activeTruck;
+        private _msg = format ["[LOGISTICS CAPTAIN]: Welcome to %1 terminal. Unload the [%2] here to register points.", _cleanBase, _displayAssetName];
+        if (!isNull _driver && isPlayer _driver) then {
+            [_msg] remoteExec ["systemChat", _driver];
+        } else {
+            systemChat _msg;
+        };
         _hasGreetedDriver = true;
     };
 
@@ -55,7 +75,7 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
         sleep 1;
     } else {
         private _triggerPos = getPos _triggerArea;
-        private _triggerScale = ((triggerArea _triggerArea) # 0) + 8; 
+        private _triggerScale = (((triggerArea _triggerArea) # 0) max ((triggerArea _triggerArea) # 1)) + 8; 
         private _nearbyObjects = nearestObjects [_triggerPos, ["Strategic", "ReammoBox_F", "Cargo_base_F", "AllVehicles", "ThingX", "Air"], _triggerScale];
 
         {
@@ -72,8 +92,12 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
                     
                     if (_scoreIndex != -1) then {
                         {
-                            private _targetVar = format ["LogiScore_%1_%2", _baseKey, _x # 0];
-                            missionNamespace setVariable [_targetVar, (missionNamespace getVariable [_targetVar, 0]) + (_x # 1), true];
+                            private _poolName = if (toUpper (_x # 0) in ["VEHICLE", "VEHICLES"]) then { "Vehicle" } else { _x # 0 };
+                            private _targetVar = format ["LogiScore_%1_%2", _baseKey, _poolName];
+                            private _curVal = missionNamespace getVariable [_targetVar, 0];
+                            if (_curVal != -1) then {
+                                missionNamespace setVariable [_targetVar, _curVal + (_x # 1), true];
+                            };
                         } forEach ((supplyScores # _scoreIndex) # 1);
                         _deliveryRecorded = true;
                     };
@@ -84,7 +108,13 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
     };
 
     if (_deliveryRecorded) exitWith {
-        systemChat format ["LOGISTICS RECEIPT: Cargo safely verified on tarmac. Caches increased at %1.", _baseKey splitString "_" joinString " "];
+        private _driver = driver _activeTruck;
+        private _receiptMsg = format ["LOGISTICS RECEIPT: Cargo safely verified on tarmac. Caches increased at %1.", _baseKey splitString "_" joinString " "];
+        if (!isNull _driver && isPlayer _driver) then {
+            [_receiptMsg] remoteExec ["systemChat", _driver];
+        } else {
+            systemChat _receiptMsg;
+        };
         
         _activeTruck setVariable ["logistics_is_loaded", false, true];
         _activeTruck setVariable ["logistics_loaded_type", "", true];
