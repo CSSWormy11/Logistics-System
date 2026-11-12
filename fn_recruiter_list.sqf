@@ -16,7 +16,8 @@ private _troopSupplyPool = missionNamespace getVariable [format ["LogiScore_%1_T
 
 // Dynamic Title Card Status
 private _titleBox = _display displayCtrl 1000;
-_titleBox ctrlSetText format ["GARRISON INFANTRY MOBILIZATION (Current Base Manpower: %1 Personnel)", _troopSupplyPool];
+private _troopStr = if (!isNil "logi_fnc_formatPoints") then { [_troopSupplyPool] call logi_fnc_formatPoints } else { str _troopSupplyPool };
+_titleBox ctrlSetText format ["GARRISON INFANTRY MOBILIZATION (Current Base Manpower: %1 Personnel)", _troopStr];
 
 // --- INITIALIZE UI LISTBOXES ---
 private _listBox1 = _display displayCtrl 1500;

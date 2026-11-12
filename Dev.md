@@ -211,6 +211,21 @@ This document tracks verified bugs, inconsistencies, incomplete features, and up
   - Removed the duplicate `_GARAGE` marker hiding loop in `init.sqf`.
 - **3. Status:** **Verified Resolved** (Files archived and code cleaned up).
 
+### 3.5 Base Supply Manifest Map Entry Displays Scientific Notation (`1.6e+06`) & Unformatted Numbers
+
+- **1. Initial Issue Summary:**
+  - On the map diary screen under **"Base Supply Manifest"** (`BasesManifestTab`), base resource pools with 1,000,000+ points (such as Staging Base Cargo and Vehicle pools at 1,600,000) reverted to raw engine scientific notation (`1.6e+06`).
+  - Numbers lacked thousands comma separators and value range context, making it difficult to gauge high-tier economy totals at a glance.
+  - The map ledger thread in `qm_clientFunctions.sqf` was passing raw scalars into `format` strings without formatting, and `logi_fnc_formatPoints` in `fn_manageLogisticsMissions.sqf` lacked full scientific notation expansion and range scale descriptors for very large numbers.
+- **2. Proposed / Applied Corrections:**
+  - Standardized `logi_fnc_formatPoints` across `qm_clientFunctions.sqf` and `fn_manageLogisticsMissions.sqf` to dynamically expand all positive and negative scientific notation floats up to 100+ Trillion (`1e+014`) into full-length integer strings.
+  - Added thousands comma formatting (`1,600,000`).
+  - Added dynamic value range scale tags off to the side: `(Thousands)`, `(Millions)`, `(Billions)`, `(Trillions)`, `(Quadrillions)`, `(Quintillions)` (leaving sub-1000 numbers unadorned for clarity).
+  - Preserved `"UNLIMITED"` for infinite pools (`-1` at MSR hubs).
+  - Updated `qm_clientFunctions.sqf` map diary ledger to route all 7 supply categories through `logi_fnc_formatPoints` and format base titles cleanly (e.g., `SB Main`, `FOB CampMaxwell`).
+  - Updated `fn_recruiter_list.sqf` title card to format base manpower totals with the same standard.
+- **3. Status:** **Verified Resolved** (In Testing).
+
 ---
 
 ## 4. Logistics Framework V8 — Current Development Goals

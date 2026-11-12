@@ -10,33 +10,108 @@
 if (!hasInterface) exitWith {};
 
 // =========================================================================
-// GLOBAL STRING FORMATTER: BANISHES SCIENTIFIC NOTATION PERMANENTLY
+// GLOBAL STRING FORMATTER: FULL LENGTH VALUES, COMMAS & SCALE NOTATION
+// Handles numbers from 0 up to 100+ Trillion without scientific notation
 // =========================================================================
 logi_fnc_formatPoints = {
-    params ["_num"];
-    if (_num == -1) exitWith { "UNLIMITED" };
-    
-    private _integer = floor _num;
-    private _str = str _integer;
-    
-    if ((_str find "e") != -1) then {
-        private _parts = _str splitString "e+";
-        private _base = _parts # 0;
-        private _exponent = parseNumber (_parts # 1);
-        private _cleanBase = (_base splitString ".") joinString "";
-        while {count _cleanBase <= _exponent} do { _cleanBase = _cleanBase + "0"; };
-        _str = _cleanBase;
+    private _num = 0;
+    private _includeScale = true;
+    if (_this isEqualType []) then {
+        _num = _this param [0, 0];
+        _includeScale = _this param [1, true];
+    } else {
+        _num = _this;
     };
-    
+
+    if (_num isEqualType "") then {
+        if (_num == "-1" || _num == "UNLIMITED") exitWith { "UNLIMITED" };
+        _num = parseNumber _num;
+    };
+
+    if (_num == -1) exitWith { "UNLIMITED" };
+    if (_num == 0) exitWith { "0" };
+
+    private _isNeg = (_num < 0);
+    private _integer = floor (abs _num);
+    private _str = str _integer;
+
+    // Expand scientific notation if present (e.g. "1.6e+006", "1.6e+06", "1e+014")
+    private _eIdx = _str find "e";
+    if (_eIdx == -1) then { _eIdx = _str find "E"; };
+
+    if (_eIdx != -1) then {
+        private _sig = _str select [0, _eIdx];
+        private _expStr = _str select [_eIdx + 1];
+        private _exp = parseNumber _expStr;
+
+        private _dotIdx = _sig find ".";
+        if (_dotIdx == -1) then {
+            for "_i" from 1 to _exp do { _sig = _sig + "0"; };
+            _str = _sig;
+        } else {
+            private _intPart = _sig select [0, _dotIdx];
+            private _decPart = _sig select [_dotIdx + 1];
+            private _decLen = count _decPart;
+
+            if (_exp >= _decLen) then {
+                private _zeroCount = _exp - _decLen;
+                private _combined = _intPart + _decPart;
+                for "_i" from 1 to _zeroCount do { _combined = _combined + "0"; };
+                _str = _combined;
+            } else {
+                private _shiftedInt = _intPart + (_decPart select [0, _exp]);
+                _str = _shiftedInt;
+            };
+        };
+    };
+
+    // Strip any trailing decimal residue if present
+    private _finalDot = _str find ".";
+    if (_finalDot != -1) then {
+        _str = _str select [0, _finalDot];
+    };
+
+    // Determine value range scale descriptor
+    private _digitCount = count _str;
+    private _scaleTag = "";
+    if (_includeScale) then {
+        if (_digitCount >= 19) then {
+            _scaleTag = " (Quintillions)";
+        } else {
+            if (_digitCount >= 16) then {
+                _scaleTag = " (Quadrillions)";
+            } else {
+                if (_digitCount >= 13) then {
+                    _scaleTag = " (Trillions)";
+                } else {
+                    if (_digitCount >= 10) then {
+                        _scaleTag = " (Billions)";
+                    } else {
+                        if (_digitCount >= 7) then {
+                            _scaleTag = " (Millions)";
+                        } else {
+                            if (_digitCount >= 4) then {
+                                _scaleTag = " (Thousands)";
+                            };
+                        };
+                    };
+                };
+            };
+        };
+    };
+
+    // Insert thousands commas from right to left
     private _arr = _str splitString "";
     private _res = "";
     private _cnt = 0;
-    for "_i" from (count _arr - 1) to 0 step -1 do {
-        if (_cnt > 0 && _cnt % 3 == 0) then { _res = "," + _res; };
+    for "_i" from (_digitCount - 1) to 0 step -1 do {
+        if (_cnt > 0 && (_cnt % 3 == 0)) then { _res = "," + _res; };
         _res = (_arr # _i) + _res;
         _cnt = _cnt + 1;
     };
-    _res
+
+    if (_isNeg) then { _res = "-" + _res; };
+    _res + _scaleTag
 };
 
 // =========================================================================

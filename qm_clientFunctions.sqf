@@ -11,6 +11,111 @@ if (!hasInterface) exitWith {};
 // 1. CLIENT HELPER FUNCTIONS
 // ---------------------------------------------------------------------------
 
+// =========================================================================
+// GLOBAL STRING FORMATTER: FULL LENGTH VALUES, COMMAS & SCALE NOTATION
+// Handles numbers from 0 up to 100+ Trillion without scientific notation
+// =========================================================================
+logi_fnc_formatPoints = {
+    private _num = 0;
+    private _includeScale = true;
+    if (_this isEqualType []) then {
+        _num = _this param [0, 0];
+        _includeScale = _this param [1, true];
+    } else {
+        _num = _this;
+    };
+
+    if (_num isEqualType "") then {
+        if (_num == "-1" || _num == "UNLIMITED") exitWith { "UNLIMITED" };
+        _num = parseNumber _num;
+    };
+
+    if (_num == -1) exitWith { "UNLIMITED" };
+    if (_num == 0) exitWith { "0" };
+
+    private _isNeg = (_num < 0);
+    private _integer = floor (abs _num);
+    private _str = str _integer;
+
+    // Expand scientific notation if present (e.g. "1.6e+006", "1.6e+06", "1e+014")
+    private _eIdx = _str find "e";
+    if (_eIdx == -1) then { _eIdx = _str find "E"; };
+
+    if (_eIdx != -1) then {
+        private _sig = _str select [0, _eIdx];
+        private _expStr = _str select [_eIdx + 1];
+        private _exp = parseNumber _expStr;
+
+        private _dotIdx = _sig find ".";
+        if (_dotIdx == -1) then {
+            for "_i" from 1 to _exp do { _sig = _sig + "0"; };
+            _str = _sig;
+        } else {
+            private _intPart = _sig select [0, _dotIdx];
+            private _decPart = _sig select [_dotIdx + 1];
+            private _decLen = count _decPart;
+
+            if (_exp >= _decLen) then {
+                private _zeroCount = _exp - _decLen;
+                private _combined = _intPart + _decPart;
+                for "_i" from 1 to _zeroCount do { _combined = _combined + "0"; };
+                _str = _combined;
+            } else {
+                private _shiftedInt = _intPart + (_decPart select [0, _exp]);
+                _str = _shiftedInt;
+            };
+        };
+    };
+
+    // Strip any trailing decimal residue if present
+    private _finalDot = _str find ".";
+    if (_finalDot != -1) then {
+        _str = _str select [0, _finalDot];
+    };
+
+    // Determine value range scale descriptor
+    private _digitCount = count _str;
+    private _scaleTag = "";
+    if (_includeScale) then {
+        if (_digitCount >= 19) then {
+            _scaleTag = " (Quintillions)";
+        } else {
+            if (_digitCount >= 16) then {
+                _scaleTag = " (Quadrillions)";
+            } else {
+                if (_digitCount >= 13) then {
+                    _scaleTag = " (Trillions)";
+                } else {
+                    if (_digitCount >= 10) then {
+                        _scaleTag = " (Billions)";
+                    } else {
+                        if (_digitCount >= 7) then {
+                            _scaleTag = " (Millions)";
+                        } else {
+                            if (_digitCount >= 4) then {
+                                _scaleTag = " (Thousands)";
+                            };
+                        };
+                    };
+                };
+            };
+        };
+    };
+
+    // Insert thousands commas from right to left
+    private _arr = _str splitString "";
+    private _res = "";
+    private _cnt = 0;
+    for "_i" from (_digitCount - 1) to 0 step -1 do {
+        if (_cnt > 0 && (_cnt % 3 == 0)) then { _res = "," + _res; };
+        _res = (_arr # _i) + _res;
+        _cnt = _cnt + 1;
+    };
+
+    if (_isNeg) then { _res = "-" + _res; };
+    _res + _scaleTag
+};
+
 QM_fnc_getNearbyAmmoSource = {
     params ["_veh"];
     if (isNull _veh) exitWith {""};
@@ -114,13 +219,15 @@ player createDiarySubject ["BasesManifestTab", "Base Supply Manifest"];
 [] spawn {
     private _diaryHandlesMap = createHashMap;
     {
-        private _recordHandle = player createDiaryRecord ["BasesManifestTab", [_x, "Synchronizing UI layers..."]];
+        private _cleanBase = (_x splitString "_") joinString " ";
+        private _recordHandle = player createDiaryRecord ["BasesManifestTab", [_cleanBase, "Synchronizing UI layers..."]];
         _diaryHandlesMap set [_x, _recordHandle];
     } forEach logisticsBases;
 
     while {true} do {
         {
             private _base = _x;
+            private _cleanBase = (_base splitString "_") joinString " ";
             private _cPoints = missionNamespace getVariable [format["LogiScore_%1_Cargo", _base], 0];
             private _aPoints = missionNamespace getVariable [format["LogiScore_%1_Ammo", _base], 0];
             private _fPoints = missionNamespace getVariable [format["LogiScore_%1_Fuel", _base], 0];
@@ -129,11 +236,22 @@ player createDiarySubject ["BasesManifestTab", "Base Supply Manifest"];
             private _vPoints = missionNamespace getVariable [format["LogiScore_%1_Vehicle", _base], 0];
             private _tPoints = missionNamespace getVariable [format["LogiScore_%1_Troops", _base], 0];
 
-            private _reportText = format ["<br/><font color='#00FFFF' size='16'>%1 Supply Manifest Ledger</font><br/><br/>  [Cargo Pool]: <font color='#FFFF00'>%2</font> Points<br/>  [Ammo Pool]: <font color='#FFFF00'>%3</font> Resources<br/>  [Fuel Pool]: <font color='#FFFF00'>%4</font> Liters<br/>  [Medical Pool]: <font color='#FFFF00'>%5</font> Supplies<br/>  [Repair Pool]: <font color='#FFFF00'>%6</font> Kits<br/>  [Vehicle Pool]: <font color='#FFFF00'>%7</font> Material<br/>  [Troops Pool]: <font color='#FFFF00'>%8</font> Personnel<br/>", _base, _cPoints, _aPoints, _fPoints, _mPoints, _rPoints, _vPoints, _tPoints];
+            private _cStr = [_cPoints] call logi_fnc_formatPoints;
+            private _aStr = [_aPoints] call logi_fnc_formatPoints;
+            private _fStr = [_fPoints] call logi_fnc_formatPoints;
+            private _mStr = [_mPoints] call logi_fnc_formatPoints;
+            private _rStr = [_rPoints] call logi_fnc_formatPoints;
+            private _vStr = [_vPoints] call logi_fnc_formatPoints;
+            private _tStr = [_tPoints] call logi_fnc_formatPoints;
+
+            private _reportText = format [
+                "<br/><font color='#00FFFF' size='16'>%1 Supply Manifest Ledger</font><br/><br/>  [Cargo Pool]: <font color='#FFFF00'>%2</font> Points<br/>  [Ammo Pool]: <font color='#FFFF00'>%3</font> Resources<br/>  [Fuel Pool]: <font color='#FFFF00'>%4</font> Liters<br/>  [Medical Pool]: <font color='#FFFF00'>%5</font> Supplies<br/>  [Repair Pool]: <font color='#FFFF00'>%6</font> Kits<br/>  [Vehicle Pool]: <font color='#FFFF00'>%7</font> Material<br/>  [Troops Pool]: <font color='#FFFF00'>%8</font> Personnel<br/>", 
+                _cleanBase, _cStr, _aStr, _fStr, _mStr, _rStr, _vStr, _tStr
+            ];
 
             private _activeHandle = _diaryHandlesMap get _base;
             if (!isNil "_activeHandle") then {
-                player setDiaryRecordText [["BasesManifestTab", _activeHandle], [_base, _reportText]];
+                player setDiaryRecordText [["BasesManifestTab", _activeHandle], [_cleanBase, _reportText]];
             };
         } forEach logisticsBases;
         uiSleep 4;
