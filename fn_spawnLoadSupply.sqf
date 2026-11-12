@@ -165,7 +165,11 @@ if (_supplyType == "Troops") exitWith {
 // --- STANDARD FREIGHT CARGO AND VEHICLE SLINGLOAD / VIV PACKING PROFILE ---
 if (_isPlane && !_isHelicopter && _heightAboveSurface > 30) exitWith {
     systemChat format ["LOGISTICS COMMAND: Flight deck cargo internal pack: [%1].", _displayAssetName];
-    { private _cargoObj = _x createVehicle [0,0,0]; _vehicle setVehicleCargo _cargoObj; } forEach _cargoList;
+    { 
+        private _cargoObj = _x createVehicle [0,0,0]; 
+        _cargoObj setVariable ["isLogisticsCargo", true, true];
+        _vehicle setVehicleCargo _cargoObj; 
+    } forEach _cargoList;
     _vehicle setVariable ["logistics_is_loaded", true, true];
     _vehicle setVariable ["logistics_loaded_type", _supplyType, true];
     _vehicle setVariable ["logistics_loaded_weight", _totalCargoPointWeight, true];
@@ -188,6 +192,7 @@ if (_isHelicopter) exitWith {
 
     {
         private _pod = createVehicle [_x, [0, 0, 500], [], 0, "CAN_COLLIDE"];
+        _pod setVariable ["isLogisticsCargo", true, true];
         private _rayStart = [_basePadPos2D # 0, _basePadPos2D # 1, (_vehPosASL # 2) + 50];
         private _rayEnd   = [_basePadPos2D # 0, _basePadPos2D # 1, -20];
         private _podHits  = lineIntersectsSurfaces [_rayStart, _rayEnd, _pod, _vehicle, true, 1, "GEOM", "NONE"];
@@ -207,6 +212,7 @@ if (_isHelicopter) exitWith {
 systemChat format ["LOGISTICS COMMAND: Surface cargo grid storage locked down: [%1].", _displayAssetName];
 {
     private _cargoObj = _x createVehicle [0,0,0];
+    _cargoObj setVariable ["isLogisticsCargo", true, true];
     private _loadedViV = _vehicle setVehicleCargo _cargoObj;
     if (!_loadedViV) then {
         deleteVehicle _cargoObj;

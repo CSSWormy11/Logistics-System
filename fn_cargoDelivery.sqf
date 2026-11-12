@@ -75,21 +75,33 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
         sleep 1;
     } else {
         private _triggerPos = getPos _triggerArea;
-        private _triggerScale = (((triggerArea _triggerArea) # 0) max ((triggerArea _triggerArea) # 1)) + 8; 
+        private _tArea = triggerArea _triggerArea;
+        private _triggerScale = (((_tArea # 0) max (_tArea # 1)) max 15) + 5; 
         private _nearbyObjects = nearestObjects [_triggerPos, ["Strategic", "ReammoBox_F", "Cargo_base_F", "AllVehicles", "ThingX", "Air"], _triggerScale];
 
         {
             private _object = _x;
             private _type = typeOf _object;
-            private _isWithinUnloadRadius = (_object distance2D _triggerPos) <= _triggerScale;
+            private _isWithinUnloadZone = (_object inArea _triggerArea) || { (_object distance2D _triggerPos) <= 15 };
             private _isNotTheTransportTruck = !(_object in allowedLogisticsVehicles) && _object != _activeTruck;
 
-            if (_isWithinUnloadRadius && isNull (attachedTo _object) && _isNotTheTransportTruck && !(_type isKindOf "Man")) then {
+            // Strict safety check: Never delete or consume base infrastructure, Arsenals, Terminals, or player assets
+            private _objName = vehicleVarName _object;
+            private _objNameUpper = toUpperANSI _objName;
+            private _isBaseInfrastructure = (
+                (_object getVariable ["QM_Crate_OwningBase", ""]) != "" ||
+                { _object getVariable ["QM_TerminalUnifiedActionsActive", false] } ||
+                { _object in (missionNamespace getVariable ["QM_Global_Terminals", []]) } ||
+                { !isNull (_object getVariable ["bis_fnc_arsenal_action", objNull]) } ||
+                { "ARSENAL" in _objNameUpper || "TERMINAL" in _objNameUpper || "SERVICE" in _objNameUpper || "_AMMO" in _objNameUpper || "_FUEL" in _objNameUpper || "_REPAIR" in _objNameUpper || "_SPAWN" in _objNameUpper || "_GARAGE" in _objNameUpper }
+            );
+
+            if (_isWithinUnloadZone && isNull (attachedTo _object) && _isNotTheTransportTruck && !(_type isKindOf "Man") && !_isBaseInfrastructure) then {
+                private _lowerSearchType = toLowerANSI _type;
+                private _scoreIndex = supplyScores findIf { toLowerANSI (_x # 0) == _lowerSearchType };
+
                 if (!_isMSR) then {
-                    // FIXED CASE INSENSITIVITY: Forces matching check loop to bypass class letter case mismatches
-                    private _lowerSearchType = toLowerANSI _type;
-                    private _scoreIndex = supplyScores findIf { toLowerANSI (_x # 0) == _lowerSearchType };
-                    
+                    // Only credit and delete valid supply score items
                     if (_scoreIndex != -1) then {
                         {
                             private _poolName = if (toUpper (_x # 0) in ["VEHICLE", "VEHICLES"]) then { "Vehicle" } else { _x # 0 };
@@ -100,9 +112,15 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
                             };
                         } forEach ((supplyScores # _scoreIndex) # 1);
                         _deliveryRecorded = true;
+                        deleteVehicle _object;
+                    };
+                } else {
+                    // At MSR, only delete if verified cargo item
+                    if (_scoreIndex != -1 || (_object getVariable ["isLogisticsCargo", false])) then {
+                        _deliveryRecorded = true;
+                        deleteVehicle _object;
                     };
                 };
-                deleteVehicle _object;
             };
         } forEach _nearbyObjects;
     };

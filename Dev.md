@@ -140,6 +140,18 @@ This document tracks verified bugs, inconsistencies, incomplete features, and up
   - Strictly preserved Bohemia Interactive native Vehicle-in-Vehicle (`setVehicleCargo`) loading without artificial workarounds or attachTo mechanics.
 - **3. Status:** **Testing in Progress** (Corrections applied in `fn_spawnLoadSupply.sqf` and `init.sqf` — awaiting in-game confirmation).
 
+### [x] 1.15 Dropoff Pad Cargo Offload Unconditionally Deleting Pre-Placed Base Arsenals & Infrastructure
+- **1. Initial Issue Summary:**
+  - In `fn_cargoDelivery.sqf` (Line 105), `deleteVehicle _object;` was executed unconditionally inside the nearby objects scan loop, outside the `if (_scoreIndex != -1)` validation block.
+  - As a result, when a player delivered cargo to a dropoff pad, any `ReammoBox_F`, `AllVehicles`, `ThingX`, `Air`, or `Strategic` entity located within the trigger radius—including editor-placed Arsenals (`VirtualReammoBox_camonet_F`, e.g. `FOB_AgiaMarinaBase_Arsenal`), base Terminals, and Ammo Caches—was permanently deleted from the world.
+  - This occurred because `SB_Main_dropoff_1` had a large 533-meter trigger radius and `FOB_AgiaMarinaBase_dropoff` spanned 41 meters, sweeping editor objects into the deletion list.
+- **2. Proposed / Applied Corrections:**
+  - In `fn_cargoDelivery.sqf`, added strict base infrastructure protection checking `vehicleVarName`, `QM_Crate_OwningBase`, `QM_TerminalUnifiedActionsActive`, `QM_Global_Terminals`, and `bis_fnc_arsenal_action` (protecting all `Arsenal`, `Terminal`, `Service`, `_Ammo`, `_Fuel`, `_Repair`, `_Spawn`, and `_Garage` objects).
+  - Restricted cargo scanning strictly to `_object inArea _triggerArea` (or within 15 meters of pad center) rather than unbounded bounding-box radii.
+  - Moved `deleteVehicle _object;` strictly inside `if (_scoreIndex != -1)` so objects are only deleted if they are verified logistics supply items credited to the base economy pool.
+  - In `fn_spawnLoadSupply.sqf`, explicitly tagged all dynamically spawned logistics cargo and slingload pods with `_cargoObj setVariable ["isLogisticsCargo", true, true];`.
+- **3. Status:** **Verified Resolved** (In Testing).
+
 ---
 
 ## 2. Economy, Filtering & Configuration Inconsistencies
