@@ -216,6 +216,52 @@ logi_fnc_getDropoffLocation = {
 };
 
 // =========================================================================
+// HELPER: CALCULATE TRAVEL DISTANCE (ROAD DRIVING VS AIR FLIGHT)
+// =========================================================================
+logi_fnc_getRouteDistance = {
+    params ["_fromBase", "_toBase", "_isGroundVehicle"];
+    
+    private _p1 = ["Dropoff", _fromBase, _fromBase] call logi_fnc_getMarkerPosSafe;
+    private _p2 = ["Dropoff", _toBase, _toBase] call logi_fnc_getMarkerPosSafe;
+    private _straightLineDist = _p1 distance2D _p2;
+
+    if (!_isGroundVehicle) exitWith { _straightLineDist };
+
+    // Ground vehicle: Check road network driving distance table
+    private _pairKey = format ["%1_%2", _fromBase, _toBase];
+    private _revKey  = format ["%1_%2", _toBase, _fromBase];
+
+    private _roadTable = missionNamespace getVariable ["Logi_RoadDistanceTable", createHashMap];
+    if (count _roadTable == 0) then {
+        _roadTable = createHashMapFromArray [
+            // Stratis SB_Main to Land FOBs (actual road driving distance in meters)
+            ["SB_Main_FOB_AgiaMarinaBase", 1050],
+            ["SB_Main_FOB_CampRogain", 3200],
+            ["SB_Main_FOB_CampMaxwell", 4100],
+            ["SB_Main_FOB_Mike26", 4600],
+            ["SB_Main_FOB_Kamino", 5300],
+            ["SB_Main_FOB_CampTempest", 7200],
+
+            // Reverse lookups
+            ["FOB_AgiaMarinaBase_SB_Main", 1050],
+            ["FOB_CampRogain_SB_Main", 3200],
+            ["FOB_CampMaxwell_SB_Main", 4100],
+            ["FOB_Mike26_SB_Main", 4600],
+            ["FOB_Kamino_SB_Main", 5300],
+            ["FOB_CampTempest_SB_Main", 7200]
+        ];
+        missionNamespace setVariable ["Logi_RoadDistanceTable", _roadTable];
+    };
+
+    if (_pairKey in _roadTable) exitWith { _roadTable get _pairKey };
+    if (_revKey in _roadTable) exitWith { _roadTable get _revKey };
+
+    // Dynamic fallback for unmapped base pairs or custom maps:
+    // Scale straight-line distance by terrain/road winding factor (1.4x)
+    _straightLineDist * 1.4
+};
+
+// =========================================================================
 // HELPER: DELETE SUB-TASKS UNDER A PARENT ROUTE TASK
 // =========================================================================
 logi_fnc_deleteRouteSubTasks = {
@@ -542,6 +588,7 @@ createClientLogiTasks = {
                     };
                     _stickyTaskID = "";
                     _lockedAssignment = false;
+                    _vehicle setVariable ["logistics_intended_fob", "", true];
                     player setVariable ["logistics_current_assigned_category", "", true];
                 } else {
                     if (_stickyTaskID != "") then {
@@ -682,25 +729,40 @@ createClientLogiTasks = {
                         if (count _waterSBs > 0) then { _candidateSBs = _waterSBs; };
                     };
 
-                    // Sort candidate SBs by distance so ties pick the nearest Supply Base
-                    private _orderedSBs = (_candidateSBs apply { [_vehicle distance2D (["Dropoff", _x, _x] call logi_fnc_getMarkerPosSafe), _x] });
+                    // Sort candidate SBs by route distance from origin MSR (road distance for land, flight for air)
+                    private _orderedSBs = (_candidateSBs apply { 
+                        private _dist = [_primaryMSR, _x, _isGroundVehicle] call logi_fnc_getRouteDistance;
+                        [_dist, _x] 
+                    });
                     _orderedSBs sort true;
                     _candidateSBs = _orderedSBs apply { _x # 1 };
 
-                    private _targetSB = _candidateSBs param [0, _primarySB];
+                    // Preserve existing intended SB if vehicle is already loaded
+                    private _savedSB = _vehicle getVariable ["logistics_intended_fob", ""];
+                    private _targetSB = if (_isLoaded && _savedSB != "" && _savedSB in _candidateSBs) then {
+                        _savedSB
+                    } else {
+                        _candidateSBs param [0, _primarySB]
+                    };
+
                     private _lowestCategory = _allowedVehicleCategories param [0, "Cargo"];
                     private _lowestScore = 999999999;
-                    {
-                        private _sb = _x;
+
+                    if (!_isLoaded || _savedSB == "") then {
                         {
-                            private _score = missionNamespace getVariable [format ["LogiScore_%1_%2", _sb, _x], 0];
-                            if (_score != -1 && _score < _lowestScore) then {
-                                _lowestScore = _score;
-                                _targetSB = _sb;
-                                _lowestCategory = _x;
-                            };
-                        } forEach _allowedVehicleCategories;
-                    } forEach _candidateSBs;
+                            private _sb = _x;
+                            {
+                                private _score = missionNamespace getVariable [format ["LogiScore_%1_%2", _sb, _x], 0];
+                                if (_score != -1 && _score < _lowestScore) then {
+                                    _lowestScore = _score;
+                                    _targetSB = _sb;
+                                    _lowestCategory = _x;
+                                };
+                            } forEach _allowedVehicleCategories;
+                        } forEach _candidateSBs;
+                    } else {
+                        _lowestCategory = player getVariable ["logistics_current_assigned_category", _allowedVehicleCategories param [0, "Cargo"]];
+                    };
 
                     _vehicle setVariable ["logistics_intended_fob", _targetSB, true];
                     player setVariable ["logistics_current_assigned_category", _lowestCategory, true];
@@ -725,27 +787,41 @@ createClientLogiTasks = {
                         if (count _waterFOBs > 0) then { _candidateFOBs = _waterFOBs; };
                     };
 
-                    // Sort candidate FOBs by distance so ties pick the nearest FOB
-                    private _orderedFOBs = (_candidateFOBs apply { [_vehicle distance2D (["Dropoff", _x, _x] call logi_fnc_getMarkerPosSafe), _x] });
+                    // Sort candidate FOBs by route travel distance from origin SB (road distance for land, flight for air)
+                    private _orderedFOBs = (_candidateFOBs apply { 
+                        private _dist = [_primarySB, _x, _isGroundVehicle] call logi_fnc_getRouteDistance;
+                        [_dist, _x] 
+                    });
                     _orderedFOBs sort true;
                     _candidateFOBs = _orderedFOBs apply { _x # 1 };
 
-                    private _targetFOB = _candidateFOBs # 0;
+                    // Preserve existing intended FOB if vehicle is already loaded
+                    private _savedFOB = _vehicle getVariable ["logistics_intended_fob", ""];
+                    private _targetFOB = if (_isLoaded && _savedFOB != "" && _savedFOB in _candidateFOBs) then {
+                        _savedFOB
+                    } else {
+                        _candidateFOBs # 0
+                    };
+
                     private _targetCategory = _allowedVehicleCategories param [0, "Cargo"];
                     private _lowestScore = 999999999;
 
-                    {
-                        private _fob = _x;
+                    if (!_isLoaded || _savedFOB == "") then {
                         {
-                            private _category = _x;
-                            private _score = missionNamespace getVariable [format ["LogiScore_%1_%2", _fob, _category], 0];
-                            if (_score != -1 && _score < _lowestScore) then {
-                                _lowestScore = _score;
-                                _targetFOB = _fob;
-                                _targetCategory = _category;
-                            };
-                        } forEach _allowedVehicleCategories;
-                    } forEach _candidateFOBs;
+                            private _fob = _x;
+                            {
+                                private _category = _x;
+                                private _score = missionNamespace getVariable [format ["LogiScore_%1_%2", _fob, _category], 0];
+                                if (_score != -1 && _score < _lowestScore) then {
+                                    _lowestScore = _score;
+                                    _targetFOB = _fob;
+                                    _targetCategory = _category;
+                                };
+                            } forEach _allowedVehicleCategories;
+                        } forEach _candidateFOBs;
+                    } else {
+                        _targetCategory = player getVariable ["logistics_current_assigned_category", _allowedVehicleCategories param [0, "Cargo"]];
+                    };
 
                     _vehicle setVariable ["logistics_intended_fob", _targetFOB, true];
                     player setVariable ["logistics_current_assigned_category", _targetCategory, true];

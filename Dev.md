@@ -152,6 +152,18 @@ This document tracks verified bugs, inconsistencies, incomplete features, and up
   - In `fn_spawnLoadSupply.sqf`, explicitly tagged all dynamically spawned logistics cargo and slingload pods with `_cargoObj setVariable ["isLogisticsCargo", true, true];`.
 - **3. Status:** **Verified Resolved** (In Testing).
 
+### [x] 1.16 Immediate Cargo Offload Processing & Anti-Collision Engine
+- **1. Initial Issue Summary:**
+  - In `fn_cargoDelivery.sqf`, the offload scanning loop blocked processing whenever internal vehicle cargo (`getVehicleCargo`) or slingloads (`getSlingLoad`) were still present (`if (count _allInternalCargo > 0 || _hasSlingLoadAttached) then { sleep 1; } else { ... };`).
+  - As a result, when a player unloaded multiple cargo crates from a transport truck onto a dropoff pad, previous code waited until the truck was completely empty before scanning, crediting, or deleting any crates.
+  - Newly offloaded crates collided with resting crates on the pad within the same bounding zone, triggering Arma 3 physics engine impact damage that caused crates to violently explode, destroy supplies, and fail delivery credit.
+- **2. Proposed / Applied Corrections:**
+  - Removed the blocking cargo check gate in `fn_cargoDelivery.sqf`. The trigger area now performs continuous real-time scanning across every tick.
+  - As soon as each individual supply crate touches the dropoff pad tarmac, it is immediately validated against `supplyScores`, credited directly to the receiving base's resource caches, and deleted on the spot (`deleteVehicle _object`).
+  - Completely eliminates crate-on-crate physics collisions and damage on the dropoff tarmac.
+  - Final delivery receipt messaging, driver notification, and truck load unmarking (`logistics_is_loaded = false`, `logistics_intended_fob = ""`) trigger cleanly once the vehicle has completely emptied all internal and slingload cargo and at least one delivery was recorded.
+- **3. Status:** **Verified Resolved** (In Testing).
+
 ---
 
 ## 2. Economy, Filtering & Configuration Inconsistencies
@@ -395,6 +407,19 @@ Enhance the Logistics Mission Routing Engine (`fn_manageLogisticsMissions.sqf`) 
   - [x] Evaluate the player's vehicle against the trigger's Eden Editor condition (`LogiTriggerCond`), distinguishing between plane corridors (`_x isKindOf "Plane"`), low/slow helicopter zones (`_x isKindOf "Helicopter"`), and open/unrestricted stationary pads.
 - [x] **Multiplayer Locality:**
   - [x] Ensure all tasks, sub-tasks, and HUD waypoints are player-local (`player` target in `BIS_fnc_setTask`) so multiple players flying or driving simultaneously never interfere with each other's navigation or progress.
+
+### 4.11 Ground Vehicle Road Driving Distance vs. Air Flight Routing
+
+Enhance the Logistics Mission Routing Engine (`fn_manageLogisticsMissions.sqf`) to evaluate actual road network driving distance for land vehicles and straight-line flight distance for aircraft, preventing illogical ground vehicle assignments (e.g. routing trucks to geographically close but road-isolated bases like Camp Tempest):
+
+- [x] **Road Driving vs. Flight Distance Function (`logi_fnc_getRouteDistance`):**
+  - [x] Aircraft (`Air`) evaluate straight-line 2D/3D Euclidean distance between origin and destination pads.
+  - [x] Ground vehicles (`LandVehicle`) check a precomputed road-network driving distance matrix on Stratis (`SB_Main` to `FOB_AgiaMarinaBase`: 1,050m, `CampRogain`: 3,200m, `CampMaxwell`: 4,100m, `Mike26`: 4,600m, `Kamino`: 5,300m, `CampTempest`: 7,200m).
+  - [x] Dynamic fallback calculation using a 1.4x road winding factor for unmapped base pairs or custom maps.
+- [x] **Origin-Based Distance Sorting:**
+  - [x] Base candidate sorting calculates route travel distance from the origin supply base (`_primarySB` / `_primaryMSR`) rather than the truck's momentary coordinate on the runway, eliminating mid-transit route recalculation artifacts.
+- [x] **In-Transit Route Destination Locking:**
+  - [x] Once loaded (`_isLoaded == true`), the assigned intended base (`logistics_intended_fob`) is locked and preserved throughout the entire transit leg, preventing destination flipping until the cargo has been safely offloaded and credited at the delivery pad.
 
 ---
 
