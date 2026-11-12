@@ -421,6 +421,20 @@ Enhance the Logistics Mission Routing Engine (`fn_manageLogisticsMissions.sqf`) 
 - [x] **In-Transit Route Destination Locking:**
   - [x] Once loaded (`_isLoaded == true`), the assigned intended base (`logistics_intended_fob`) is locked and preserved throughout the entire transit leg, preventing destination flipping until the cargo has been safely offloaded and credited at the delivery pad.
 
+### 4.12 Universal Dropoff Processing, Field Salvage & Ad-Hoc Supply Returns
+
+Enhance the logistics economy and dropoff engine to universally accept and credit supplies at any dropoff zone, regardless of active mission tasking, vehicle type, or original cargo origin:
+
+- [ ] **Missionless & Ad-Hoc Dropoff Acceptance:**
+  - [ ] Decouple `fn_cargoDelivery.sqf` from strict vehicle variable gates (`logistics_loaded_type != ""`) and trigger filter restrictions (`typeOf _x in allowedLogisticsVehicles`).
+  - [ ] Any valid supply object matching `supplyScores` placed or dropped on a dropoff pad will be validated, credited to the receiving base's resource caches, and deleted immediately from the tarmac.
+- [ ] **Field Salvage & Re-Delivery of Lost/Abandoned Cargo:**
+  - [ ] Crates dropped along roads, at combat sites, or recovered from destroyed logistics convoys remain persistent in the world and can be recovered via ViV, slingload, or transport vehicles and delivered to any friendly dropoff pad for credit.
+- [ ] **Dynamic Alternate-Base Delivery Recognition in Task Engine:**
+  - [ ] Update `fn_manageLogisticsMissions.sqf` load state transition logic so delivering cargo to any friendly dropoff pad (even if different from `logistics_intended_fob`) credits the run as a successful delivery rather than failing the task with an out-of-zone detachment alert (`[DETACHED / LOST]`).
+- [ ] **Combat Logistics Supply Return Loop:**
+  - [ ] Allow players to retrieve unused or surplus combat supplies from the field and deliver them back to rear Supply Bases or forward FOBs. Physical separation between pickup and dropoff pads ensures supplies returned to their origin base increase that base's stockpiles without triggering infinite spawn-despawn loops.
+
 ---
 
 **Ongoing Development Tracking**
