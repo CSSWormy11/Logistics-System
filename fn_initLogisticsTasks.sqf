@@ -180,6 +180,13 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
             };
 
             if (_isDropoff) then {
+                // Register this trigger into the parent base's dropoff trigger group
+                private _dropListVar = format ["LogiDropoffTriggers_%1", _parentBase];
+                private _dropList = missionNamespace getVariable [_dropListVar, []];
+                _dropList pushBackUnique _trigger;
+                missionNamespace setVariable [_dropListVar, _dropList];
+                _trigger setVariable ["LogiTriggerCond", _cond];
+
                 if (_act == "" || { "CargoDelivery" in _act } || { "fn_cargoDelivery" in _act }) then {
                     _act = format ["[thisTrigger, %1] execVM 'fn_cargoDelivery.sqf';", str _parentBase];
                     if (_deact == "") then { _deact = "thisTrigger setVariable ['isProcessingLogistics', false];"; };

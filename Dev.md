@@ -355,6 +355,20 @@ Provide an option in the Recruitment / Mobilization interface (or a 3rd UI colum
 - [ ] Bind spawned groups to the player using `player hcSetGroup [_group]` / `setCommander`.
 - [ ] Deduct base `Troops` and `Cargo` supply points identically to squad templates.
 
+### 4.10 Task HUD & Waypoint Navigation: 3-Tier Sub-Task Hierarchy, Grid Coordinates & Manifest Status
+
+Enhance the Logistics Mission Routing Engine (`fn_manageLogisticsMissions.sqf`) so transport routes feature a structured parent/sub-task hierarchy (`BIS_fnc_setTask`) communicating base names, 6-digit military map grid coordinates (`mapGridPosition`), and live cargo manifest status:
+
+- [x] **Parent Task Hierarchy (`[SubTaskID, ParentTaskID]`):**
+  - [x] **Sub-Task 1: Pickup Supplies** — Assigned at route start; waypoint targets the center of the compatible pickup trigger with base name and 6-digit grid. Marked `SUCCEEDED` upon loading completion.
+  - [x] **Sub-Task 2: Cargo Manifest & Securing** — Shows assigned cargo category (e.g. `Ammo`, `Fuel`, `Medical`, `Cargo`). Marked `SUCCEEDED` once loaded and secured. Resets/fails if cargo is dropped or lost early before reaching the delivery zone.
+  - [x] **Sub-Task 3: Deliver Supplies** — Transitions to `ASSIGNED` upon loading completion; waypoint targets the center of the dropoff zone at the destination base with 6-digit grid. Marked `SUCCEEDED` upon dropoff delivery.
+  - [x] **Parent Route Task** — Completes once all 3 sub-tasks succeed, cycling the player to their next prioritized route assignment.
+- [x] **Trigger Condition-Driven Compatibility:**
+  - [x] Evaluate the player's vehicle against the trigger's Eden Editor condition (`LogiTriggerCond`), distinguishing between plane corridors (`_x isKindOf "Plane"`), low/slow helicopter zones (`_x isKindOf "Helicopter"`), and open/unrestricted stationary pads.
+- [x] **Multiplayer Locality:**
+  - [x] Ensure all tasks, sub-tasks, and HUD waypoints are player-local (`player` target in `BIS_fnc_setTask`) so multiple players flying or driving simultaneously never interfere with each other's navigation or progress.
+
 ---
 
 **Ongoing Development Tracking**
