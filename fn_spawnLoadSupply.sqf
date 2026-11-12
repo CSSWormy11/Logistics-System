@@ -208,39 +208,9 @@ systemChat format ["LOGISTICS COMMAND: Surface cargo grid storage locked down: [
 {
     private _cargoObj = _x createVehicle [0,0,0];
     private _loadedViV = _vehicle setVehicleCargo _cargoObj;
-
-    // If native Vehicle-in-Vehicle fails (e.g. Huron containers or MRAPs on HEMTT Flatbed)
     if (!_loadedViV) then {
-        // Fallback attachment for flatbeds and cargo beds
-        private _attachOffset = [0, -1.5, 0.4];
-        if (_cargoObj isKindOf "MRAP_01_base_F" || _cargoObj isKindOf "Wheeled_APC_F") then {
-            _attachOffset = [0, -1.8, 0.7];
-        };
-        _cargoObj attachTo [_vehicle, _attachOffset];
-
-        // Register unload action on transport vehicle if not already present
-        if ((_vehicle getVariable ["logistics_unload_action_id", -1]) == -1) then {
-            private _actId = _vehicle addAction [
-                "<t color='#00FF00'>[ Unload Flatbed Cargo ]</t>",
-                {
-                    params ["_target", "_caller", "_actionId"];
-                    private _attached = attachedObjects _target;
-                    {
-                        detach _x;
-                        private _dropPos = _target modelToWorld [0, -8, 0];
-                        _dropPos set [2, 0 max ((getPosATL _target) select 2)];
-                        _x setPosATL _dropPos;
-                        _x setVelocity [0,0,0];
-                    } forEach _attached;
-                    _target removeAction _actionId;
-                    _target setVariable ["logistics_unload_action_id", -1, true];
-                    systemChat "LOGISTICS COMMAND: Flatbed cargo unloaded onto surface.";
-                },
-                nil, 1.5, false, true, "",
-                "count (attachedObjects _target) > 0"
-            ];
-            _vehicle setVariable ["logistics_unload_action_id", _actId, true];
-        };
+        deleteVehicle _cargoObj;
+        diag_log format ["[LOGISTICS ERROR]: setVehicleCargo failed to load %1 into %2", _x, typeOf _vehicle];
     };
 } forEach _cargoList;
 

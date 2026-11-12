@@ -119,11 +119,6 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
         _activeTruck setVariable ["logistics_is_loaded", false, true];
         _activeTruck setVariable ["logistics_loaded_type", "", true];
         _activeTruck setVariable ["logistics_loaded_weight", 0, true];
-        private _unloadActId = _activeTruck getVariable ["logistics_unload_action_id", -1];
-        if (_unloadActId != -1) then {
-            _activeTruck removeAction _unloadActId;
-            _activeTruck setVariable ["logistics_unload_action_id", -1, true];
-        };
         _triggerArea setVariable ["isProcessingLogistics", false];
     };
 
