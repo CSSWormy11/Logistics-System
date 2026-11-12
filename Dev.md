@@ -446,6 +446,38 @@ Enhance the logistics economy and dropoff engine to universally accept and credi
 
 ---
 
+## 5. Architectural Explorations, Considerations & Revamping Concepts (Optional Alternatives)
+
+This section documents alternative design paradigms, prospective refactors, and conceptual revamps that may be considered as substitutes or evolutions to existing processes. These concepts are exploratory: they allow comparing trade-offs between static templating and procedural automation before committing to major architectural shifts.
+
+### 5.1 Dynamic Config Introspection & Auto-Discovery vs. Static Vehicle Templates
+
+Investigate replacing manually curated, static template files (`spawnableVehicleTemplate.sqf`, `logisticsCargoTemplates.sqf`) with runtime engine config introspection (`"configFile >> 'CfgVehicles'"`), dynamically discovering vehicles, equipment, and compatibility without requiring exhaustive classname maintenance or `isClass` checks:
+
+- [ ] **Procedural Asset Auto-Discovery:**
+  - Query active engine configs directly at mission startup to identify all accessible assets matching target criteria:
+    - Faction/Side filtering (e.g. `getNumber (_cfg >> "side") == 1` for BLUFOR).
+    - Scope validation (`getNumber (_cfg >> "scope") == 2` for playable/curator-accessible entities).
+    - Category classification (`_class isKindOf "Helicopter"`, `"Plane"`, `"Tank"`, `"Car"`, `"Ship"`).
+  - Automatically captures all active vehicles across Vanilla, CDLCs (Spearhead 1944, Western Sahara, S.O.G. Prairie Fire), and third-party mods (RHS, CUP, 3CB) without needing manual template entries.
+- [ ] **Automated Vehicle Stat & Capacity Extraction:**
+  - Extract physical and logistical statistics directly from config properties:
+    - **Crew & Turret Complement:** Query `hasDriver`, `hasGunner`, `hasCommander`, and `_cfg >> "Turrets"` to dynamically determine crew seating.
+    - **Passenger Capacity:** Query `getNumber (_cfg >> "transportSoldier")` and calculate available cargo / FFV seats automatically.
+    - **Slingload Limits:** Query `getNumber (_cfg >> "slingLoadMaxCargoMass")` to determine exact lift capacity.
+- [ ] **Dynamic Cargo & Slingload Matching:**
+  - Retrieve the mass of supply crates, vehicles, and pods (`getNumber (configFile >> "CfgVehicles" >> _cargoClass >> "mass")`).
+  - Procedurally match any slingloadable asset beneath the helicopter's `slingLoadMaxCargoMass`, eliminating hardcoded per-helicopter slingload cargo tables.
+- [ ] **Simplified Role-Archetype Population Templates:**
+  - Rather than hardcoding full unit lists per vehicle, mission makers provide a lightweight archetype mapping:
+    - *Pilot / Driver archetype*, *Gunner archetype*, *Commander archetype*, *Passenger squad pool*.
+  - Spawner loops dynamically read vehicle capacity from config and fill seats sequentially until full.
+- [ ] **Technical Scope & Known Boundaries:**
+  - **Vehicle-in-Vehicle (ViV) Limitations:** While slingload mass and passenger seating are exposed cleanly in config, ViV internal dimensions, proxy clearance, and `cargoDoors` collision geometry are notoriously complex in engine configs. A hybrid model (procedural discovery for slingloading/passengers/motorpools, paired with a lightweight curated template for ViV cargo) may represent the ideal balance.
+  - **Relationship to Section 4.4:** Section 4.4 remains the concrete near-term implementation path (curated master templates with `isClass` safety checks); this concept serves as the long-term procedural alternative under evaluation.
+
+---
+
 **Ongoing Development Tracking**
 
 Maintain this checklist as part of the V8 development process. These goals are not necessarily sequential and may be addressed independently as opportunities arise during debugging, refactoring, and feature development.
