@@ -314,17 +314,26 @@ Improve vehicle spawning accuracy and transition toward physical objects as spaw
     - [x] Position helicopters on top of the invisible helipad, similar to the existing marker-based positioning behavior. *(`_veh setPosASL (getPosASL _padObj)`)*
     - [x] Prevent incompatible vehicle types from spawning at designated objects. *(Enforced by variable name type and size specifiers)*
 
-### 4.4 Modded Vehicle and Equipment Handling
+### 4.4 Modded Vehicle and Equipment Handling (Universal Mod & CDLC Compatibility)
 
-Update the existing template-based system to support comprehensive vehicle and equipment templates while filtering available items according to loaded mods.
+Update the existing template-based architecture to support comprehensive master templates for vehicles, infantry, weapons, equipment, magazines, and items that automatically adapt to loaded mods and CDLCs, ensuring mission makers can maintain a single template file that functions across any terrain, modset, or DLC configuration:
 
-- [ ] Include every vehicle in the appropriate templates.
-- [ ] Include every piece of equipment in the appropriate templates.
-- [ ] Implement detection of which required mods are currently loaded.
-- [ ] Update the vehicle spawner.
-  - [ ] Only display vehicles whose required mods are loaded.
-- [ ] Update the Virtual Arsenal.
-  - [ ] Only display equipment whose required mods are loaded.
+- [ ] **Universal Multi-Mod / CDLC Master Template Architecture:**
+  - [ ] Allow mission makers to define a unified master template file containing vehicles (`spawnableVehicleTemplate.sqf`), infantry (`fn_recruiter_list.sqf`), cargo (`logisticsCargoTemplates.sqf`), weapons, magazines, and equipment across Vanilla, CDLCs (Western Sahara, Spearhead 1944, S.O.G. Prairie Fire, CSLA, Global Mobilization), and popular community mods (RHS, CUP, 3CB, etc.).
+  - [ ] Ensure the framework gracefully parses templates without generating engine config errors, missing-asset warnings, or script halts when optional mods/CDLCs are not active.
+- [ ] **Class Existence Validation Engine (`isClass` Config Verification):**
+  - [ ] Implement robust config verification across all UI builders and spawner loops, mirroring the graceful `fileExists` pattern used for mission scripts:
+    - [ ] **Vehicles, Drones & Statics:** `isClass (configFile >> "CfgVehicles" >> _classname)` in `c_vehicleTabs.sqf` and Motorpool UI.
+    - [ ] **Infantry Specialists & Squads:** `isClass (configFile >> "CfgVehicles" >> _classname)` in `fn_recruiter_list.sqf` and Recruiter UI.
+    - [ ] **Weapons & Attachments:** `isClass (configFile >> "CfgWeapons" >> _classname)` in Virtual Arsenal and loadout handlers.
+    - [ ] **Equipment, Vests, Uniforms & Headgear:** `isClass (configFile >> "CfgWeapons" >> _classname) || isClass (configFile >> "CfgGlasses" >> _classname)`.
+    - [ ] **Magazines & Ordnance:** `isClass (configFile >> "CfgMagazines" >> _classname)`.
+  - [ ] Automatically suppress and hide any entry from menus if its class does not exist in the active engine session.
+- [ ] **Vehicle & Equipment Spawner Safety:**
+  - [ ] Prevent unverified or missing classnames from reaching `createVehicle`, `createUnit`, `addWeapon`, or `setPylonLoadout`.
+- [ ] **Content Set & Era Filtering Toggles (Phase 2):**
+  - [ ] Provide mission-maker configuration toggles to enable or restrict specific eras and content packs (e.g. `QM_AllowedEras = ["WW2", "VIETNAM", "COLD_WAR", "MODERN", "2035"]` or `QM_DisableVanilla2035 = true;`).
+  - [ ] Ensure historical or thematic missions (such as World War II or Vietnam) can suppress vanilla 2035 assets (preventing futuristic aircraft like the Black Wasp II or stealth drones from appearing alongside period-accurate assets) even when running on the vanilla engine.
 
 ### 4.5 Vehicle Salvage System Redesign (Low Priority — Combined Bug 1.5 Fix & Feature Update)
 
