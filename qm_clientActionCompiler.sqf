@@ -11,10 +11,7 @@
 
 if (isDedicated) exitWith {};
 
-// --- MODULE 1: INFANTRY GEAR PROCUREMENT ---
-QM_fnc_clientRegisterTraderActions = { params [["_crate", objNull], ["_baseKey", ""]]; };
-
-// --- MODULE 2: VEHICLE PROCUREMENT FACTORY ---
+// --- MODULE 1: VEHICLE PROCUREMENT FACTORY ---
 QM_fnc_clientRegisterFlagActions = {
     params [["_crate", objNull, [objNull]], ["_baseKey", "", [""]]];
     if (isNull _crate || _baseKey == "") exitWith {};

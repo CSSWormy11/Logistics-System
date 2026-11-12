@@ -24,7 +24,7 @@ class CfgControlHubMenu {
             w = 0.70 * safezoneW; h = 0.04 * safezoneH; colorBackground[] = {0.55, 0.25, 0.0, 1};
         };
         class Col1Header: RscText {
-            idc = -1; text = "INDIVIDUAL SQUAD REPLACEMENTS [LOCAL]";
+            idc = -1; text = "INDIVIDUAL SPECIALIST RECRUITS";
             x = 0.17 * safezoneW + safezoneX; y = 0.22 * safezoneH + safezoneY;
             w = 0.32 * safezoneW; h = 0.03 * safezoneH; colorText[] = {0.0, 0.85, 1, 1};
         };
@@ -33,11 +33,11 @@ class CfgControlHubMenu {
             w = 0.32 * safezoneW; h = 0.44 * safezoneH;
         };
         class ConfirmCol1Btn: RscButton {
-            idc = 2010; text = "DRAFT BODY TO YOUR SQUAD"; action = "[0] execVM 'fn_recruiter.sqf';";
+            idc = 2010; text = "DRAFT RECRUIT TO YOUR SQUAD"; action = "[0] execVM 'fn_recruiter.sqf';";
             x = 0.17 * safezoneW + safezoneX; y = 0.72 * safezoneH + safezoneY; w = 0.32 * safezoneW; h = 0.04 * safezoneH;
         };
         class Col2Header: RscText {
-            idc = -1; text = "AUTONOMOUS LOGISTICS GROUPS [SERVER]";
+            idc = -1; text = "SQUAD TEMPLATES [QUICK DRAFT]";
             x = 0.51 * safezoneW + safezoneX; y = 0.22 * safezoneH + safezoneY;
             w = 0.32 * safezoneW; h = 0.03 * safezoneH; colorText[] = {1, 0.75, 0.0, 1};
         };
@@ -46,7 +46,7 @@ class CfgControlHubMenu {
             w = 0.32 * safezoneW; h = 0.44 * safezoneH;
         };
         class ConfirmCol2Btn: RscButton {
-            idc = 2020; text = "MOBILIZE INDEPENDENT UNIT"; action = "[1] execVM 'fn_recruiter.sqf';";
+            idc = 2020; text = "DRAFT SQUAD TEMPLATE TO YOUR SQUAD"; action = "[1] execVM 'fn_recruiter.sqf';";
             x = 0.51 * safezoneW + safezoneX; y = 0.72 * safezoneH + safezoneY; w = 0.32 * safezoneW; h = 0.04 * safezoneH;
         };
         class CloseButton: RscButton {

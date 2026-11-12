@@ -163,34 +163,42 @@ This document tracks verified bugs, inconsistencies, incomplete features, and up
 
 ## 3. Incomplete Features & Legacy/Redundant Files
 
-### [ ] 3.1 Unwired Pylon Dialog Controls (`QM_PylonDialog`)
-- **1. Initial Issue Summary:** In `qm_pylonMenu.hpp` (Lines 124–156), UI controls for Internal Weapon Systems (`GunHeader` 8300, `GunSlider` 8301, `GunSliderText` 8302) and Livery/Camo (`CamoDropdown` 8400) exist in the dialog definition, but `fn_pylonManager.sqf` has no logic or event handlers bound to them.
-- **2. Proposed / Applied Corrections:** Implement event handlers in `fn_pylonManager.sqf` for internal gun ammo belt scaling and aircraft camouflage selection (or hide unused controls until implemented).
-- **3. Status:** **Identified** (Pending feature work).
+### [x] 3.1 Unwired Pylon Dialog Controls (`QM_PylonDialog` UI Polish)
+- **1. Initial Issue Summary:** In `qm_pylonMenu.hpp` (Lines 124–156), UI controls for Internal Weapon Systems (`GunHeader` 8300, `GunSlider` 8301, `GunSliderText` 8302) and Livery/Camo (`CamoDropdown` 8400) existed in the dialog definition, but had no logic or event handlers bound to them, cluttering the UI.
+- **2. Proposed / Applied Corrections:** Polished the Pylon dialog by hiding controls 8300, 8301, 8302, and 8400 (`show = 0` in `qm_pylonMenu.hpp` and `ctrlShow false` in `fn_pylonManager.sqf`). Future feature requests for internal gun ammo belt scaling and aircraft livery/camo selection are tracked under **Section 4.8**.
+- **3. Status:** **Verified Resolved** (Unimplemented controls hidden; feature requests deferred to Section 4.8).
 
-### [ ] 3.2 Autonomous Group Recruitment vs. Player Squad Joining
-- **1. Initial Issue Summary:** Column 2 of `CfgControlHubMenu` in `qm_quartermasterUI.hpp` (Lines 40, 49) is titled `"AUTONOMOUS LOGISTICS GROUPS [SERVER]"` / `"MOBILIZE INDEPENDENT UNIT"`, but `QM_fnc_serverCreateLocalGroup` in `qm_serverFunctions.sqf` (Lines 132–192) attaches spawned units directly to `group _playerUnit`.
-- **2. Proposed / Applied Corrections:** Confirm whether Column 2 is intended to attach a pre-built squad template to the player's squad (current code behavior and `systemChat` message) or spawn an independent group (e.g., High Command / autonomous AI).
-- **3. Status:** **Identified** (Awaiting confirmation).
+### [x] 3.2 Infantry Recruitment UI Polish (Squad Quick-Draft vs. Individual Specialists)
+- **1. Initial Issue Summary:** In `qm_quartermasterUI.hpp` (Lines 40, 49), Column 2 of `CfgControlHubMenu` was previously titled `"AUTONOMOUS LOGISTICS GROUPS [SERVER]"` / `"MOBILIZE INDEPENDENT UNIT"`, which created confusion because `QM_fnc_serverCreateLocalGroup` in `qm_serverFunctions.sqf` (Lines 136–191) attaches the spawned AI group directly to `group _playerUnit` (the player's personal squad), behaving as a quick-draft squad composition rather than an autonomous/independent entity.
+- **2. Proposed / Applied Corrections:**
+  - Polished `qm_quartermasterUI.hpp`:
+    - Updated Column 1 Header to `"INDIVIDUAL SPECIALIST RECRUITS"` and button to `"DRAFT RECRUIT TO YOUR SQUAD"`.
+    - Updated Column 2 Header to `"SQUAD TEMPLATES [QUICK DRAFT]"` and button to `"DRAFT SQUAD TEMPLATE TO YOUR SQUAD"`.
+  - Added a dedicated low-priority feature request to **Section 4.9** for a potential future 3rd column or autonomous AI module that answers to the player through High Command (`setCommander` / `BIS_fnc_HCSetGroupSelection`).
+- **3. Status:** **Verified Resolved** (UI headers and labels aligned with squad integration).
 
-### [ ] 3.3 Missing External / Planned Modules Referenced in Code
-- **1. Initial Issue Summary:** Several scripts are referenced via `fileExists` or UI `action` strings but are not present in the workspace:
-  - Tactical Command Center / GIN (`init.sqf` Lines 159, 179–180): `tsk_serverGIN.sqf`, `tsk_clientMapIntel.sqf`, `tsk_clientTaskMaster.sqf`
-  - Zeus Master Admin Tablet (`qm_quartermasterUI.hpp` Lines 131–167): `fn_adminTabletLoad.sqf`, `fn_adminTabletExecute.sqf`
+### [x] 3.3 External Modular Systems (Combat Tasking System / GIN / Zeus / WorldAI)
+- **1. Initial Issue Summary:** Several scripts are referenced via `fileExists` or UI `action` strings that are external to this repository:
+  - Tactical Command Center / GIN (`tsk_serverGIN.sqf`, `tsk_clientMapIntel.sqf`, `tsk_clientTaskMaster.sqf`)
+  - Zeus Master Admin Tablet (`fn_adminTabletLoad.sqf`, `fn_adminTabletExecute.sqf`)
   - WorldAI Spawner: Referenced by `"WorldAI"` tags and multi-vehicle convoy blueprints in `spawnableInfantryTemplate.sqf` and `spawnableVehicleTemplate.sqf`.
-- **2. Proposed / Applied Corrections:** Track as external/modular or upcoming components; guarded by `fileExists` in `init.sqf`.
-- **3. Status:** **Identified** (Modular / Pending external modules).
+- **2. Proposed / Applied Corrections:** Documented that these references belong to the separate **Combat Tasking System** within the larger modular dynamic mission architecture. All hooks in `init.sqf` are safely guarded with `fileExists` checks so the Logistics System functions seamlessly as a standalone core or alongside the combat systems without modification or errors.
+- **3. Status:** **Verified Resolved / By Design** (External modular hooks confirmed and left untouched).
 
-### [ ] 3.4 Redundant / Superseded Workspace Files & Code Blocks
+### [x] 3.4 Redundant / Superseded Workspace Files & Code Blocks
 - **1. Initial Issue Summary:**
-  - `qm_openPylonMenu.sqf` — Contains `.hpp` C++ dialog classes inside a `.sqf` file; unused.
+  - `qm_openPylonMenu.sqf` — Contained `.hpp` C++ dialog classes inside a `.sqf` file; unused.
   - `c_vehicleExecute.sqf` — Duplicate of `fn_newCarDealership.sqf`; unused by `qm_quartermasterUI.hpp`.
   - `c_unifiedMenu.sqf` — Legacy terminal entry script; superseded by `qm_clientActionCompiler.sqf`.
   - `QM_fnc_initVirtualArsenal` in `fn_equipmentTrader.sqf` (Lines 14–84) — Uncalled function (superseded by inline Arsenal logic in `qm_clientActionCompiler.sqf`).
-  - `QM_fnc_clientRegisterTraderActions` in `qm_clientActionCompiler.sqf` (Line 15) — Empty no-op stub.
-  - Duplicate `_GARAGE` marker hiding loop in `init.sqf` (Lines 117–119 and 133–135).
-- **2. Proposed / Applied Corrections:** Leave untouched or clean up when directed by the user.
-- **3. Status:** **Identified** (Pending cleanup decision).
+  - `QM_fnc_clientRegisterTraderActions` in `qm_clientActionCompiler.sqf` (Line 15) and `qm_clientFunctions.sqf` (Line 101) — Empty no-op stub.
+  - Duplicate `_GARAGE` marker hiding loop in `init.sqf` (Lines 113–115 and 129–131).
+- **2. Proposed / Applied Corrections:**
+  - Moved `qm_openPylonMenu.sqf`, `c_vehicleExecute.sqf`, and `c_unifiedMenu.sqf` into an `archive/` folder.
+  - Removed dead `QM_fnc_initVirtualArsenal` function block from `fn_equipmentTrader.sqf`.
+  - Removed no-op stub `QM_fnc_clientRegisterTraderActions` from `qm_clientActionCompiler.sqf` and its caller in `qm_clientFunctions.sqf`.
+  - Removed the duplicate `_GARAGE` marker hiding loop in `init.sqf`.
+- **3. Status:** **Verified Resolved** (Files archived and code cleaned up).
 
 ---
 
@@ -322,9 +330,19 @@ Enhance the Aircraft Pylon Manager (`fn_pylonManager.sqf` / `qm_pylonMenu.hpp`, 
 - [ ] **Pilot vs. Gunner (Turret) Pylon Control Toggle (Higher Priority):**
   - [ ] Allow players to toggle each pylon's controller between **Pilot (`[]`)** and **Gunner / Co-Pilot (`[0]`)** inside the Pylon Manager UI (both when equipping new ordnance and on already-equipped pylons).
   - [ ] Synchronize the selected turret path (`[]` vs. `[0]`) across all clients via `setPylonLoadout [_pylonIndex, _magClass, true, _selectedTurretPath]` so pilots flying solo can take control of weapons or hand weapon control over when picking up a co-pilot/gunner.
-- [ ] **Aircraft Camo Schemes & Component Options (Low Priority — Links to Section 3.1):**
+- [ ] **Internal Weapon Systems Scaling (Low Priority Future Feature):**
+  - [ ] Wire `GunSlider` / `GunSliderText` (IDC `8300`, `8301`, `8302`) in `qm_pylonMenu.hpp` / `fn_pylonManager.sqf` to allow scaling internal cannon/gun ammunition reserves and deduct or refund base Ammo points accordingly.
+- [ ] **Aircraft Camo Schemes & Component Options (Low Priority Future Feature):**
   - [ ] Wire `CamoDropdown` (IDC `8400`) in `qm_pylonMenu.hpp` / `fn_pylonManager.sqf` to read `CfgVehicles >> _vehClass >> TextureSources` and apply the selected camouflage skin globally via `BIS_fnc_initVehicle`.
   - [ ] Support optional aircraft component/animation toggles (`AnimationSources`) if applicable.
+
+### 4.9 High Command Autonomous Groups Integration (Low Priority Future Feature)
+
+Provide an option in the Recruitment / Mobilization interface (or a 3rd UI column) to mobilize independent AI squads that do not join the player's direct personal squad, but are instead assigned to the player via Arma 3's High Command system.
+
+- [ ] Create independent groups on the server with autonomous AI leaders.
+- [ ] Bind spawned groups to the player using `player hcSetGroup [_group]` / `setCommander`.
+- [ ] Deduct base `Troops` and `Cargo` supply points identically to squad templates.
 
 ---
 

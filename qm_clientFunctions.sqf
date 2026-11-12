@@ -98,7 +98,6 @@ QM_fnc_addPylonAction = {
             if (!isNull _hub && !(_hub in _processedHubs)) then {
                 private _baseKey = _hub getVariable ["QM_Crate_OwningBase", ""];
                 if (_baseKey != "") then {
-                    if (!isNil "QM_fnc_clientRegisterTraderActions") then { [_hub, _baseKey] call QM_fnc_clientRegisterTraderActions; };
                     if (!isNil "QM_fnc_clientRegisterFlagActions") then { [_hub, _baseKey] call QM_fnc_clientRegisterFlagActions; };
                     if (!isNil "QM_fnc_clientRegisterBarracksActions") then { [_hub, _baseKey] call QM_fnc_clientRegisterBarracksActions; };
                     _processedHubs pushBack _hub;

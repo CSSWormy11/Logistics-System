@@ -9,7 +9,10 @@
 
 // Format: [BaseType, [[Category, DefaultValue], ...]]
 // Note: -1 denotes unlimited reserves (MSR Hub)
-// Balances: SB holds exactly 3 maximum heavy HEMTT Cargo trips per pool, rounded up.
+// Balances:
+//   - SB: Baseline values calibrated for full fleet + 400 troops.
+//         If only 1 SB exists on the map, init.sqf doubles its values automatically.
+//   - FOB: Set at 10% of the baseline SB values (can be adjusted independently).
 
 logisticsBaseDefaults = [
     [
@@ -27,20 +30,20 @@ logisticsBaseDefaults = [
             ["Fuel", 100000],
             ["Medical", 100000],
             ["Repair", 200000],
-            ["Vehicle", 2400000],
-            ["Troops", 256]
+            ["Vehicle", 1600000],
+            ["Troops", 400]
         ]
     ],
     [
         "FOB", 
         [
-            ["Cargo", 7000],
-            ["Ammo", 5000],
-            ["Fuel", 5000],
-            ["Medical", 2000],
-            ["Repair", 5000],
-            ["Vehicle", 36000],
-            ["Troops", 10]
+            ["Cargo", 30000],
+            ["Ammo", 30000],
+            ["Fuel", 10000],
+            ["Medical", 10000],
+            ["Repair", 20000],
+            ["Vehicle", 160000],
+            ["Troops", 40]
         ]
     ]
 ];

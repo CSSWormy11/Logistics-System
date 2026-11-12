@@ -125,12 +125,10 @@ if (isServer) then {
     };
     publicVariable "logisticsBases"; 
 
-    // Broadcast to clients
-    {
-        if ("_GARAGE" in toUpper _x) then { _x setMarkerAlpha 0; };
-    } forEach allMapMarkers;
-
     // --- Initialize Base Ledger Economy ---
+    private _sbCount = { (["SB", _x] call BIS_fnc_inString) } count logisticsBases;
+    private _sbMultiplier = if (_sbCount <= 1) then { 2 } else { 1 };
+
     {
         private _baseName = _x; 
         _baseName setMarkerAlpha 0;
@@ -143,7 +141,12 @@ if (isServer) then {
         private _typeIndex = logisticsBaseDefaults findIf {_x # 0 == _baseType};
         if (_typeIndex != -1) then {
             { 
-                missionNamespace setVariable [format ["LogiScore_%1_%2", _baseName, _x # 0], _x # 1, true]; 
+                private _cat = _x # 0;
+                private _val = _x # 1;
+                if (_val != -1 && _baseType == "SB") then {
+                    _val = _val * _sbMultiplier;
+                };
+                missionNamespace setVariable [format ["LogiScore_%1_%2", _baseName, _cat], _val, true]; 
             } forEach ((logisticsBaseDefaults # _typeIndex) # 1);
         };
     } forEach logisticsBases;

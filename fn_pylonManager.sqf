@@ -17,6 +17,12 @@ createDialog "QM_PylonDialog";
 waitUntil { !isNull findDisplay 8000 };
 private _display = findDisplay 8000;
 
+// Hide un-implemented controls (internal gun ammo slider and camo dropdown)
+{
+    private _ctrl = _display displayCtrl _x;
+    if (!isNull _ctrl) then { _ctrl ctrlShow false; };
+} forEach [8300, 8301, 8302, 8400];
+
 uiNamespace setVariable ["QM_Pylon_ActiveVeh", _veh];
 uiNamespace setVariable ["QM_Pylon_BaseKey", _baseKey];
 
