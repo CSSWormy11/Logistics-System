@@ -129,6 +129,18 @@ This document tracks verified bugs, inconsistencies, incomplete features, and up
   - Updated `fn_initLogisticsTasks.sqf` (Lines 166–171) to automatically initialize all `<Base>_service*` triggers at mission start so they accept `LandVehicle`, `Air`, and `Ship`, pass `vehicle player` directly to `fn_executeR4CService.sqf`, and draw yellow map markers and bounding boxes (`Service_<Base>` and `Area_<TriggerName>`) on the in-game map.
 - **3. Status:** **In Testing** (Corrections applied in `fn_executeR4CService.sqf` and `fn_initLogisticsTasks.sqf` — needs in-game verification with a Prowler/ground vehicle and aircraft).
 
+### [ ] 1.14 MSR Infinite-Pool (`-1`) Verification Guard & HEMTT Flatbed Container ViV Loading Fallback
+- **1. Initial Issue Summary:**
+  1. In `fn_spawnLoadSupply.sqf` (Lines 91–97), `_availablePoints != -1 && _availablePoints < _totalCargoPointWeight` checked whether base storage had sufficient points before spawning. When loading at an MSR hub, if `LogiScore_MSR_<category>` was not found in `missionNamespace` (e.g. if no map marker was named `"MSR"` or before network sync), `getVariable` returned `0` (`0 != -1`), which evaluated as depleted and aborted with `"WARNING: Stores low on <category> at MSR."`.
+  2. In `init.sqf` (Lines 121–152), `logisticsBases` and `LogiScore_<base>_*` were only initialized from markers in `allMapMarkers`. If mission makers placed MSR pickup triggers (`MSR_pickup_1`..`5`) without a dedicated marker named `"MSR"`, `"MSR"` was omitted from `logisticsBases` and its infinite (`-1`) pool values were never initialized.
+  3. In `fn_spawnLoadSupply.sqf` (Line 207), ground vehicle cargo was spawned at `[0,0,0]` and loaded strictly via `_vehicle setVehicleCargo _cargoObj`. In vanilla Arma 3, `B_Truck_01_flatbed_F` ViV configs only permit smaller utility vehicles; large Huron slingload containers (`B_Slingload_01_*`) and Hunter MRAPs (`B_MRAP_01_F`) return `false` from `setVehicleCargo`, leaving spawned cargo abandoned at `[0,0,0]` and the truck bed completely empty.
+- **2. Proposed / Applied Corrections:**
+  - Updated `fn_spawnLoadSupply.sqf` to explicitly check `private _isMSR = "MSR" in (toUpper _pickupBaseKey);` so MSR loading pads are recognized as infinite (`-1`), bypassing low store warnings and skipping pool deductions.
+  - Updated `init.sqf` to ensure `"MSR"` is unconditionally registered in `logisticsBases` and its ledger pools initialized to `-1` across all resource categories in `logisticsBaseDefaults.sqf`.
+  - Added robust ViV fallback in `fn_spawnLoadSupply.sqf`: if native `setVehicleCargo` returns `false` (e.g. Huron containers or MRAPs on HEMTT Flatbeds), the cargo is mounted directly onto the vehicle deck using `attachTo` with vehicle-calibrated offsets, and an interactive `[ Unload Flatbed Cargo ]` action is registered on the vehicle.
+  - Updated `fn_cargoDelivery.sqf` so that when detached onto the dropoff zone tarmac, the delivery is processed and the temporary unload action is cleanly stripped from the vehicle.
+- **3. Status:** **In Testing** (Corrections applied in `fn_spawnLoadSupply.sqf`, `init.sqf`, and `fn_cargoDelivery.sqf`).
+
 ---
 
 ## 2. Economy, Filtering & Configuration Inconsistencies

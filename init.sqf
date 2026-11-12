@@ -123,6 +123,11 @@ if (isServer) then {
         ((_m find "fob" >= 0) || (_m find "sb" >= 0) || (_m find "msr" >= 0)) &&
         { ["spawn", "garage", "terminal", "arsenal", "service", "pickup", "dropoff"] findIf { _m find _x >= 0 } == -1 }
     };
+    
+    // Ensure "MSR" base key is always present in logisticsBases
+    if !("MSR" in logisticsBases) then {
+        logisticsBases pushBackUnique "MSR";
+    };
     publicVariable "logisticsBases"; 
 
     // --- Initialize Base Ledger Economy ---
@@ -134,8 +139,8 @@ if (isServer) then {
         _baseName setMarkerAlpha 0;
         
         private _baseType = "FOB";
-        if (["MSR", _baseName] call BIS_fnc_inString) then { _baseType = "MSR"; };
-        if (["SB", _baseName] call BIS_fnc_inString) then { _baseType = "SB"; };
+        if (["MSR", _baseName] call BIS_fnc_inString || { "MSR" in (toUpper _baseName) }) then { _baseType = "MSR"; };
+        if (["SB", _baseName] call BIS_fnc_inString || { "SB" in (toUpper _baseName) }) then { _baseType = "SB"; };
 
         // Read directly from logisticsBaseDefaults.sqf
         private _typeIndex = logisticsBaseDefaults findIf {_x # 0 == _baseType};

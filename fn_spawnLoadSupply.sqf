@@ -89,14 +89,15 @@ private _totalCargoPointWeight = 0;
 } forEach _cargoList;
 
 // Stock storage verification protection guard (top-level exitWith so it properly halts script)
+private _isMSR = "MSR" in (toUpper _pickupBaseKey);
 private _targetVar = format ["LogiScore_%1_%2", _pickupBaseKey, _supplyType];
-private _availablePoints = missionNamespace getVariable [_targetVar, 0];
+private _availablePoints = if (_isMSR) then { -1 } else { missionNamespace getVariable [_targetVar, 0] };
 
-if (_availablePoints != -1 && _availablePoints < _totalCargoPointWeight) exitWith {
+if (!_isMSR && _availablePoints != -1 && _availablePoints < _totalCargoPointWeight) exitWith {
     [west, "HQ"] sideChat format ["WARNING: Stores low on %1 at %2.", _supplyType, _pickupBaseKey];
 };
 
-if (_availablePoints != -1) then {
+if (!_isMSR && _availablePoints != -1) then {
     missionNamespace setVariable [_targetVar, 0 max (_availablePoints - _totalCargoPointWeight), true];
 };
 
@@ -204,7 +205,44 @@ if (_isHelicopter) exitWith {
 };
 
 systemChat format ["LOGISTICS COMMAND: Surface cargo grid storage locked down: [%1].", _displayAssetName];
-{ private _cargoObj = _x createVehicle [0,0,0]; _vehicle setVehicleCargo _cargoObj; } forEach _cargoList;
+{
+    private _cargoObj = _x createVehicle [0,0,0];
+    private _loadedViV = _vehicle setVehicleCargo _cargoObj;
+
+    // If native Vehicle-in-Vehicle fails (e.g. Huron containers or MRAPs on HEMTT Flatbed)
+    if (!_loadedViV) then {
+        // Fallback attachment for flatbeds and cargo beds
+        private _attachOffset = [0, -1.5, 0.4];
+        if (_cargoObj isKindOf "MRAP_01_base_F" || _cargoObj isKindOf "Wheeled_APC_F") then {
+            _attachOffset = [0, -1.8, 0.7];
+        };
+        _cargoObj attachTo [_vehicle, _attachOffset];
+
+        // Register unload action on transport vehicle if not already present
+        if ((_vehicle getVariable ["logistics_unload_action_id", -1]) == -1) then {
+            private _actId = _vehicle addAction [
+                "<t color='#00FF00'>[ Unload Flatbed Cargo ]</t>",
+                {
+                    params ["_target", "_caller", "_actionId"];
+                    private _attached = attachedObjects _target;
+                    {
+                        detach _x;
+                        private _dropPos = _target modelToWorld [0, -8, 0];
+                        _dropPos set [2, 0 max ((getPosATL _target) select 2)];
+                        _x setPosATL _dropPos;
+                        _x setVelocity [0,0,0];
+                    } forEach _attached;
+                    _target removeAction _actionId;
+                    _target setVariable ["logistics_unload_action_id", -1, true];
+                    systemChat "LOGISTICS COMMAND: Flatbed cargo unloaded onto surface.";
+                },
+                nil, 1.5, false, true, "",
+                "count (attachedObjects _target) > 0"
+            ];
+            _vehicle setVariable ["logistics_unload_action_id", _actId, true];
+        };
+    };
+} forEach _cargoList;
 
 _vehicle setVariable ["logistics_is_loaded", true, true];
 _vehicle setVariable ["logistics_loaded_type", _supplyType, true];
