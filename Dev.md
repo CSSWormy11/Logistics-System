@@ -138,7 +138,7 @@ This document tracks verified bugs, inconsistencies, incomplete features, and up
   - Updated `fn_spawnLoadSupply.sqf` to explicitly check `private _isMSR = "MSR" in (toUpper _pickupBaseKey);` so MSR loading pads are recognized as infinite (`-1`), bypassing low store warnings and skipping pool deductions.
   - Updated `init.sqf` to ensure `"MSR"` is unconditionally registered in `logisticsBases` and its ledger pools initialized to `-1` across all resource categories in `logisticsBaseDefaults.sqf`.
   - Strictly preserved Bohemia Interactive native Vehicle-in-Vehicle (`setVehicleCargo`) loading without artificial workarounds or attachTo mechanics.
-- **3. Status:** **In Testing** (Corrections applied in `fn_spawnLoadSupply.sqf` and `init.sqf`).
+- **3. Status:** **Testing in Progress** (Corrections applied in `fn_spawnLoadSupply.sqf` and `init.sqf` — awaiting in-game confirmation).
 
 ---
 
