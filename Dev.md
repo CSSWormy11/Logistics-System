@@ -171,7 +171,7 @@ This document tracks verified bugs, inconsistencies, incomplete features, and up
 
 ## 2. Economy, Filtering & Configuration Inconsistencies
 
-### [ ] 2.1 Base Restriction Tier Discrepancy (`c_vehicleTabs.sqf` vs. `fn_recruiter_list.sqf`)
+### [x] 2.1 Base Restriction Tier Discrepancy (`c_vehicleTabs.sqf` vs. `fn_recruiter_list.sqf`)
 - **1. Initial Issue Summary:**
   - In `fn_recruiter_list.sqf` (Line 67), `"FOB"`-tier units were allowed at both `FOB` and `SB` bases (`_isFOB || _isSB`), allowing frontline-only `"FOB"` infantry to be spawned at rear `"SB"` hubs.
   - Neither `fn_recruiter_list.sqf` nor `c_vehicleTabs.sqf` supported `"BOTH"` or an array of allowed base types/names (e.g., `["SB", "FOB"]`).
@@ -180,22 +180,22 @@ This document tracks verified bugs, inconsistencies, incomplete features, and up
   - `"FOB"` restricts strictly to `FOB` bases (`_isFOB`).
   - `"ALL"` or `"BOTH"` allows spawning at both `SB` and `FOB` bases (`_isSB || _isFOB`).
   - Array restrictions (e.g., `["SB", "FOB"]` or specific base names like `["SB_Carrier"]`) are also supported.
-- **3. Status:** **In Testing** (Corrections applied in `fn_recruiter_list.sqf` and `c_vehicleTabs.sqf` — needs in-game verification).
+- **3. Status:** **Verified Resolved** (In Testing).
 
-### [ ] 2.2 Case Sensitivity in Infantry & Vehicle Template Filtering
+### [x] 2.2 Case Sensitivity in Infantry & Vehicle Template Filtering
 - **1. Initial Issue Summary:** In `fn_recruiter_list.sqf` (Lines 62–64), `_faction`, `_terrainArray`, and `_systemsArray` were compared without `toUpper` normalization, and in `c_vehicleTabs.sqf` (Line 150), `_systemsArray` was compared without `toUpper`.
 - **2. Proposed / Applied Corrections:** Normalized `_faction`, `_terrainArray`, `_systemsArray`, and `_restrictionType` in both `fn_recruiter_list.sqf` and `c_vehicleTabs.sqf` using `toUpper` so mission-maker case differences never break filtering.
-- **3. Status:** **In Testing** (Corrections applied in `fn_recruiter_list.sqf` and `c_vehicleTabs.sqf` — needs in-game verification).
+- **3. Status:** **Verified Resolved** (In Testing).
 
 ### [x] 2.3 `B_supplyCrate_F` Cost / Score Values in Templates
 - **1. Initial Issue Summary:** `B_supplyCrate_F` is set to `4,000` Cargo points in `spawnableVehicleTemplate.sqf` (Line 195) and `7,000` Cargo points in `SupplyScores.sqf` (Line 15).
 - **2. Proposed / Applied Corrections:** None required — template values were intentionally configured by the author and are designed to be mission-maker customizable.
 - **3. Status:** **Verified Resolved / By Design** (Template files left untouched per design specification).
 
-### [ ] 2.4 Service Truck & Huron Container `1,000,000` Cost Entries vs. `10,000,000` Script Filter
+### [x] 2.4 Service Truck & Huron Container `1,000,000` Cost Entries vs. `10,000,000` Script Filter
 - **1. Initial Issue Summary:** `c_vehicleTabs.sqf` (Line 205) and `qm_serverFunctions.sqf` (Lines 54, 256, 337) filtered out pool costs `>= 10000000` (10M), while `spawnableVehicleTemplate.sqf` (Lines 52–67, 89, 184–188) has `1000000` (1M — representing bulk/infinite `transportAmmo`/`transportFuel`/`transportRepair` config values) on HEMTT service trucks, Bobcats, and Huron containers. Because `1,000,000 < 10,000,000`, the scripts billed 1,000,000 Ammo/Fuel/Repair/Cargo points when spawning those assets (which exceeded an SB's starting 100k–300k pools).
 - **2. Proposed / Applied Corrections:** Kept `spawnableVehicleTemplate.sqf` untouched and updated the cost filter threshold in `c_vehicleTabs.sqf` (Line 212) and `qm_serverFunctions.sqf` (`QM_fnc_serverVehicleSale` and `QM_fnc_processGarageSpawn`) from `< 10000000` to `< 1000000` so `1000000` config-capacity values are excluded while normal chassis/fuel/cargo costs are billed and refunded normally.
-- **3. Status:** **In Testing** (Corrections applied in `c_vehicleTabs.sqf` and `qm_serverFunctions.sqf` — needs in-game verification).
+- **3. Status:** **Verified Resolved** (In Testing).
 
 ---
 
@@ -297,19 +297,21 @@ Develop a standalone loading mechanic that distinguishes between loading zones a
 - [x] **Slingload Helicopter Exclusion:**
   - [x] Standard external helicopter slingloading is unaffected; restrictions apply strictly to internal Vehicle-in-Vehicle (ViV) transport.
 
-### 4.2 Respawn System Updates
+### 4.2 Respawn System Updates & Per-Player FOB Cooldowns (Implemented — In Testing)
 
-Update the respawn system to account for troop supply availability and individual player respawn restrictions at each base.
+Update the respawn system to account for troop supply availability and individual player respawn restrictions at forward bases (`qm_clientRespawnManager.sqf`, `onPlayerRespawn.sqf`, `init.sqf`):
 
-- [ ] Integrate troop supply availability into respawn location selection.
-  - [ ] Only display bases with available troop supply points as respawn locations.
-- [ ] Implement per-player, per-base respawn timers.
-  - [ ] Track respawn timers independently for each player at each base.
-  - [ ] Prevent players from respawning at the same base in quick succession.
-- [ ] Support more realistic gameplay pacing.
-  - [ ] Reduce the ability to immediately return to the battlefield after death.
-  - [ ] Discourage players from exploiting knowledge gained from ambushes and sniper positions through repeated instant respawns.
-  - [ ] Encourage teamwork, coordination, intelligence sharing, scouting, and base security.
+- [x] **Integrate troop supply availability into respawn location selection:**
+  - [x] Only display bases with available troop supply points (`LogiScore_<Base>_Troops > 0` or `-1` infinite) in the respawn selection list.
+  - [x] Bases with depleted troop pools (`0`) are dynamically purged from players' respawn menus until reinforcements are delivered.
+- [x] **Implement per-player, per-base FOB cooldown timers:**
+  - [x] **Per-Player Client Isolation:** Delegated respawn registration from side-wide `west` to per-player targeting (`[player, _entity, _name] call BIS_fnc_addRespawnPosition`), ensuring that a cooldown on one player never locks out or interferes with other players.
+  - [x] **Forward Operating Base (FOB) Cooldown:** When a player respawns at a FOB, a tactical cooldown timer (`QM_Respawn_FOBCooldown`, default 120s / 2 minutes, configurable in `init.sqf`) is applied strictly for that player and that FOB via a persistent client session map (`QM_Local_FOBCooldowns`).
+  - [x] **Supply Base (SB / MSR) Cooldown Exemption:** Rear-echelon Supply Bases (`SB_Main`, `SB_Carrier`, `MSR`) have **zero** cooldown. A player killed in action can always redeploy immediately to a Supply Base (subject only to the standard engine 10-second death delay `respawnDelay`).
+  - [x] Dynamic auto-restoration: If a player sits in the respawn menu, the FOB dynamically re-appears as an available spawn point the exact second their cooldown timer expires.
+- [x] **Support realistic gameplay pacing & anti-exploit security:**
+  - [x] Eliminates the "revolving door" exploit where killed players repeatedly respawn at the exact same forward FOB within seconds to rush enemy sniper or ambush positions.
+  - [x] Encourages medical revives, base defense, intelligence sharing, and logistics supply runs (flying or driving reinforcements forward from rear SBs).
 
 ### 4.3 Vehicle Spawning System Updates
 

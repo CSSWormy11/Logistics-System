@@ -28,9 +28,22 @@ if (_closestBase == "" || _shortestDistance > 250) exitWith {};
 // --- STEP 1: DEDUCT THE TROOP POINT ON THE SERVER ---
 [_closestBase] remoteExec ["QM_fnc_deductRespawnTroop", 2];
 
-systemChat format ["Welcome back. Deployment authenticated at %1.", _closestBase];
+// --- STEP 2: APPLY FOB RESPAWN COOLDOWN TIMER (PER-PLAYER) ---
+private _isSB = (["SB", _closestBase] call BIS_fnc_inString || { "MSR" in (toUpper _closestBase) });
+if (!_isSB) then {
+    private _cooldownTime = missionNamespace getVariable ["QM_Respawn_FOBCooldown", 120];
+    if (isNil "QM_Local_FOBCooldowns") then { QM_Local_FOBCooldowns = createHashMap; };
+    QM_Local_FOBCooldowns set [_closestBase, diag_tickTime + _cooldownTime];
+    
+    private _mins = floor (_cooldownTime / 60);
+    private _secs = round (_cooldownTime % 60);
+    private _timeStr = if (_mins > 0) then { format ["%1m %2s", _mins, _secs] } else { format ["%1s", _secs] };
+    systemChat format ["[FOB DEPLOYMENT]: %1 reinforced. Forward redeployment cooldown active (%2).", _closestBase, _timeStr];
+} else {
+    systemChat format ["[BASE DEPLOYMENT]: Welcome back. Primary deployment authenticated at %1.", _closestBase];
+};
 
-// --- STEP 2: INDOOR STRUCTURAL PLACEMENT (If Cargo House / Barracks Nearby) ---
+// --- STEP 3: INDOOR STRUCTURAL PLACEMENT (If Cargo House / Barracks Nearby) ---
 private _spawnPosASL = getPosASL _newUnit;
 private _allowedBarracksTypes = ["Land_Cargo_House_V1_F", "Land_Cargo_House_V3_F"];
 

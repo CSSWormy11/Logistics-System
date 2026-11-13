@@ -41,6 +41,9 @@ if (fileExists "logisticsFieldLoadingTemplate.sqf") then { call compile preproce
 if (isNil "QM_AutoCloseMotorpool") then { QM_AutoCloseMotorpool = 1; };
 publicVariable "QM_AutoCloseMotorpool";
 
+if (isNil "QM_Respawn_FOBCooldown") then { QM_Respawn_FOBCooldown = 120; }; // Default 120s cooldown for FOBs (SBs have 0 cooldown)
+publicVariable "QM_Respawn_FOBCooldown";
+
 allowedLogisticsVehicles = logisticsCargoTemplates apply {_x select 0};
 
 
@@ -192,6 +195,7 @@ if (hasInterface) then {
     if (fileExists "fn_pylonManager.sqf") then { QM_fnc_pylonManager = compile preprocessFileLineNumbers "fn_pylonManager.sqf"; };
     if (fileExists "qm_clientActionCompiler.sqf") then { call compile preprocessFileLineNumbers "qm_clientActionCompiler.sqf"; };
     if (fileExists "fn_equipmentTrader.sqf") then { [] execVM "fn_equipmentTrader.sqf"; };
+    if (fileExists "qm_clientRespawnManager.sqf") then { [] execVM "qm_clientRespawnManager.sqf"; };
 
     // --- TACTICAL COMMAND CENTER CLIENT DAEMONS ---
     if (fileExists "tsk_clientMapIntel.sqf") then { [] execVM "tsk_clientMapIntel.sqf"; };
