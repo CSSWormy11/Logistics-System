@@ -425,9 +425,12 @@ Provide an option in the Recruitment / Mobilization interface (or a 3rd UI colum
 - [ ] Bind spawned groups to the player using `player hcSetGroup [_group]` / `setCommander`.
 - [ ] Deduct base `Troops` and `Cargo` supply points identically to squad templates.
 
-### 4.10 Task HUD & Waypoint Navigation: 3-Tier Sub-Task Hierarchy, Grid Coordinates & Manifest Status
+### 4.10 Task & Journal Navigation: 3-Tier Sub-Task Hierarchy, Grid Coordinates & Manifest Status (Verified Complete)
 
-Enhance the Logistics Mission Routing Engine (`fn_manageLogisticsMissions.sqf`) so transport routes feature a structured parent/sub-task hierarchy (`BIS_fnc_setTask`) communicating base names, 6-digit military map grid coordinates (`mapGridPosition`), and live cargo manifest status:
+Enhance the Logistics Mission Routing Engine (`fn_manageLogisticsMissions.sqf`) so transport routes feature a structured parent/sub-task hierarchy (`BIS_fnc_setTask`) communicating base names, 6-digit military map grid coordinates (`mapGridPosition`), and live cargo manifest status in the map diary journal:
+
+> [!NOTE]
+> Per design review, real-time on-screen HUD overlays are explicitly rejected in favor of native Arma 3 Map and Journal diary immersion. As long as the player's journal displays the pickup base name, 6-digit grid, manifest item, and dropoff base name with 6-digit grid, and the trigger zones are visually marked on the map, navigation is complete and realistic without screen clutter.
 
 - [x] **Parent Task Hierarchy (`[SubTaskID, ParentTaskID]`):**
   - [x] **Sub-Task 1: Pickup Supplies** — Assigned at route start; waypoint targets the center of the compatible pickup trigger with base name and 6-digit grid. Marked `SUCCEEDED` upon loading completion.
