@@ -132,16 +132,22 @@ This document tracks verified bugs, inconsistencies, incomplete features, and up
   - Updated `fn_initLogisticsTasks.sqf` (Lines 166–171) to automatically initialize all `<Base>_service*` triggers at mission start so they accept `LandVehicle`, `Air`, and `Ship`, pass `vehicle player` directly to `fn_executeR4CService.sqf`, and draw yellow map markers and bounding boxes (`Service_<Base>` and `Area_<TriggerName>`) on the in-game map.
 - **3. Status:** **In Testing** (Corrections applied in `fn_executeR4CService.sqf` and `fn_initLogisticsTasks.sqf` — needs in-game verification with a Prowler/ground vehicle and aircraft).
 
-### [ ] 1.14 MSR Infinite-Pool (`-1`) Verification Guard & Native ViV Loading
+### [x] 1.14 MSR (Main Supply Route) Architectural Role & Infinite Supply Ingress Pipeline
 - **1. Initial Issue Summary:**
   1. In `fn_spawnLoadSupply.sqf` (Lines 91–97), `_availablePoints != -1 && _availablePoints < _totalCargoPointWeight` checked whether base storage had sufficient points before spawning. When loading at an MSR hub, if `LogiScore_MSR_<category>` was not found in `missionNamespace` (e.g. if no map marker was named `"MSR"` or before network sync), `getVariable` returned `0` (`0 != -1`), which evaluated as depleted and aborted with `"WARNING: Stores low on <category> at MSR."`.
   2. Because of this top-level script exit, `fn_spawnLoadSupply.sqf` aborted before reaching the cargo spawning code, completely preventing cargo from spawning or loading into the transport vehicle.
   3. In `init.sqf` (Lines 121–152), `logisticsBases` and `LogiScore_<base>_*` were only initialized from markers in `allMapMarkers`. If mission makers placed MSR pickup triggers (`MSR_pickup_1`..`5`) without a dedicated marker named `"MSR"`, `"MSR"` was omitted from `logisticsBases` and its infinite (`-1`) pool values were never initialized.
+  4. Architectural Scope Clarification: MSR was previously at risk of being treated as a standard operating base with player respawns, arsenals, vehicle factories, and service pads, and an artificial `b_installation` marker was being spawned on map init.
 - **2. Proposed / Applied Corrections:**
-  - Updated `fn_spawnLoadSupply.sqf` to explicitly check `private _isMSR = "MSR" in (toUpper _pickupBaseKey);` so MSR loading pads are recognized as infinite (`-1`), bypassing low store warnings and skipping pool deductions.
-  - Updated `init.sqf` to ensure `"MSR"` is unconditionally registered in `logisticsBases` and its ledger pools initialized to `-1` across all resource categories in `logisticsBaseDefaults.sqf`.
-  - Strictly preserved Bohemia Interactive native Vehicle-in-Vehicle (`setVehicleCargo`) loading without artificial workarounds or attachTo mechanics.
-- **3. Status:** **Testing in Progress** (Corrections applied in `fn_spawnLoadSupply.sqf` and `init.sqf` — awaiting in-game confirmation).
+  - **Off-Map Supply Pipeline Role:** MSR is strictly an off-map / boundary supply ingress corridor solely for generating and hauling supplies forward (Cargo crates, Vehicle Ammo crates, Fuel bladders, Repair containers, Troop reinforcement AI squads):
+    - **No Player Respawn:** MSR is strictly excluded from `qm_clientRespawnManager.sqf` and `onPlayerRespawn.sqf`. Players cannot spawn or respawn at MSR.
+    - **No Vehicle Procurement / Garage:** MSR does not host a vehicle procurement terminal or garage pads for player use.
+    - **No R4-C Vehicle Service:** MSR does not provide vehicle rearming, repair, refueling, or AI recrewing (`fn_executeR4CService.sqf`, `qm_clientFunctions.sqf`, and `qm_serverFunctions.sqf` strictly guard against MSR).
+    - **No Terminals or Arsenals:** MSR is excluded from physical terminal/arsenal loops in `qm_serverGarrisonManager.sqf`.
+    - **Map Representation:** Removed artificial `b_installation` map marker creation in `init.sqf`. MSR's pickup corridors/pads are represented exclusively by their functional `mil_pickup` markers without misleading base labels.
+  - **Troop Reinforcement Transportation:** When Troop supplies are loaded at MSR (`_supplyType == "Troops"`), AI troops board the transport vehicle, the player hauls them to a rear Staging Base (SB) or forward base (FOB) dropoff pad, and upon dropoff, those troops are inducted into that receiving base's troop pool.
+  - **Infinite Pool Safeguards:** Preserved infinite (`-1`) pool ledgers for MSR in `init.sqf` and `fn_spawnLoadSupply.sqf`, with native Vehicle-in-Vehicle (`setVehicleCargo`) loading.
+- **3. Status:** **Verified Resolved** (Architecture aligned with off-map ingress role; respawn, garage, service, and marker exclusions implemented).
 
 ### [x] 1.15 Dropoff Pad Cargo Offload Unconditionally Deleting Pre-Placed Base Arsenals & Infrastructure
 - **1. Initial Issue Summary:**
@@ -307,7 +313,7 @@ Update the respawn system to account for troop supply availability and individua
 - [x] **Implement per-player, per-base FOB cooldown timers:**
   - [x] **Per-Player Client Isolation:** Delegated respawn registration from side-wide `west` to per-player targeting (`[player, _entity, _name] call BIS_fnc_addRespawnPosition`), ensuring that a cooldown on one player never locks out or interferes with other players.
   - [x] **Forward Operating Base (FOB) Cooldown:** When a player respawns at a FOB, a tactical cooldown timer (`QM_Respawn_FOBCooldown`, default 120s / 2 minutes, configurable in `init.sqf`) is applied strictly for that player and that FOB via a persistent client session map (`QM_Local_FOBCooldowns`).
-  - [x] **Supply Base (SB / MSR) Cooldown Exemption:** Rear-echelon Supply Bases (`SB_Main`, `SB_Carrier`, `MSR`) have **zero** cooldown. A player killed in action can always redeploy immediately to a Supply Base (subject only to the standard engine 10-second death delay `respawnDelay`).
+  - [x] **Supply Base (SB) Cooldown Exemption & MSR Ingress Separation:** Rear-echelon Supply Bases (`SB_Main`, `SB_Carrier`) have **zero** cooldown. A player killed in action can always redeploy immediately to a Supply Base (subject only to the standard engine 10-second death delay `respawnDelay`). MSR is strictly an off-map supply ingress pipeline and is completely excluded from player respawning.
   - [x] Dynamic auto-restoration: If a player sits in the respawn menu, the FOB dynamically re-appears as an available spawn point the exact second their cooldown timer expires.
 - [x] **Support realistic gameplay pacing & anti-exploit security:**
   - [x] Eliminates the "revolving door" exploit where killed players repeatedly respawn at the exact same forward FOB within seconds to rush enemy sniper or ambush positions.

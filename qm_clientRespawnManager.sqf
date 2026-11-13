@@ -3,7 +3,8 @@
 // File: qm_clientRespawnManager.sqf
 // Description: Manages per-player respawn positions based on troop supply
 //              availability and individual FOB redeployment cooldown timers.
-//              Supply Bases (SB / MSR) have zero cooldown.
+//              Supply Bases (SB) have zero cooldown.
+//              MSR is strictly excluded (off-map supply pipeline only).
 // Execution: Client-side only (hasInterface)
 // ============================================================================
 
@@ -24,7 +25,10 @@ while {true} do {
 
     {
         private _baseKey = _x;
-        private _isSB = (["SB", _baseKey] call BIS_fnc_inString || { "MSR" in (toUpper _baseKey) });
+        // MSR is strictly an off-map supply pipeline corridor, not a player base
+        if (toUpper _baseKey == "MSR") then { continue; };
+
+        private _isSB = ["SB", _baseKey] call BIS_fnc_inString;
         private _troopVarName = format ["LogiScore_%1_Troops", _baseKey];
         private _currentTroops = missionNamespace getVariable [_troopVarName, 0];
 

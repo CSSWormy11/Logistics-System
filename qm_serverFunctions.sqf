@@ -550,7 +550,7 @@ QM_fnc_processGarageSpawn = {
 // -----------------------------------------------------------------------
 QM_fnc_serverProcessR4C = {
     params ["_baseKey", "_vehicle", "_playerUnit", "_serviceType", "_calculatedCost"];
-    if (_baseKey == "" || isNull _vehicle || isNull _playerUnit || _serviceType == "") exitWith { false };
+    if (_baseKey == "" || (toUpper _baseKey) find "MSR" >= 0 || isNull _vehicle || isNull _playerUnit || _serviceType == "") exitWith { false };
 
     private _poolSuffix = switch (_serviceType) do {
         case "REPAIR": { "Repair" };
@@ -585,7 +585,7 @@ QM_fnc_serverProcessR4C = {
 
 QM_fnc_serverR4CCreateVehicleCrew = {
     params ["_baseKey", "_vehicle", "_playerUnit", "_missingSeatCount", "_totalCost"];
-    if (!isServer) exitWith {};
+    if (!isServer || (toUpper _baseKey) find "MSR" >= 0) exitWith {};
 
     private _troopVar = format ["LogiScore_%1_Troops", _baseKey];
     private _currentPool = missionNamespace getVariable [_troopVar, 0];

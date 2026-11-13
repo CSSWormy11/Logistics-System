@@ -129,7 +129,7 @@ QM_fnc_getNearbyAmmoSource = {
         if (_idx != -1) then {
             if (_veh inArea _x || _veh distance2D _x < 40) then {
                 private _potBase = _tName select [0, _idx];
-                if (_potBase in logisticsBases || { ["SB", _potBase] call BIS_fnc_inString } || { ["FOB", _potBase] call BIS_fnc_inString } || { ["MSR", _potBase] call BIS_fnc_inString }) then {
+                if (toUpper _potBase != "MSR" && { _potBase in logisticsBases || { ["SB", _potBase] call BIS_fnc_inString } || { ["FOB", _potBase] call BIS_fnc_inString } }) then {
                     _foundBase = _potBase;
                 };
             };
@@ -146,7 +146,7 @@ QM_fnc_getNearbyAmmoSource = {
         private _idx = _vLower find "_ammo";
         if (_idx != -1) then {
             private _potBase = _varName select [0, _idx];
-            if (_potBase in logisticsBases || { ["SB", _potBase] call BIS_fnc_inString } || { ["FOB", _potBase] call BIS_fnc_inString } || { ["MSR", _potBase] call BIS_fnc_inString }) then {
+            if (toUpper _potBase != "MSR" && { _potBase in logisticsBases || { ["SB", _potBase] call BIS_fnc_inString } || { ["FOB", _potBase] call BIS_fnc_inString } }) then {
                 _foundBase = _potBase;
             };
         };

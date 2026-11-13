@@ -22,14 +22,14 @@ private _shortestDistance = 99999;
     };
 } forEach logisticsBases;
 
-// Only deduct points if they spawned inside the radius of a logistics base
-if (_closestBase == "" || _shortestDistance > 250) exitWith {};
+// Only deduct points if they spawned inside the radius of a logistics base (MSR is strictly an off-map supply corridor, never a player spawn)
+if (_closestBase == "" || _shortestDistance > 250 || toUpper _closestBase == "MSR") exitWith {};
 
 // --- STEP 1: DEDUCT THE TROOP POINT ON THE SERVER ---
 [_closestBase] remoteExec ["QM_fnc_deductRespawnTroop", 2];
 
 // --- STEP 2: APPLY FOB RESPAWN COOLDOWN TIMER (PER-PLAYER) ---
-private _isSB = (["SB", _closestBase] call BIS_fnc_inString || { "MSR" in (toUpper _closestBase) });
+private _isSB = ["SB", _closestBase] call BIS_fnc_inString;
 if (!_isSB) then {
     private _cooldownTime = missionNamespace getVariable ["QM_Respawn_FOBCooldown", 120];
     if (isNil "QM_Local_FOBCooldowns") then { QM_Local_FOBCooldowns = createHashMap; };
