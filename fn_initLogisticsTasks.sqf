@@ -221,14 +221,14 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
                     _expectedMarkerID setMarkerColor _markerColor;
                     _expectedMarkerID setMarkerType _markerType;
                     _expectedMarkerID setMarkerText ""; // Text removed: master base marker handles name
-                };
-
-                // Per-trigger pad marker icon (ensures all numbered pads show an icon without text)
-                if (getMarkerColor _triggerMarkerID == "") then {
-                    createMarker [_triggerMarkerID, getPos _trigger];
-                    _triggerMarkerID setMarkerColor _markerColor;
-                    _triggerMarkerID setMarkerType _markerType;
-                    _triggerMarkerID setMarkerText ""; // Text removed: clean icon only
+                } else {
+                    // Secondary / subsequent pads of the same category at this base (prevents duplicate icon overlap on pad 1)
+                    if (getMarkerColor _triggerMarkerID == "") then {
+                        createMarker [_triggerMarkerID, getPos _trigger];
+                        _triggerMarkerID setMarkerColor _markerColor;
+                        _triggerMarkerID setMarkerType _markerType;
+                        _triggerMarkerID setMarkerText ""; // Text removed: clean icon only
+                    };
                 };
 
                 // Draw the exact trigger area bounding box on the map so players can see the zone boundaries
