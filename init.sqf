@@ -98,6 +98,7 @@ QM_fnc_getLocationsByPrefix = {
 // ---------------------------------------------------------------------------
 if (fileExists "fn_initLogisticsTasks.sqf") then { [] execVM "fn_initLogisticsTasks.sqf"; };
 if (fileExists "fn_manageLogisticsMissions.sqf") then { [] execVM "fn_manageLogisticsMissions.sqf"; };
+if (fileExists "fn_standaloneLoadingMechanic.sqf") then { [] execVM "fn_standaloneLoadingMechanic.sqf"; };
 if (fileExists "fn_startupMarkerDiagnostics.sqf") then { [] execVM "fn_startupMarkerDiagnostics.sqf"; };
 
 

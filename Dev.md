@@ -270,19 +270,23 @@ These are the current development goals for Logistics Framework V8. They should 
 
 ---
 
-### 4.1 Standalone Loading Mechanic
+### 4.1 Standalone Loading Mechanic (Implemented — In Testing)
 
-Develop a standalone loading mechanic that distinguishes between loading zones and non-loading zones.
+Develop a standalone loading mechanic that distinguishes between loading zones and non-loading zones, regulating Vehicle-in-Vehicle (ViV) loading based on cargo mass, crew complement, and vehicle specialization (`fn_standaloneLoadingMechanic.sqf`):
 
-- [ ] Implement loading zones.
-  - [ ] Allow anything a vehicle is capable of carrying to be loaded within loading zones.
-- [ ] Implement non-loading zones.
-  - [ ] Restrict loading to items the vehicle itself can load or items personnel can load.
-  - [ ] Support items that require two people to be present for loading.
-- [ ] Develop loading templates.
-  - [ ] Define which items can be loaded in non-loading zones.
-  - [ ] Define which items each vehicle can load in non-loading zones.
-  - [ ] Define which items each vehicle can load in loading zones.
+- [x] **Implement loading zones (`QM_fnc_isInsideLoadingZone`):**
+  - [x] Allow anything a vehicle is capable of carrying (Huron containers, cargo nets, vehicle ammo, supply boxes) to be loaded freely within designated Base Loading Zones (`_isPickup` triggers).
+- [x] **Implement non-loading zones (Field Loading):**
+  - [x] Restrict field loading according to item mass:
+    - [x] **Tier 1 (<= 120 lbs):** Single player can load into any compatible vehicle anywhere.
+    - [x] **Tier 2 (121 - 250 lbs):** Requires at least TWO players nearby (within 12m) to team-lift into a vehicle; rejected and unloaded back onto the ground if fewer than two players are present.
+    - [x] **Tier 3 (> 250 lbs):** Prohibited in the field! Must be loaded inside a designated Base Loading Zone.
+  - [x] **HEMTT Flatbed Specialization Exception:**
+    - [x] The HEMTT Flatbed (`B_Truck_01_flatbed_F` / `B_T_Truck_01_flatbed_F`) is equipped with a heavy onboard hydraulic winch/crane and is the ONLY vehicle authorized to load Huron Containers (`B_Slingload_01_*_F`) anywhere (both in the field and in loading areas).
+    - [x] Other heavy supplies (cargo nets, vehicle ammo, crates > 250 lbs) cannot be loaded onto the Flatbed in the field without being in a loading zone.
+    - [x] Added dedicated `[FLATBED WINCH] Load Nearby Huron Container` action on the Flatbed for seamless field winching.
+  - [x] **Slingload Helicopter Exclusion:**
+    - [x] Standard external helicopter slingloading is unaffected; restrictions apply strictly to internal Vehicle-in-Vehicle (ViV) transport.
 
 ### 4.2 Respawn System Updates
 

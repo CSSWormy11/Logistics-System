@@ -160,6 +160,10 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
                 _trigList pushBackUnique _trigger;
                 missionNamespace setVariable [_trigListVar, _trigList];
 
+                private _allPickups = missionNamespace getVariable ["Logi_AllPickupTriggers", []];
+                _allPickups pushBackUnique _trigger;
+                missionNamespace setVariable ["Logi_AllPickupTriggers", _allPickups];
+
                 // Capture mission-maker trigger timeout and condition per trigger for the unified countdown HUD, then zero engine timeout
                 private _tTimeout = triggerTimeout _trigger;
                 _tTimeout params [["_tMin", 0], ["_tMid", 0], ["_tMax", 0], ["_tInt", false]];
