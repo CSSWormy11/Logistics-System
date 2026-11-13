@@ -270,23 +270,32 @@ These are the current development goals for Logistics Framework V8. They should 
 
 ---
 
-### 4.1 Standalone Loading Mechanic (Implemented — In Testing)
+### 4.1 Standalone Loading Mechanic & Field Capability Registry (Implemented — In Testing)
 
-Develop a standalone loading mechanic that distinguishes between loading zones and non-loading zones, regulating Vehicle-in-Vehicle (ViV) loading based on cargo mass, crew complement, and vehicle specialization (`fn_standaloneLoadingMechanic.sqf`):
+Develop a standalone loading mechanic that distinguishes between loading zones and non-loading zones, regulating Vehicle-in-Vehicle (ViV) loading based on cargo mass, crew complement, and vehicle material-handling equipment (`fn_standaloneLoadingMechanic.sqf` and `logisticsFieldLoadingTemplate.sqf`):
 
 - [x] **Implement loading zones (`QM_fnc_isInsideLoadingZone`):**
-  - [x] Allow anything a vehicle is capable of carrying (Huron containers, cargo nets, vehicle ammo, supply boxes) to be loaded freely within designated Base Loading Zones (`_isPickup` triggers).
-- [x] **Implement non-loading zones (Field Loading):**
-  - [x] Restrict field loading according to item mass:
+  - [x] Allow anything a vehicle is capable of carrying (Huron containers, cargo nets, vehicle ammo, supply boxes) to be loaded freely within designated Base Loading Zones (`_isPickup` triggers) thanks to base infrastructure (forklifts, overhead cranes, depot crews).
+- [x] **Implement Field-Loading Capability Registry (`logisticsFieldLoadingTemplate.sqf`):**
+  - [x] **Onboard Crane Vehicles (`["ALL"]`):** Vehicles equipped with heavy hydraulic material-handling cranes (e.g. RHS M1084 FMTV series, Russian KamAZ 5350 Crane variants, Ural Cranes) are authorized to field-load *any* cargo they physically fit into their bays anywhere in the field.
+  - [x] **Container Winch Vehicles (`["Huron_Containers"]`):** The HEMTT Flatbed (`B_Truck_01_flatbed_F` / `B_T_Truck_01_flatbed_F`) is equipped with an onboard container winch/tilt-bed and is authorized to field-load 20ft Huron Containers (`B_Slingload_01_*_F`) anywhere. It *cannot* field-load cargo nets or vehicle ammo boxes in the field without being inside a Base Loading Zone.
+  - [x] **Unassisted Standard Haulers (`[]`):** Vehicles without self-loading equipment (HEMTT Cargo, Blackfish, Huron ViV, Vans, LSVs) are restricted to human-liftable weight tiers when in the field.
+  - [x] **Object Variable Override:** Supported via `_vehicle setVariable ["QM_FieldLoadingCapacity", ["ALL"], true]` for easy Eden editor / script-driven assignment without editing templates.
+- [x] **Implement non-loading zones (Austere Field Loading):**
+  - [x] Restrict unassisted field loading according to item mass:
     - [x] **Tier 1 (<= 120 lbs):** Single player can load into any compatible vehicle anywhere.
     - [x] **Tier 2 (121 - 250 lbs):** Requires at least TWO players nearby (within 12m) to team-lift into a vehicle; rejected and unloaded back onto the ground if fewer than two players are present.
-    - [x] **Tier 3 (> 250 lbs):** Prohibited in the field! Must be loaded inside a designated Base Loading Zone.
-  - [x] **HEMTT Flatbed Specialization Exception:**
-    - [x] The HEMTT Flatbed (`B_Truck_01_flatbed_F` / `B_T_Truck_01_flatbed_F`) is equipped with a heavy onboard hydraulic winch/crane and is the ONLY vehicle authorized to load Huron Containers (`B_Slingload_01_*_F`) anywhere (both in the field and in loading areas).
-    - [x] Other heavy supplies (cargo nets, vehicle ammo, crates > 250 lbs) cannot be loaded onto the Flatbed in the field without being in a loading zone.
-    - [x] Added dedicated `[FLATBED WINCH] Load Nearby Huron Container` action on the Flatbed for seamless field winching.
-  - [x] **Slingload Helicopter Exclusion:**
-    - [x] Standard external helicopter slingloading is unaffected; restrictions apply strictly to internal Vehicle-in-Vehicle (ViV) transport.
+    - [x] **Tier 3 (> 250 lbs):** Prohibited in the field! Must be loaded inside a designated Base Loading Zone (or requires a vehicle equipped with an onboard crane).
+  - [x] **Interactive Field Actions:**
+    - [x] `[FLATBED WINCH] Load Nearby Huron Container` added to Flatbeds (cyan).
+    - [x] `[FIELD CRANE] Hoist Nearby Cargo` added to crane-equipped trucks (orange).
+    - [x] Short-circuit distance evaluation (`player distance _target < 10`) eliminates unnecessary per-frame entity scans for optimized client performance.
+- [x] **Engine Event Handler & Multiplayer Authority:**
+  - [x] Switched ViV event interceptor to native `CargoLoaded` / `CargoUnloaded` engine event handlers.
+  - [x] Authoritative validation runs strictly on `isServer`, preventing MP race conditions, multiple unloads, and duplicate network chat broadcasts.
+  - [x] Reset `logistics_is_loaded` and `logistics_loaded_type` dynamically on `CargoUnloaded` when bay is emptied.
+- [x] **Slingload Helicopter Exclusion:**
+  - [x] Standard external helicopter slingloading is unaffected; restrictions apply strictly to internal Vehicle-in-Vehicle (ViV) transport.
 
 ### 4.2 Respawn System Updates
 

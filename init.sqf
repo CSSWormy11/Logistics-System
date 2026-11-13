@@ -33,6 +33,7 @@ if (fileExists "spawnableInfantryTemplate.sqf") then { call compile preprocessFi
 if (fileExists "spawnableVehicleTemplate.sqf") then { call compile preprocessFileLineNumbers "spawnableVehicleTemplate.sqf"; };
 if (fileExists "qm_vehicleCapsTemplate.sqf") then { call compile preprocessFileLineNumbers "qm_vehicleCapsTemplate.sqf"; } else { QM_CAP_ConfigMatrix = []; };
 if (fileExists "logisticsVehicleRoles.sqf") then { call compile preprocessFileLineNumbers "logisticsVehicleRoles.sqf"; }; // LOAD THE Vehicle Role TEMPLATE
+if (fileExists "logisticsFieldLoadingTemplate.sqf") then { call compile preprocessFileLineNumbers "logisticsFieldLoadingTemplate.sqf"; } else { logisticsFieldLoadingTemplate = []; };
 
 // ---------------------------------------------------------------------------
 // Global derived lists
