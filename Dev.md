@@ -340,13 +340,18 @@ Update the existing template-based architecture to support comprehensive master 
 Replace the current blind radius-based salvage check (`fn_usedCarSalesman.sqf`) with a dedicated, reliable Salvage system at bases.
 
 - [ ] Support Laptop / Terminal Objects (`_Terminal` / `_Arsenal`) placed at vehicle spawn locations or base hubs.
-- [ ] **Option A (Preferred) — Salvage Menu UI (Reusing Motorpool Dialog):**
+- [ ] **Option A — Salvage Menu UI (Reusing Motorpool Dialog):**
   - [ ] Open a Salvage menu via `addAction` that reuses the Motorpool UI layout (`CfgVehicleProcureMenu`) and tabs (`Wheeled`, `Tracked`, `Helis`, `Planes`, `Boats`, `Drones`, `Supplies`).
   - [ ] List all unoccupied, salvageable vehicles (any vehicle present in `G_Procureable_Vehicles`) currently located at the base (near any base marker, 3D facility/spawn object, or dropoff zone).
   - [ ] Display live vehicle status/stats in the UI (e.g., Health / Damage %, Fuel remaining %, Ammo remaining %) and scale or display the corresponding resource refund.
   - [ ] Allow the player to select the exact vehicle from the list and confirm despawning/salvaging it.
-- [ ] **Option B (Alternative / Supplemental) — Direct Look-At (`cursorObject`) Salvage Action:**
+- [ ] **Option B — Direct Look-At (`cursorObject`) Salvage Action:**
   - [ ] When a player is at a base and walks up to / looks directly at an unoccupied spawnable vehicle, provide a context-sensitive `addAction` on the vehicle (or player) to salvage that specific vehicle.
+- [ ] **Option C (Leading Preferred Direction) — Dropoff Zone Vehicle Salvage with Disembark Confirmation Prompt:**
+  - [ ] Eliminate the broken scroll-wheel terminal `addAction` (`fn_usedCarSalesman.sqf`) entirely.
+  - [ ] Use the existing base **Dropoff Zone** as the universal vehicle return location.
+  - [ ] When an unoccupied vehicle is parked inside the dropoff zone and the crew disembarks, prompt the last player to exit with an explicit confirmation: `"Would you like [Vehicle Name] to be salvaged? [YES / NO]"`.
+  - [ ] If confirmed YES: despawn the vehicle, refund vehicle/cargo points to the base pool, and unregister its vehicle cap (`QM_CAP`). If NO: leave the vehicle completely untouched.
 
 ### 4.6 Contested Bases (`Contested_*`) Mechanics & Integration (Low Priority)
 
@@ -437,6 +442,10 @@ Enhance the logistics economy and dropoff engine to universally accept and credi
 - [ ] **Missionless & Ad-Hoc Dropoff Acceptance:**
   - [ ] Decouple `fn_cargoDelivery.sqf` from strict vehicle variable gates (`logistics_loaded_type != ""`) and trigger filter restrictions (`typeOf _x in allowedLogisticsVehicles`).
   - [ ] Any valid supply object matching `supplyScores` placed or dropped on a dropoff pad will be validated, credited to the receiving base's resource caches, and deleted immediately from the tarmac.
+- [ ] **Strict Safeguard: Supply Crates vs. Drivable Vehicles:**
+  - [ ] Enforce a strict distinction between detached cargo objects (crates, nets, bladders, pods) and drivable vehicles (`LandVehicle`, `Air`, `Ship`).
+  - [ ] Drivable transport or combat vehicles driven into or passing through dropoff zones will NEVER be automatically deleted, reclaimed, or consumed by the delivery loop.
+  - [ ] Vehicle despawning/salvaging is strictly gated behind an explicit player confirmation flow (see Option C in Section 4.5 and Section 5.2).
 - [ ] **Field Salvage & Re-Delivery of Lost/Abandoned Cargo:**
   - [ ] Crates dropped along roads, at combat sites, or recovered from destroyed logistics convoys remain persistent in the world and can be recovered via ViV, slingload, or transport vehicles and delivered to any friendly dropoff pad for credit.
 - [ ] **Dynamic Alternate-Base Delivery Recognition in Task Engine:**
@@ -475,6 +484,26 @@ Investigate replacing manually curated, static template files (`spawnableVehicle
 - [ ] **Technical Scope & Known Boundaries:**
   - **Vehicle-in-Vehicle (ViV) Limitations:** While slingload mass and passenger seating are exposed cleanly in config, ViV internal dimensions, proxy clearance, and `cargoDoors` collision geometry are notoriously complex in engine configs. A hybrid model (procedural discovery for slingloading/passengers/motorpools, paired with a lightweight curated template for ViV cargo) may represent the ideal balance.
   - **Relationship to Section 4.4:** Section 4.4 remains the concrete near-term implementation path (curated master templates with `isClass` safety checks); this concept serves as the long-term procedural alternative under evaluation.
+
+### 5.2 Dropoff Zone Vehicle Salvage & Disembark Confirmation System (Alternative to Terminal Salvage)
+
+Investigate moving vehicle despawning and salvaging entirely out of terminal scroll-wheel actions and into the physical base **Dropoff Zone**, utilizing an interactive confirmation prompt when players disembark to ensure safe, foolproof vehicle reclamation:
+
+- [ ] **Unified Vehicle Return Location (Dropoff Zone):**
+  - Rather than requiring players to navigate to a specific terminal/laptop crate or attempting to scan large radii across multiple garage pads (which previously failed to reliably locate vehicles), designated base Dropoff Zones act as universal vehicle return points.
+  - Players simply drive, land, or dock any vehicle they wish to return inside the base's dropoff pad.
+- [ ] **Accidental Deletion & Drive-Through Safeguard:**
+  - Transport trucks, combat vehicles, tanks, and helicopters driving through or stopping in dropoff zones to deliver cargo will **never** be automatically deleted or reclaimed.
+  - Automatic detection and deletion is strictly confined to detached cargo objects (crates, nets, bladders, pods). Drivable vehicles are completely immune from automatic tarmac clearing.
+- [ ] **Interactive Disembark Confirmation Flow:**
+  - When a player drives or flies a vehicle into a dropoff pad, stops the engine, and disembarks:
+    - The system checks if all player crew members have exited (`count (crew _veh select {isPlayer _x}) == 0`).
+    - If unoccupied by players, the last disembarking player is presented with a context-sensitive confirmation prompt (e.g. dynamic on-screen prompt, custom action, or dialog):
+      `"Would you like to salvage [Vehicle Display Name] for [X] points? [YES / NO]"`
+    - **Confirmed (YES):** The vehicle is despawned, remaining AI crew members safely deleted, calculated resource refund credited to the base ledger, and vehicle cap (`QM_CAP`) unregistered.
+    - **Declined (NO / Ignored):** The vehicle remains intact, allowing players to leave parked vehicles at the pad without fear of accidental reclamation.
+- [ ] **Deprecation of Broken Scroll-Wheel Action:**
+  - Fully removes the legacy, unreliable `fn_usedCarSalesman.sqf` addAction from terminals, cleaning up the player scroll-wheel menu and resolving Section 1.5.
 
 ---
 
