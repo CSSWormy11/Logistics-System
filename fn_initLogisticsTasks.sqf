@@ -187,11 +187,11 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
                 missionNamespace setVariable [_dropListVar, _dropList];
                 _trigger setVariable ["LogiTriggerCond", _cond];
 
-                if (_act == "" || { "CargoDelivery" in _act } || { "fn_cargoDelivery" in _act }) then {
-                    _act = format ["[thisTrigger, %1] execVM 'fn_cargoDelivery.sqf';", str _parentBase];
-                    if (_deact == "") then { _deact = "thisTrigger setVariable ['isProcessingLogistics', false];"; };
-                    _trigger setTriggerStatements [_cond, _act, _deact];
-                };
+                // Universal Dropoff: Allow any vehicle, aircraft, boat, or player on foot to trigger dropoff processing
+                _cond = "this";
+                _act = format ["[thisTrigger, %1] execVM 'fn_cargoDelivery.sqf';", str _parentBase];
+                if (_deact == "") then { _deact = "thisTrigger setVariable ['isProcessingLogistics', false];"; };
+                _trigger setTriggerStatements [_cond, _act, _deact];
             };
 
             if (_isService) then {

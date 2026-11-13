@@ -37,26 +37,6 @@ QM_fnc_clientRegisterFlagActions = {
         "alive _target && {player distance _target < 5}",
         5
     ];
-
-    // Action B: Scrap / Recycle Nearest Vehicle on Pad
-    _crate addAction [
-        "<t color='#FFA500' font='RobotoCondensedBold'>[LOGISTICS HUB] Return Nearest Vehicle for Salvage</t>",
-        {
-            params ["_target", "_caller", "_actionId", "_arguments"];
-            _arguments params ["_bKey"];
-            
-            _caller setVariable ["QM_Current_Terminal_Box", _target];
-            _caller setVariable ["QM_Current_Terminal_Base", _bKey];
-            if (fileExists "fn_usedCarSalesman.sqf") then { [] execVM "fn_usedCarSalesman.sqf"; };
-        },
-        [_baseKey],
-        4,
-        true,
-        true,
-        "",
-        "alive _target && {player distance _target < 5}",
-        5
-    ];
 };
 
 // --- MODULE 3: BARRACKS & TEMPLATE-RESTRICTED VIRTUAL ARSENAL ---

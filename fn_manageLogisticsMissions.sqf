@@ -568,7 +568,21 @@ createClientLogiTasks = {
 
                 private _isNearDropoff = (_dropoffPos distance2D [0,0,0] > 10) && { (_vehicle distance2D _dropoffPos) <= 150 };
 
-                if (_isNearDropoff && _stickyTaskID != "") then {
+                // Alternate-Base Delivery Recognition: Check if unloaded at intended dropoff OR any other friendly base dropoff pad
+                private _deliveredBase = "";
+                if (_isNearDropoff) then {
+                    _deliveredBase = _targetBase;
+                } else {
+                    {
+                        private _baseName = _x;
+                        ([_vehicle, _baseName] call logi_fnc_getDropoffLocation) params ["", "_bPos"];
+                        if (_bPos distance2D [0,0,0] > 10 && { (_vehicle distance2D _bPos) <= 150 }) exitWith {
+                            _deliveredBase = _baseName;
+                        };
+                    } forEach (missionNamespace getVariable ["logisticsBases", []]);
+                };
+
+                if (_deliveredBase != "" && _stickyTaskID != "") then {
                     // Successful delivery! Mark Delivery sub-task and Parent task SUCCEEDED
                     private _subDelivery = _stickyTaskID + "_Delivery";
                     if ([_subDelivery] call BIS_fnc_taskExists) then {
@@ -579,7 +593,11 @@ createClientLogiTasks = {
                     };
                     
                     private _routeDisplayName = if (_stickyTaskID == "Logi_Strategic_Task") then {"Strategic Route"} else {"Tactical Route"};
-                    systemChat format ["LOGISTICS ENGINE: %1 completed successfully! Cycling next assignment...", _routeDisplayName];
+                    if (_deliveredBase == _targetBase) then {
+                        systemChat format ["LOGISTICS ENGINE: %1 completed successfully! Cycling next assignment...", _routeDisplayName];
+                    } else {
+                        systemChat format ["LOGISTICS ENGINE: %1 rerouted to %2 and completed successfully! Cycling next assignment...", _routeDisplayName, _deliveredBase splitString "_" joinString " "];
+                    };
 
                     // Reset sub-tasks and reset parent task state for the next run
                     [_stickyTaskID] call logi_fnc_deleteRouteSubTasks;

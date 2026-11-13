@@ -257,3 +257,121 @@ player createDiarySubject ["BasesManifestTab", "Base Supply Manifest"];
         uiSleep 4;
     };
 };
+
+// =========================================================================
+// HELPER: DETECT IF VEHICLE IS INSIDE ANY BASE DROPOFF ZONE
+// Returns: BaseKey (String) or "" if outside dropoff zones
+// =========================================================================
+QM_fnc_getVehicleDropoffBase = {
+    params [["_vehicle", objNull]];
+    if (isNull _vehicle || !alive _vehicle) exitWith { "" };
+
+    private _allBases = missionNamespace getVariable ["logisticsBases", []];
+    private _foundBase = "";
+
+    {
+        private _bKey = _x;
+        private _trigList = missionNamespace getVariable [format ["LogiDropoffTriggers_%1", _bKey], []];
+        if ({ _vehicle inArea _x } count _trigList > 0) exitWith {
+            _foundBase = _bKey;
+        };
+    } forEach _allBases;
+
+    _foundBase
+};
+
+// =========================================================================
+// DROPOFF ZONE VEHICLE SALVAGE CONTROLLER
+// Automatically prompts players upon disembarking an unoccupied vehicle
+// in a base dropoff zone to confirm recycling/salvage for resources.
+// Also registers a context action on the player to salvage unoccupied
+// vehicles parked inside any base dropoff zone.
+// =========================================================================
+QM_fnc_initDropoffSalvageListener = {
+    if (!hasInterface) exitWith {};
+
+    // 1. Disembark Watchdog: Prompts the last player to exit an unoccupied vehicle in a dropoff pad
+    player addEventHandler ["GetOutMan", {
+        params ["_unit", "_role", "_vehicle", "_turret"];
+        if (isNull _vehicle || !alive _vehicle) exitWith {};
+        if !(_vehicle isKindOf "LandVehicle" || _vehicle isKindOf "Air" || _vehicle isKindOf "Ship") exitWith {};
+
+        private _baseKey = [_vehicle] call QM_fnc_getVehicleDropoffBase;
+        if (_baseKey == "") exitWith {};
+
+        [_vehicle, _baseKey, _unit] spawn {
+            params ["_veh", "_bKey", "_playerUnit"];
+            sleep 0.5;
+            if (!alive _veh || !alive _playerUnit) exitWith {};
+
+            // Check if any human players are still inside the vehicle
+            if ({ isPlayer _x } count (crew _veh) > 0) exitWith {};
+
+            // Prevent spamming if already prompting
+            if (_veh getVariable ["QM_SalvagePromptActive", false]) exitWith {};
+            _veh setVariable ["QM_SalvagePromptActive", true];
+
+            private _class = typeOf _veh;
+            private _displayName = getText (configFile >> "CfgVehicles" >> _class >> "displayName");
+            private _cleanBase = _bKey splitString "_" joinString " ";
+
+            private _prompt = format [
+                "You have parked a %1 in the %2 Delivery / Return Zone.<br/><br/>Would you like to SALVAGE this vehicle and recycle its resources back to %2?",
+                _displayName, _cleanBase
+            ];
+
+            private _confirmed = [_prompt, "VEHICLE SALVAGE CONFIRMATION", "YES (SALVAGE)", "NO (KEEP VEHICLE)"] call BIS_fnc_guiMessage;
+            
+            if (_confirmed && alive _veh && { { isPlayer _x } count (crew _veh) == 0 }) then {
+                [_bKey, _veh, _playerUnit] remoteExec ["QM_fnc_serverVehicleSale", 2];
+            } else {
+                systemChat format ["[SALVAGE CONTROL]: %1 kept active. Parked in %2.", _displayName, _cleanBase];
+                sleep 8;
+                _veh setVariable ["QM_SalvagePromptActive", false];
+            };
+        };
+    }];
+
+    // 2. Direct Look-At Action on Player: For ad-hoc salvage of unoccupied vehicles in any dropoff zone
+    player addAction [
+        "<t color='#00FF88' font='RobotoCondensedBold'>[SALVAGE CONTROL] Recycle Vehicle to Base</t>",
+        {
+            params ["_target", "_caller", "_actionId", "_arguments"];
+            private _veh = cursorObject;
+            if (isNull _veh || !alive _veh) exitWith {};
+            private _baseKey = [_veh] call QM_fnc_getVehicleDropoffBase;
+            if (_baseKey == "") exitWith { hint "Vehicle is not inside a designated Dropoff Zone."; };
+            
+            [_veh, _baseKey, _caller] spawn {
+                params ["_v", "_bKey", "_p"];
+                if ({ isPlayer _x } count (crew _v) > 0) exitWith {
+                    hint "Cannot salvage vehicle while human crew members are inside!";
+                };
+                private _displayName = getText (configFile >> "CfgVehicles" >> typeOf _v >> "displayName");
+                private _cleanBase = _bKey splitString "_" joinString " ";
+                private _prompt = format [
+                    "Would you like to SALVAGE this %1 and recycle its resources back to %2?",
+                    _displayName, _cleanBase
+                ];
+                private _confirmed = [_prompt, "VEHICLE SALVAGE CONFIRMATION", "YES (SALVAGE)", "NO (CANCEL)"] call BIS_fnc_guiMessage;
+                if (_confirmed && alive _v && { { isPlayer _x } count (crew _v) == 0 }) then {
+                    [_bKey, _v, _p] remoteExec ["QM_fnc_serverVehicleSale", 2];
+                };
+            };
+        },
+        [],
+        1.5,
+        false,
+        true,
+        "",
+        "private _v = cursorObject; !isNull _v && {alive _v} && {player distance _v < 8} && {(_v isKindOf 'LandVehicle' || _v isKindOf 'Air' || _v isKindOf 'Ship')} && {!(_v isKindOf 'Man')} && {({isPlayer _x} count (crew _v)) == 0} && {([_v] call QM_fnc_getVehicleDropoffBase) != ''}",
+        5
+    ];
+};
+
+// Auto-initialize salvage listener
+[] spawn {
+    waitUntil { !isNull player && player == player };
+    waitUntil { !isNil "logisticsBases" };
+    call QM_fnc_initDropoffSalvageListener;
+};

@@ -29,14 +29,17 @@ This document tracks verified bugs, inconsistencies, incomplete features, and up
 - **2. Proposed / Applied Corrections:** Updated `QM_fnc_serverR4CCreateVehicleCrew` in `qm_serverFunctions.sqf` (Lines 609–615) to spawn the crew on the server via `createVehicleCrew _vehicle` and then transfer the newly created crew members into `group _playerUnit` using `joinSilent`.
 - **3. Status:** **In Testing** (Corrections applied in `qm_serverFunctions.sqf` — needs in-game verification).
 
-### [ ] 1.5 Vehicle Salvage System (Bug Fix & Planned Redesign)
-- **1. Initial Issue Summary:** In `fn_usedCarSalesman.sqf` (Lines 9–17), salvage detection searched within a 14m 3D sphere around `getMarkerPos _baseKey` (the master base marker at `Z=0`) for `["LandVehicle", "Air"]`. Because `getMarkerPos` is at sea level (`Z=0`), elevated decks (e.g., `SB_Carrier` at ~24m ASL or Destroyers) and garage pads located >14m away from the central base marker were completely out of range, and `"Ship"` / boats inside Boat Racks were excluded. Additionally, even with expanded radius checks, triggering salvage blindly from a terminal crate does not reliably detect unoccupied vehicles at the base or make it clear which vehicle will be despawned.
+### [x] 1.5 Vehicle Salvage System (Redesigned with Dropoff Zone Disembark Confirmation)
+- **1. Initial Issue Summary:** In `fn_usedCarSalesman.sqf` (Lines 9–17), salvage detection searched within a 14m 3D sphere around `getMarkerPos _baseKey` (the master base marker at `Z=0`) for `["LandVehicle", "Air"]`. Because `getMarkerPos` is at sea level (`Z=0`), elevated decks (e.g., `SB_Carrier` at ~24m ASL or Destroyers) and garage pads located >14m away from the central base marker were completely out of range, and `"Ship"` / boats inside Boat Racks were excluded. In-game testing confirmed that triggering salvage blindly from a terminal crate does not reliably detect unoccupied vehicles on distant pads.
 - **2. Proposed / Applied Corrections:**
-  - *Initial Attempt:* Updated `qm_clientActionCompiler.sqf` and `fn_usedCarSalesman.sqf` to search around terminal/pad objects and clean up crew in `QM_fnc_serverVehicleSale`, which still failed to reliably pick up unoccupied vehicles in in-game testing.
-  - *Planned Redesign (Combined Bug Fix + Feature Update — Low Priority):* Replace the blind nearest-vehicle terminal action with a dedicated **Salvage System** (See **Section 4.5** below). Options under consideration:
-    1. **Salvage Menu UI (Preferred):** Reuse the Motorpool UI layout (`CfgVehicleProcureMenu`) when selecting the Salvage action at a base terminal/laptop to list all unoccupied, salvageable vehicles currently at the base categorized by type, displaying live vehicle stats (Health %, Fuel %, Ammo %) and calculated refund values before confirming salvage.
-    2. **Direct Look-At (`cursorObject` / `cursorTarget`) Action:** Allow players at a base to walk up to and look directly at an unoccupied vehicle to get a context-sensitive `addAction` to despawn/salvage that specific vehicle.
-- **3. Status:** **Solution Proposed (Low Priority — Deferred to Section 4.5 Salvage Redesign)** (In-game testing confirmed the current radius scan still does not pick up vehicles; will be resolved by redoing how Salvage works).
+  - Removed the broken `fn_usedCarSalesman.sqf` scroll-wheel action from base terminals in `qm_clientActionCompiler.sqf`.
+  - Implemented **Option C (Dropoff Zone Disembark Confirmation Prompt & Context Action)**:
+    1. Base **Dropoff Zones** serve as the universal vehicle return point.
+    2. When a player drives, lands, or docks an unoccupied vehicle into a dropoff zone and disembarks, `GetOutMan` triggers a modal `BIS_fnc_guiMessage` confirmation prompt asking: `"Would you like to SALVAGE this [Vehicle Name] and recycle its resources back to [Base Name]? [YES / NO]"`.
+    3. If confirmed **YES**, the vehicle is despawned, crew safely deleted, 100% of chassis resources credited to base ledgers, and its vehicle cap (`QM_CAP`) unregistered via `QM_fnc_serverVehicleSale`.
+    4. If declined **NO**, the vehicle remains completely untouched on the pad.
+    5. Added a context-sensitive look-at `addAction` on the player (`[SALVAGE CONTROL] Recycle Vehicle to Base`) for ad-hoc salvage of unoccupied vehicles inside any base dropoff zone.
+- **3. Status:** **Verified Resolved** (In Testing).
 
 ### [ ] 1.6 Multi-Tier Task Visibility, Priority Auto-Assignment & Aircraft Support in `fn_manageLogisticsMissions.sqf`
 - **1. Initial Issue Summary:**
@@ -347,11 +350,12 @@ Replace the current blind radius-based salvage check (`fn_usedCarSalesman.sqf`) 
   - [ ] Allow the player to select the exact vehicle from the list and confirm despawning/salvaging it.
 - [ ] **Option B — Direct Look-At (`cursorObject`) Salvage Action:**
   - [ ] When a player is at a base and walks up to / looks directly at an unoccupied spawnable vehicle, provide a context-sensitive `addAction` on the vehicle (or player) to salvage that specific vehicle.
-- [ ] **Option C (Leading Preferred Direction) — Dropoff Zone Vehicle Salvage with Disembark Confirmation Prompt:**
-  - [ ] Eliminate the broken scroll-wheel terminal `addAction` (`fn_usedCarSalesman.sqf`) entirely.
-  - [ ] Use the existing base **Dropoff Zone** as the universal vehicle return location.
-  - [ ] When an unoccupied vehicle is parked inside the dropoff zone and the crew disembarks, prompt the last player to exit with an explicit confirmation: `"Would you like [Vehicle Name] to be salvaged? [YES / NO]"`.
-  - [ ] If confirmed YES: despawn the vehicle, refund vehicle/cargo points to the base pool, and unregister its vehicle cap (`QM_CAP`). If NO: leave the vehicle completely untouched.
+- [x] **Option C (Implemented — In Testing) — Dropoff Zone Vehicle Salvage with Disembark Confirmation Prompt:**
+  - [x] Eliminated the broken scroll-wheel terminal `addAction` (`fn_usedCarSalesman.sqf`) from base terminals.
+  - [x] Designated the existing base **Dropoff Zone** as the universal vehicle return location.
+  - [x] When an unoccupied vehicle is parked inside the dropoff zone and the crew disembarks, `GetOutMan` prompts the last player to exit with an interactive `BIS_fnc_guiMessage` confirmation: `"Would you like to SALVAGE this [Vehicle Name] and recycle its resources back to [Base Name]? [YES / NO]"`.
+  - [x] If confirmed YES: despawns vehicle, refunds chassis/cargo points to base pool, and unregisters its vehicle cap (`QM_CAP`) via `QM_fnc_serverVehicleSale`. If NO: leaves vehicle untouched.
+  - [x] Registered direct look-at `addAction` on the player (`[SALVAGE CONTROL] Recycle Vehicle to Base`) for ad-hoc salvage of unoccupied vehicles inside any base dropoff pad.
 
 ### 4.6 Contested Bases (`Contested_*`) Mechanics & Integration (Low Priority)
 
@@ -439,19 +443,19 @@ Enhance the Logistics Mission Routing Engine (`fn_manageLogisticsMissions.sqf`) 
 
 Enhance the logistics economy and dropoff engine to universally accept and credit supplies at any dropoff zone, regardless of active mission tasking, vehicle type, or original cargo origin:
 
-- [ ] **Missionless & Ad-Hoc Dropoff Acceptance:**
-  - [ ] Decouple `fn_cargoDelivery.sqf` from strict vehicle variable gates (`logistics_loaded_type != ""`) and trigger filter restrictions (`typeOf _x in allowedLogisticsVehicles`).
-  - [ ] Any valid supply object matching `supplyScores` placed or dropped on a dropoff pad will be validated, credited to the receiving base's resource caches, and deleted immediately from the tarmac.
-- [ ] **Strict Safeguard: Supply Crates vs. Drivable Vehicles:**
-  - [ ] Enforce a strict distinction between detached cargo objects (crates, nets, bladders, pods) and drivable vehicles (`LandVehicle`, `Air`, `Ship`).
-  - [ ] Drivable transport or combat vehicles driven into or passing through dropoff zones will NEVER be automatically deleted, reclaimed, or consumed by the delivery loop.
-  - [ ] Vehicle despawning/salvaging is strictly gated behind an explicit player confirmation flow (see Option C in Section 4.5 and Section 5.2).
-- [ ] **Field Salvage & Re-Delivery of Lost/Abandoned Cargo:**
-  - [ ] Crates dropped along roads, at combat sites, or recovered from destroyed logistics convoys remain persistent in the world and can be recovered via ViV, slingload, or transport vehicles and delivered to any friendly dropoff pad for credit.
-- [ ] **Dynamic Alternate-Base Delivery Recognition in Task Engine:**
-  - [ ] Update `fn_manageLogisticsMissions.sqf` load state transition logic so delivering cargo to any friendly dropoff pad (even if different from `logistics_intended_fob`) credits the run as a successful delivery rather than failing the task with an out-of-zone detachment alert (`[DETACHED / LOST]`).
-- [ ] **Combat Logistics Supply Return Loop:**
-  - [ ] Allow players to retrieve unused or surplus combat supplies from the field and deliver them back to rear Supply Bases or forward FOBs. Physical separation between pickup and dropoff pads ensures supplies returned to their origin base increase that base's stockpiles without triggering infinite spawn-despawn loops.
+- [x] **Missionless & Ad-Hoc Dropoff Acceptance:**
+  - [x] Decouple `fn_cargoDelivery.sqf` from strict vehicle variable gates (`logistics_loaded_type != ""`) and trigger filter restrictions (`typeOf _x in allowedLogisticsVehicles`).
+  - [x] Any valid supply object matching `supplyScores` placed or dropped on a dropoff pad will be validated, credited to the receiving base's resource caches, and deleted immediately from the tarmac.
+- [x] **Strict Safeguard: Supply Crates vs. Drivable Vehicles:**
+  - [x] Enforce a strict distinction between detached cargo objects (crates, nets, bladders, pods) and drivable vehicles (`LandVehicle`, `Air`, `Ship`).
+  - [x] Drivable transport or combat vehicles driven into or passing through dropoff zones will NEVER be automatically deleted, reclaimed, or consumed by the delivery loop.
+  - [x] Vehicle despawning/salvaging is strictly gated behind an explicit player confirmation flow (see Option C in Section 4.5 and Section 5.2).
+- [x] **Field Salvage & Re-Delivery of Lost/Abandoned Cargo:**
+  - [x] Crates dropped along roads, at combat sites, or recovered from destroyed logistics convoys remain persistent in the world and can be recovered via ViV, slingload, or transport vehicles and delivered to any friendly dropoff pad for credit.
+- [x] **Dynamic Alternate-Base Delivery Recognition in Task Engine:**
+  - [x] Update `fn_manageLogisticsMissions.sqf` load state transition logic so delivering cargo to any friendly dropoff pad (even if different from `logistics_intended_fob`) credits the run as a successful delivery rather than failing the task with an out-of-zone detachment alert (`[DETACHED / LOST]`).
+- [x] **Combat Logistics Supply Return Loop:**
+  - [x] Allow players to retrieve unused or surplus combat supplies from the field and deliver them back to rear Supply Bases or forward FOBs. Physical separation between pickup and dropoff pads ensures supplies returned to their origin base increase that base's stockpiles without triggering infinite spawn-despawn loops.
 
 ---
 
@@ -489,20 +493,20 @@ Investigate replacing manually curated, static template files (`spawnableVehicle
 
 Investigate moving vehicle despawning and salvaging entirely out of terminal scroll-wheel actions and into the physical base **Dropoff Zone**, utilizing an interactive confirmation prompt when players disembark to ensure safe, foolproof vehicle reclamation:
 
-- [ ] **Unified Vehicle Return Location (Dropoff Zone):**
+- [x] **Unified Vehicle Return Location (Dropoff Zone):**
   - Rather than requiring players to navigate to a specific terminal/laptop crate or attempting to scan large radii across multiple garage pads (which previously failed to reliably locate vehicles), designated base Dropoff Zones act as universal vehicle return points.
   - Players simply drive, land, or dock any vehicle they wish to return inside the base's dropoff pad.
-- [ ] **Accidental Deletion & Drive-Through Safeguard:**
+- [x] **Accidental Deletion & Drive-Through Safeguard:**
   - Transport trucks, combat vehicles, tanks, and helicopters driving through or stopping in dropoff zones to deliver cargo will **never** be automatically deleted or reclaimed.
   - Automatic detection and deletion is strictly confined to detached cargo objects (crates, nets, bladders, pods). Drivable vehicles are completely immune from automatic tarmac clearing.
-- [ ] **Interactive Disembark Confirmation Flow:**
+- [x] **Interactive Disembark Confirmation Flow:**
   - When a player drives or flies a vehicle into a dropoff pad, stops the engine, and disembarks:
     - The system checks if all player crew members have exited (`count (crew _veh select {isPlayer _x}) == 0`).
     - If unoccupied by players, the last disembarking player is presented with a context-sensitive confirmation prompt (e.g. dynamic on-screen prompt, custom action, or dialog):
       `"Would you like to salvage [Vehicle Display Name] for [X] points? [YES / NO]"`
     - **Confirmed (YES):** The vehicle is despawned, remaining AI crew members safely deleted, calculated resource refund credited to the base ledger, and vehicle cap (`QM_CAP`) unregistered.
     - **Declined (NO / Ignored):** The vehicle remains intact, allowing players to leave parked vehicles at the pad without fear of accidental reclamation.
-- [ ] **Deprecation of Broken Scroll-Wheel Action:**
+- [x] **Deprecation of Broken Scroll-Wheel Action:**
   - Fully removes the legacy, unreliable `fn_usedCarSalesman.sqf` addAction from terminals, cleaning up the player scroll-wheel menu and resolving Section 1.5.
 
 ---
