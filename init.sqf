@@ -132,13 +132,25 @@ if (isServer) then {
     };
     publicVariable "logisticsBases"; 
 
+    // Ensure MSR has a visible base map marker if not placed in editor
+    if (getMarkerColor "MSR" == "") then {
+        private _msrObj = missionNamespace getVariable ["MSR_pickup_1", objNull];
+        private _msrPos = if (!isNull _msrObj) then { getPos _msrObj } else { getMarkerPos "MSR_pickup_1" };
+        if (_msrPos isNotEqualTo [0,0,0]) then {
+            createMarker ["MSR", _msrPos];
+            "MSR" setMarkerType "b_installation";
+            "MSR" setMarkerColor "ColorBLUFOR";
+            "MSR" setMarkerText "MSR Supply Hub";
+        };
+    };
+
     // --- Initialize Base Ledger Economy ---
     private _sbCount = { (["SB", _x] call BIS_fnc_inString) } count logisticsBases;
     private _sbMultiplier = if (_sbCount <= 1) then { 2 } else { 1 };
 
     {
         private _baseName = _x; 
-        _baseName setMarkerAlpha 0;
+        _baseName setMarkerAlpha 1; // Master base marker remains visible on map
         
         private _baseType = "FOB";
         if (["MSR", _baseName] call BIS_fnc_inString || { "MSR" in (toUpper _baseName) }) then { _baseType = "MSR"; };

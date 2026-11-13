@@ -205,16 +205,30 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
                 _trigger setTriggerStatements [_cond, _act, _deact];
             };
 
-            // Server-only: Standardized map marker generation (Icon + Exact Trigger Area Bounding Box)
+            // Server-only: Standardized map marker generation (Clean Icon without text + Exact Trigger Area Bounding Box)
             if (isServer) then {
                 private _prefix = if (_isPickup) then {"Pickup_"} else { if (_isDropoff) then {"Dropoff_"} else {"Service_"} };
                 private _expectedMarkerID = format ["%1%2", _prefix, _parentBase]; 
+                private _triggerMarkerID = format ["%1%2", _prefix, _triggerName];
                 
+                // Color coding: Pickup = Blue (BLUFOR), Dropoff = Green, Service = Yellow
+                private _markerColor = if (_isPickup) then {"ColorBLUFOR"} else { if (_isDropoff) then {"ColorGreen"} else {"ColorYellow"} };
+                private _markerType = if (_isPickup) then {"mil_pickup"} else { if (_isDropoff) then {"mil_end"} else {"b_maint"} };
+
+                // Primary base-level marker (used by spawning & routing scripts)
                 if (getMarkerColor _expectedMarkerID == "") then {
                     createMarker [_expectedMarkerID, getPos _trigger];
-                    _expectedMarkerID setMarkerColor (if (_isPickup) then {"ColorBLUFOR"} else { if (_isDropoff) then {"ColorGreen"} else {"ColorYellow"} });
-                    _expectedMarkerID setMarkerType (if (_isPickup) then {"mil_pickup"} else { if (_isDropoff) then {"mil_end"} else {"b_maint"} });
-                    _expectedMarkerID setMarkerText (if (_isPickup) then {format ["%1 - Loading Zone", _displayName]} else { if (_isDropoff) then {format ["%1 - Delivery Zone", _displayName]} else {format ["%1 - R4-C Service Pad", _displayName]} });
+                    _expectedMarkerID setMarkerColor _markerColor;
+                    _expectedMarkerID setMarkerType _markerType;
+                    _expectedMarkerID setMarkerText ""; // Text removed: master base marker handles name
+                };
+
+                // Per-trigger pad marker icon (ensures all numbered pads show an icon without text)
+                if (getMarkerColor _triggerMarkerID == "") then {
+                    createMarker [_triggerMarkerID, getPos _trigger];
+                    _triggerMarkerID setMarkerColor _markerColor;
+                    _triggerMarkerID setMarkerType _markerType;
+                    _triggerMarkerID setMarkerText ""; // Text removed: clean icon only
                 };
 
                 // Draw the exact trigger area bounding box on the map so players can see the zone boundaries

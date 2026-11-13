@@ -441,6 +441,10 @@ Enhance the Logistics Mission Routing Engine (`fn_manageLogisticsMissions.sqf`) 
   - [x] Evaluate the player's vehicle against the trigger's Eden Editor condition (`LogiTriggerCond`), distinguishing between plane corridors (`_x isKindOf "Plane"`), low/slow helicopter zones (`_x isKindOf "Helicopter"`), and open/unrestricted stationary pads.
 - [x] **Multiplayer Locality:**
   - [x] Ensure all tasks, sub-tasks, and HUD waypoints are player-local (`player` target in `BIS_fnc_setTask`) so multiple players flying or driving simultaneously never interfere with each other's navigation or progress.
+- [x] **Clean Map Marker Styling & De-Cluttering:**
+  - [x] Master base markers (`SB_Main`, `FOB_*`, `MSR`) remain visible on the map and display their clean human-readable name (`Main Supply Base`, `Agia Marina Base`, `MSR Supply Hub`).
+  - [x] All text labels are removed (`setMarkerText ""`) from individual Pickup (`mil_pickup` Blue), Dropoff (`mil_end` Green), and Service (`b_maint` Yellow) pad icons, preventing the distracting "wall-of-text" across the map when zoomed out.
+  - [x] Every individual numbered trigger pad (e.g. `MSR_pickup_1` through `5`) receives its own clean icon and transparent boundary box on the map.
 
 ### 4.11 Ground Vehicle Road Driving Distance vs. Air Flight Routing
 
