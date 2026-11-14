@@ -16,13 +16,13 @@ This document tracks verified bugs, inconsistencies, incomplete features, and up
 - **2. Proposed / Applied Corrections:** Updated `QM_CAP_ActiveRegistry`, `QM_CAP_fnc_checkCurrentActiveCount`, `QM_CAP_fnc_registerNewVehicle`, and `QM_CAP_fnc_unregisterVehicleAsset` in `qm_serverFunctions.sqf` (Lines 197–274) so that every matching parent class and specific vehicle class in `QM_CAP_ConfigMatrix` is evaluated and tracked simultaneously. Spawning is denied if *any* matching category or specific class cap is full, and destroyed/deleted/salvaged vehicles are removed from all matching cap registries. `qm_vehicleCapsTemplate.sqf` values are left untouched for mission-maker customization.
 - **3. Status:** **In Testing** (Corrections applied in `qm_serverFunctions.sqf` — needs in-game verification).
 
-### [ ] 1.3 Garage & Facility Discovery: Strict 3D Editor Objects Only
+### [x] 1.3 Garage & Facility Discovery: Strict 3D Editor Objects Only
 - **1. Initial Issue Summary:** Client UI `c_vehicleTabs.sqf` (Lines 46–53) checked both `allMapMarkers` and `allVariables missionNamespace` (editor-placed objects) when deciding which vehicle tabs/sizes a base supports, whereas server `QM_fnc_processGarageSpawn` in `qm_serverFunctions.sqf` (Line 300) only searched `allMapMarkers`. Additionally, 2D map markers lack 3D elevation (`Z = 0`), causing height/positioning inaccuracies on ship decks and inside hangars.
 - **2. Proposed / Applied Corrections:** Transitioned `_Arsenal`/`_Terminal`, `_Spawn`, and `_Garage` locations strictly to 3D Editor Objects (discovered via `missionNamespace` variable names, independent of object classname) while keeping map markers strictly for base identification (`logisticsBases`):
   - Updated `QM_fnc_getLocationsByPrefix` in `init.sqf`, `c_vehicleTabs.sqf`, `QM_fnc_processGarageSpawn` in `qm_serverFunctions.sqf`, `qm_serverGarrisonManager.sqf`, `qm_serverRespawnManager.sqf`, `onPlayerRespawn.sqf`, and `fn_usedCarSalesman.sqf` to use editor-placed 3D objects (`getPosASL` / `getDir`) and removed runtime marker-to-object spawning loops.
   - Added support in `QM_fnc_processGarageSpawn` for both `_HELI` and `_HELICOPTER` garage suffixes, and enabled direct Vehicle-in-Vehicle boat loading (`setVehicleCargo`) when the `<BaseKey>_Garage_Boat_...` object is itself a Boat Rack (or near one).
   - Updated `onPlayerRespawn.sqf` to check within 40m of the `_Spawn` object for nearby Cargo Houses (`Land_Cargo_House_V1_F`, `Land_Cargo_House_V3_F`) and otherwise preserve the exact 3D ASL position of the `_Spawn` object (e.g., `Land_HelipadEmpty_F` on a Carrier/Destroyer deck).
-- **3. Status:** **In Testing** (Corrections applied across `init.sqf`, `qm_serverFunctions.sqf`, `c_vehicleTabs.sqf`, `qm_serverGarrisonManager.sqf`, `qm_serverRespawnManager.sqf`, `onPlayerRespawn.sqf`, and `fn_usedCarSalesman.sqf` — needs in-game verification).
+- **3. Status:** **Verified Resolved** (Confirmed in-game; strict 3D editor objects, ASL elevation positioning, Boat Racks, and variable suffix type/size filters verified).
 
 ### [ ] 1.4 Dedicated Server Locality in `QM_fnc_serverR4CCreateVehicleCrew`
 - **1. Initial Issue Summary:** In `qm_serverFunctions.sqf` (Line 537), `(group _playerUnit) createVehicleCrew _vehicle;` was executed on the server. In Arma 3, the group-targeted `createVehicleCrew` syntax requires the target group to be local to the executing machine; on a dedicated server, a player's group is local to the client.
@@ -319,16 +319,16 @@ Update the respawn system to account for troop supply availability and individua
   - [x] Eliminates the "revolving door" exploit where killed players repeatedly respawn at the exact same forward FOB within seconds to rush enemy sniper or ambush positions.
   - [x] Encourages medical revives, base defense, intelligence sharing, and logistics supply runs (flying or driving reinforcements forward from rear SBs).
 
-### 4.3 Vehicle Spawning System Updates
+### [x] 4.3 Vehicle Spawning System Updates (Verified Resolved)
 
 Improve vehicle spawning accuracy and transition toward physical objects as spawn-point references instead of relying on markers.
 
-- [x] Improve spawn positioning and height accuracy. *(In Testing)*
+- [x] Improve spawn positioning and height accuracy. *(Verified Resolved)*
   - [x] Prevent objects from spawning above their intended positions. *(Uses exact 3D `getPosASL` of editor-placed pad object)*
   - [x] Prevent objects from spawning below their intended positions. *(Uses exact 3D `getPosASL` of editor-placed pad object)*
   - [x] Ensure objects spawn exactly where intended. *(Uses exact 3D `getPosASL` and `getDir` of editor-placed pad object)*
-- [x] Transition from markers to physical objects as spawn-point references. *(In Testing — `_Arsenal`/`_Terminal`, `_Spawn`, and `_Garage` now strictly use editor-placed 3D objects via variable name; markers are reserved for base identification)*
-- [x] Develop spawn-point object compatibility. *(In Testing)*
+- [x] Transition from markers to physical objects as spawn-point references. *(Verified Resolved — `_Arsenal`/`_Terminal`, `_Spawn`, and `_Garage` now strictly use editor-placed 3D objects via variable name; markers are reserved for base identification)*
+- [x] Develop spawn-point object compatibility. *(Verified Resolved)*
   - [x] Determine which objects permit which vehicle types to spawn. *(Determined strictly by the object's variable name suffix: `_GROUND`, `_HELI`/`_HELICOPTER`, `_PLANE`, `_AIR`, `_BOAT`, or universal, plus `XXS`..`XL` upper-limit sizing)*
   - [x] Determine how each object positions the vehicles it spawns.
   - [x] Support boat racks for compatible boats.
