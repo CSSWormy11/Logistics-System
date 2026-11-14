@@ -537,40 +537,35 @@ Investigate moving vehicle despawning and salvaging entirely out of terminal scr
 - [x] **Deprecation of Broken Scroll-Wheel Action:**
   - Fully removes the legacy, unreliable `fn_usedCarSalesman.sqf` addAction from terminals, cleaning up the player scroll-wheel menu and resolving Section 1.5.
 
-### 5.3 Selective Supply Loading Architecture: Mission-Maker Whitelist Template vs. Interactive Supply Manifest Dialog
+### [x] 5.3 Selective Supply Loading Architecture: Interactive Supply Manifest Dialog (Option B Implemented — In Testing)
 
 Explore solutions to prevent non-cargo scene objects and ambient base clutter (such as road cones `RoadCone_F`, barrier tape, floodlights, toolboxes, or furniture placed by mission makers inside a Base Loading Zone) from being inadvertently loaded into transport vehicles (e.g., HEMTTs, cargo vans, Blackfish), while providing fine-grained player control over cargo loading order:
 
-- [ ] **Core Problem & Accidental Clutter Ingestion:**
+- [x] **Core Problem & Accidental Clutter Ingestion:**
   - In crowded supply depot environments, proximity-based or native ViV loading can inadvertently grab non-logistics props placed for visual detailing (e.g., traffic cones demarcating runways, barricades, decorative crates) and load them into cargo bays.
   - When multiple supply items sit on the same loading pad, players currently lack a deterministic mechanism to choose *which* crate or container is loaded first into their vehicle.
-- [ ] **Architectural Comparison: Static Template vs. Interactive Manifest UI:**
-  - **Option A (Static Mission-Maker Whitelist / Blacklist Template):**
-    - A dedicated configuration template (e.g., `logisticsLoadableCargoTemplate.sqf`) defining an explicit whitelist of permissible cargo classes (or a blacklist excluding props like road cones and barriers).
-    - *Pros:* Fully automated one-click loading; requires zero additional user interface.
-    - *Cons:* Imposes ongoing manual curation overhead on mission makers for every modpack or CDLC; does not resolve player choice when multiple valid crates are present on the pad.
-  - **Option B (Interactive Supply Manifest Selection Dialog — Recommended):**
-    - A lightweight, clean selection dialog (consistent with the Quartermaster motorpool and infantry spawner menus) opened via a contextual vehicle interaction (`[SELECT CARGO TO LOAD]`).
-    - Queries all valid supply items located within the loading zone or within proximity of the vehicle.
-    - Displays a structured, sortable manifest showing:
-      - **Item Display Name & Category Tag:** (e.g., *[Ammo] NATO Vehicle Ammo Box*, *[Fuel] Flexible Fuel Bladder*, *[Cargo] Standard Wooden Pallet*).
-      - **Weight / Effective Mass:** Formatted in pounds (e.g., `180 lbs`, `1,250 lbs`).
-      - **Relative Distance & Proximity:** Distance from the vehicle (e.g., `4.2m`, `11.8m`).
-      - **Capacity / Fit Status:** Real-time indication of whether the item physically fits in the vehicle's remaining cargo bay (`canVehicleCargo`).
-    - Selecting an item and clicking **[LOAD]** executes native `setVehicleCargo` on the exact designated object.
-    - *Pros:* Completely eliminates accidental prop loading; gives players total agency over load sequence; provides instant situational awareness of pad contents and remaining bay capacity.
-- [ ] **Ambient Prop & Scene Clutter Filtering Safeguard:**
-    - The scanning engine applies an automatic strict filter:
-      - Must match an established supply category in `supplyScores.sqf` or possess the `isLogisticsCargo == true` tag.
-      - Explicitly ignores common scene props (`RoadCone_F`, `TargetBase`, `Sign_F`, `Land_BarGate_F`, toolkits, and editor-placed static props).
-      - Ignores occupied or crewed vehicles and editor-placed base facilities (`_Arsenal`, `_Terminal`, `_Spawn`, `_Garage`).
-- [ ] **Lightweight Native Fallback & Third-Party Mod Interoperability:**
-  - **Bare-Necessity Philosophy:** Designed strictly as an ultra-lightweight, high-polish native fallback for vanilla environments or server setups lacking dedicated loading mods.
-  - **Third-Party Mod Coexistence:** Must never interfere with, override, or duplicate functionality from dedicated third-party logistics mods that players frequently run:
-    - **ACE3 Cargo System** (`ace_cargo`)
-    - **Boxloader**
-    - **Drongo's DYEL** (`Drongo's DYEL` / `d_dyel`)
-  - The system will detect if external logistics frameworks are active (`isClass (configFile >> "CfgPatches" >> "ace_cargo")`, etc.) and adapt gracefully (e.g. deferring primary loading actions to the mod suite or operating alongside them without keybind or action conflicts).
+- [x] **Architectural Implementation: Option B (Interactive Dual-Column Supply Manifest Dialog):**
+  - **Context-Sensitive Interaction:** Added `[CARGO MANIFEST] Selective Supply Loading` action to all cargo-capable vehicles in `fn_standaloneLoadingMechanic.sqf` (accessible whether dismounted within 10m or seated inside vehicle).
+  - **Dual-Column Manifest Dialog (`CfgCargoManifestMenu` in `qm_manifestMenu.hpp`):**
+    - **Header & Status Bar:** Displays target vehicle display name, active location environment (`[BASE LOADING ZONE]` vs. `[FIELD ZONE - CAPABILITY RULES ACTIVE]`), and current bay occupancy.
+    - **Left Column (Available Ground Supplies):** Scans within 25m of the vehicle, displaying item display name, category tag (`[Cargo]`, `[Ammo]`, `[Fuel]`, `[Repair]`, `[Medical]`), mass in lbs, distance, and real-time fit status (`[FITS]` green vs. `[BAY FULL]` / `[CANNOT FIT]` red).
+    - **Right Column (Current Vehicle Cargo Bay):** Displays all items currently secured inside the vehicle's cargo bay.
+    - **Action Controls:**
+      - **[LOAD SELECTED INTO VEHICLE]** (`fn_manifestLoadExecute.sqf`): Validates physical fit and capability rules (field crane / winch / mass tiers), loads item via native `setVehicleCargo`, updates tracking variables (`logistics_is_loaded`, `logistics_loaded_type`), and dynamically refreshes the manifest.
+      - **[UNLOAD SELECTED TO GROUND]** (`fn_manifestUnloadExecute.sqf`): Offloads selected item from cargo bay to the ground behind the vehicle and dynamically refreshes both columns.
+      - **[REFRESH MANIFEST]** (`fn_manifestMenuPopulate.sqf`): Re-scans perimeter and updates dialog in real time.
+- [x] **Ambient Prop & Scene Clutter Filtering Safeguard:**
+  - Implemented strict filtering in `fn_manifestMenuPopulate.sqf`:
+    - Filters out common scene props (`RoadCone_F`, `Sign_F`, `TargetBase`, `Land_BarGate_F`, helipads, tools, and clutter props).
+    - Filters out editor-placed base facilities (`_Arsenal`, `_Terminal`, `_Spawn`, `_Garage`, `_Service`) and items with `QM_TerminalUnifiedActionsActive` or `QM_Crate_OwningBase`.
+    - Filters out crewed vehicles, attached objects, and cargo already loaded into other vehicles.
+    - Only permits verified supply assets matching `supplyScores`, tagged with `isLogisticsCargo == true`, or valid logistics containers (`Slingload_01_Base_F`, `ReammoBox_F`, cargo vehicles).
+- [x] **Field-Loading Capability Integration & Third-Party Mod Interoperability:**
+  - Enforces `logisticsFieldLoadingTemplate.sqf` capability registry rules when outside base loading zones:
+    - Vehicles with onboard cranes (`["ALL"]`) can load any cargo that physically fits.
+    - Vehicles with container winches (`["Huron_Containers"]`, e.g. HEMTT Flatbed) can load Huron containers only.
+    - Standard haulers enforce mass tiers ($\le 120$ lbs 1-man, $121-250$ lbs 2-man lift, $> 250$ lbs prohibited in field).
+  - Uses native engine ViV calls (`setVehicleCargo`, `canVehicleCargo`) and standard vehicle actions, operating harmoniously alongside ACE3, Boxloader, or Drongo's DYEL without conflicts.
 
 ---
 

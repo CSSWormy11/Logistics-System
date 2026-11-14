@@ -230,11 +230,33 @@ QM_fnc_initVehicleCargoRules = {
         }];
     };
 
-    // Client-side Interactive Actions (Flatbed Winch & Field Crane)
+    // Client-side Interactive Actions (Cargo Manifest, Flatbed Winch & Field Crane)
     if (hasInterface) then {
         private _caps = [_veh] call QM_fnc_getFieldLoadingCapabilities;
         private _hasCrane = ("ALL" in _caps);
         private _hasWinch = ("Huron_Containers" in _caps || "Slingload_01_Base_F" in _caps);
+
+        // Universal Selective Cargo Manifest Action (Section 5.3)
+        private _hasViV = (maxVehicleCargoMass _veh > 0) || 
+                          (getNumber (configFile >> "CfgVehicles" >> typeOf _veh >> "vehicleCargo") > 0) || 
+                          (typeOf _veh in (missionNamespace getVariable ["allowedLogisticsVehicles", []]));
+
+        if (_hasViV) then {
+            _veh addAction [
+                "<t color='#00E5FF' font='RobotoCondensedBold'>[CARGO MANIFEST] Selective Supply Loading</t>",
+                {
+                    params ["_target", "_caller", "_actionId", "_arguments"];
+                    [_target] execVM "fn_manifestMenuOpen.sqf";
+                },
+                [],
+                3,
+                false,
+                true,
+                "",
+                "alive _target && { player distance _target < 10 || vehicle player == _target }",
+                10
+            ];
+        };
 
         // Dedicated Flatbed Winch Action
         if (_hasWinch) then {

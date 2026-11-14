@@ -61,3 +61,6 @@ wreckRemovalMaxTime = 600;  // Maximum time a wreck stays (10 mins)
 
 // Part 3C: Dynamic Pylon Aircraft Menus
 #include "qm_pylonMenu.hpp"
+
+// Part 5.3: Selective Supply Loading & Cargo Manifest Dialog
+#include "qm_manifestMenu.hpp"
