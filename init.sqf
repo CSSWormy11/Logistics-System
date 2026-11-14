@@ -45,6 +45,7 @@ if (isNil "QM_Respawn_FOBCooldown") then { QM_Respawn_FOBCooldown = 120; }; // D
 publicVariable "QM_Respawn_FOBCooldown";
 
 allowedLogisticsVehicles = logisticsCargoTemplates apply {_x select 0};
+publicVariable "allowedLogisticsVehicles";
 
 
 // ---------------------------------------------------------------------------

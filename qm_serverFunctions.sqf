@@ -520,6 +520,9 @@ QM_fnc_processGarageSpawn = {
                 }];
 
                 [_veh, _class] call QM_CAP_fnc_registerNewVehicle;
+                if (!isNil "QM_fnc_initVehicleCargoRules") then {
+                    [_veh] remoteExec ["QM_fnc_initVehicleCargoRules", 0, true];
+                };
                 ["MANAGEMENT: Allocation authorized. Vehicle deployed successfully."] remoteExec ["systemChat", _player];
             } else {
                 if (_attempts == 0) then {

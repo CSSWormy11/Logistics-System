@@ -27,11 +27,12 @@ if (isNull _vehicle || !alive _vehicle) exitWith {
 
 // Verify vehicle has ViV cargo capability
 private _vehClass = typeOf _vehicle;
-private _cfgViV = getNumber (configFile >> "CfgVehicles" >> _vehClass >> "vehicleCargo");
-private _maxMass = maxVehicleCargoMass _vehicle;
-private _isAllowedLogi = _vehClass in (missionNamespace getVariable ["allowedLogisticsVehicles", []]);
+private _hasCarrier = (getNumber (configFile >> "CfgVehicles" >> _vehClass >> "VehicleTransport" >> "Carrier" >> "canTransport") == 1) ||
+                      isClass (configFile >> "CfgVehicles" >> _vehClass >> "VehicleTransport" >> "Carrier") ||
+                      (_vehClass in (missionNamespace getVariable ["allowedLogisticsVehicles", []])) ||
+                      (count (getVehicleCargo _vehicle) > 0);
 
-if (_cfgViV <= 0 && _maxMass <= 0 && !_isAllowedLogi) exitWith {
+if (!_hasCarrier) exitWith {
     hint format ["CARGO MANIFEST: %1 does not support Vehicle-in-Vehicle cargo.", getText (configFile >> "CfgVehicles" >> _vehClass >> "displayName")];
 };
 

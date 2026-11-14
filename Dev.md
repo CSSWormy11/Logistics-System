@@ -566,6 +566,7 @@ Explore solutions to prevent non-cargo scene objects and ambient base clutter (s
     - Vehicles with container winches (`["Huron_Containers"]`, e.g. HEMTT Flatbed) can load Huron containers only.
     - Standard haulers enforce mass tiers ($\le 120$ lbs 1-man, $121-250$ lbs 2-man lift, $> 250$ lbs prohibited in field).
   - Uses native engine ViV calls (`setVehicleCargo`, `canVehicleCargo`) and standard vehicle actions, operating harmoniously alongside ACE3, Boxloader, or Drongo's DYEL without conflicts.
+  - Resolved RPT script error on startup by replacing non-existent command check with native Bohemia `CfgVehicles >> VehicleTransport >> Carrier` config verification, separated server-authoritative event handlers from client `addAction` attachments, and added client proximity daemon / `GetInMan` hooks so all vehicles reliably receive the interactive actions.
 
 ---
 

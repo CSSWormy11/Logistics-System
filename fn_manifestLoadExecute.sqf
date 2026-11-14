@@ -63,23 +63,30 @@ if (_mass <= 0) then {
     _mass = getNumber (configFile >> "CfgVehicles" >> typeOf _cargoObj >> "mass");
 };
 
+private _allowed = true;
+
 // Enforce field rules if outside designated base loading zone
 if (!_inZone && !_hasCrane) then {
     if (_isHuron && !_hasWinch) exitWith {
+        _allowed = false;
         hint "FIELD LOADING DENIED: Huron containers in the field require a vehicle equipped with a container winch (e.g. HEMTT Flatbed) or a Base Loading Zone!";
     };
 
     if (_mass > 250 && !_isHuron) exitWith {
+        _allowed = false;
         hint format ["FIELD LOADING DENIED: Heavy cargo (%1 lbs) exceeds 250 lbs field limit! Requires a vehicle with an onboard crane or a Base Loading Zone.", round _mass];
     };
 
     if (_mass > 120 && _mass <= 250) then {
         private _nearbyPlayers = allPlayers select { alive _x && { (_x distance _veh) <= 12 || (_x distance _cargoObj) <= 12 } };
-        if (count _nearbyPlayers < 2) exitWith {
+        if (count _nearbyPlayers < 2) then {
+            _allowed = false;
             hint format ["TEAM LIFT REQUIRED: Cargo weighs %1 lbs. Loading medium items in the field requires at least TWO players nearby!", round _mass];
         };
     };
 };
+
+if (!_allowed) exitWith {};
 
 // --- STEP 3: EXECUTE NATIVE VIV LOAD ---
 private _cargoName = getText (configFile >> "CfgVehicles" >> typeOf _cargoObj >> "displayName");

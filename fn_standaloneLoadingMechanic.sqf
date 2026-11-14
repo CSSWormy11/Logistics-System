@@ -207,11 +207,11 @@ QM_fnc_validateVehicleCargoLoad = {
 QM_fnc_initVehicleCargoRules = {
     params [["_veh", objNull]];
     if (isNull _veh || !alive _veh) exitWith {};
-    if (_veh getVariable ["QM_CargoRulesActive", false]) exitWith {};
-    _veh setVariable ["QM_CargoRulesActive", true];
 
-    // ViV Load & Unload Event Handlers (Executed authoritatively on server)
-    if (isServer) then {
+    // 1. Authoritative Server Event Handlers
+    if (isServer && {!(_veh getVariable ["QM_CargoRulesServerActive", false])}) then {
+        _veh setVariable ["QM_CargoRulesServerActive", true];
+
         _veh addEventHandler ["CargoLoaded", {
             params ["_parentVehicle", "_cargoVehicle"];
             [_parentVehicle, _cargoVehicle] call QM_fnc_validateVehicleCargoLoad;
@@ -230,16 +230,20 @@ QM_fnc_initVehicleCargoRules = {
         }];
     };
 
-    // Client-side Interactive Actions (Cargo Manifest, Flatbed Winch & Field Crane)
-    if (hasInterface) then {
+    // 2. Client-side Interactive Actions (Cargo Manifest, Flatbed Winch & Field Crane)
+    if (hasInterface && {!(_veh getVariable ["QM_CargoActionsClientActive", false])}) then {
+        _veh setVariable ["QM_CargoActionsClientActive", true];
+
         private _caps = [_veh] call QM_fnc_getFieldLoadingCapabilities;
         private _hasCrane = ("ALL" in _caps);
         private _hasWinch = ("Huron_Containers" in _caps || "Slingload_01_Base_F" in _caps);
 
         // Universal Selective Cargo Manifest Action (Section 5.3)
-        private _hasViV = (maxVehicleCargoMass _veh > 0) || 
-                          (getNumber (configFile >> "CfgVehicles" >> typeOf _veh >> "vehicleCargo") > 0) || 
-                          (typeOf _veh in (missionNamespace getVariable ["allowedLogisticsVehicles", []]));
+        private _vehClass = typeOf _veh;
+        private _hasViV = (getNumber (configFile >> "CfgVehicles" >> _vehClass >> "VehicleTransport" >> "Carrier" >> "canTransport") == 1) ||
+                          isClass (configFile >> "CfgVehicles" >> _vehClass >> "VehicleTransport" >> "Carrier") ||
+                          (_vehClass in (missionNamespace getVariable ["allowedLogisticsVehicles", []])) ||
+                          (count (getVehicleCargo _veh) > 0);
 
         if (_hasViV) then {
             _veh addAction [
@@ -350,5 +354,27 @@ addMissionEventHandler ["EntityCreated", {
         [_entity] call QM_fnc_initVehicleCargoRules;
     };
 }];
+
+// Client-Side Proximity Daemon & GetIn Hook: Guarantees action availability on all vehicles
+if (hasInterface) then {
+    player addEventHandler ["GetInMan", {
+        params ["_unit", "_role", "_vehicle", "_turret"];
+        if (!isNull _vehicle && alive _vehicle) then {
+            [_vehicle] call QM_fnc_initVehicleCargoRules;
+        };
+    }];
+
+    [] spawn {
+        while {true} do {
+            private _nearVehs = (getPosATL player) nearEntities [["LandVehicle", "Air", "Ship"], 35];
+            {
+                if (alive _x && {!(_x getVariable ["QM_CargoActionsClientActive", false])}) then {
+                    [_x] call QM_fnc_initVehicleCargoRules;
+                };
+            } forEach _nearVehs;
+            uiSleep 4;
+        };
+    };
+};
 
 diag_log "[LOGISTICS FRAMEWORK]: Standalone Loading Mechanic initialized with Field-Loading Capability Registry.";
