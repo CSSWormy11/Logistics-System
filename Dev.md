@@ -6,10 +6,10 @@ This document tracks verified bugs, inconsistencies, incomplete features, and up
 
 ## 1. Critical Bugs & Logic Issues to Address
 
-### [ ] 1.1 Strategic vs. Tactical Role Parsing in `fn_manageLogisticsMissions.sqf`
+### [x] 1.1 Strategic vs. Tactical Role Parsing in `fn_manageLogisticsMissions.sqf`
 - **1. Initial Issue Summary:** `logisticsVehicleRoles.sqf` stores vehicle roles as prioritized arrays of strings (e.g., `["Strategic", "Tactical", "CLT"]`), but `fn_manageLogisticsMissions.sqf` (Lines 139–148) assigned `_assignedRoleOverride = (logisticsVehicleRoles # _roleIdx) # 1;` (which is the array itself) and compared `if (_assignedRoleOverride == "Strategic")`. Comparing an Array to a String in SQF always evaluates to `false`, preventing any vehicle from ever receiving `Logi_Strategic_Task` routing.
 - **2. Proposed / Applied Corrections:** Updated `fn_manageLogisticsMissions.sqf` (Lines 139–150) to unwrap the primary role (`# 0`) when the `logisticsVehicleRoles` entry is an array, while preserving fallback support if a string is provided. Mission makers retain full control over the role priority array per vehicle in `logisticsVehicleRoles.sqf`. *(Note: Line 112 still excludes `Air` vehicles via `!(_vehicle isKindOf "Air")`, which may need review if VTOLs/Helicopters should receive Strategic/Tactical tasks prior to GIN/CLT integration.)*
-- **3. Status:** **In Testing** (Corrections applied in `fn_manageLogisticsMissions.sqf` — needs in-game verification).
+- **3. Status:** **Verified Resolved** (Role array unwrapping and priority matching confirmed functional).
 
 ### [ ] 1.2 Vehicle Cap (`QM_CAP`) First-Match Short-Circuit
 - **1. Initial Issue Summary:** In `qm_serverFunctions.sqf` (Lines 199–216), `QM_CAP_fnc_checkCurrentActiveCount` and `QM_CAP_fnc_registerNewVehicle` iterated over `QM_CAP_ConfigMatrix` from top to bottom and exited (`exitWith`) on the first parent class where `_classname isKindOf (_x select 0)`. Because `["All", 256]` is the first element in `qm_vehicleCapsTemplate.sqf` (Line 13), every vehicle matched `"All"` immediately and ignored all category and specific vehicle caps below it.
@@ -41,7 +41,7 @@ This document tracks verified bugs, inconsistencies, incomplete features, and up
     5. Added a context-sensitive look-at `addAction` on the player (`[SALVAGE CONTROL] Recycle Vehicle to Base`) for ad-hoc salvage of unoccupied vehicles inside any base dropoff zone.
 - **3. Status:** **Verified Resolved** (In Testing).
 
-### [ ] 1.6 Multi-Tier Task Visibility, Priority Auto-Assignment & Aircraft Support in `fn_manageLogisticsMissions.sqf`
+### [x] 1.6 Multi-Tier Task Visibility, Priority Auto-Assignment & Aircraft Support in `fn_manageLogisticsMissions.sqf`
 - **1. Initial Issue Summary:**
   1. Line 112 of `fn_manageLogisticsMissions.sqf` checked `!(_vehicle isKindOf "Air") && getMass _vehicle > 4000`, completely blocking aircraft (such as the Blackfish and Huron) and light vehicles from the task system.
   2. `fn_manageLogisticsMissions.sqf` hardcoded `"SB"` (`LogiScore_SB_*`, `"Pickup_SB"`, `"Dropoff_SB"`) instead of dynamically resolving `SB` and `MSR` bases from `logisticsBases` (e.g., `SB_Carrier`), causing task waypoints to point to `[0,0,0]` and stockpile manifests to read `0` when the Staging Base is named `SB_Carrier`.
@@ -52,7 +52,7 @@ This document tracks verified bugs, inconsistencies, incomplete features, and up
   - Updated `fn_manageLogisticsMissions.sqf` to dynamically resolve `MSR`, `SB`, and `FOB` bases from `logisticsBases` instead of hardcoding `"SB"`.
   - Updated `fn_manageLogisticsMissions.sqf` so players in any vehicle defined in `logisticsVehicleRoles` (or fallback cargo ground vehicles) can see all available tasks matching any role in their vehicle's `logisticsVehicleRoles` array (`Strategic`, `Tactical`, `CLT`), receive their next task automatically according to the priority order of their vehicle's role array (`#0` $\rightarrow$ `#1` $\rightarrow$ `#2`), and keep their current task sticky until delivery is completed.
   - Fixed native Map UI manual task switching in `fn_manageLogisticsMissions.sqf`: clicking "Assign" in the Arma 3 Map UI updates the native engine `currentTask player` handle (`BIS_fnc_taskReal`) rather than `BIS_fnc_setTask`'s internal variable (`BIS_fnc_taskCurrent`). Previously, `BIS_fnc_taskSetDescription` (every 5s) and `BIS_fnc_taskSetDestination` read the stale `BIS_fnc_setTask` state and forcibly reverted the player back to the default route. The script now reads `currentTask player` directly, synchronizes `BIS_fnc_taskSetState`, and uses `setSimpleTaskDescription` on the real task handle so manual task selection in the Map UI is never overwritten until the selected task's delivery is completed.
-- **3. Status:** **In Testing** (Corrections applied in `fn_initLogisticsTasks.sqf` and `fn_manageLogisticsMissions.sqf` — needs in-game verification).
+- **3. Status:** **Verified Resolved** (Dynamic base resolution, trigger suffix stripping, multi-task priority, and Map UI manual assignment confirmed functional).
 
 ### [ ] 1.7 `fn_spawnLoadSupply.sqf` `getPosVisual` (ASL) Bug, Helicopter Slingload Spawning & Legacy Trigger Filenames
 - **1. Initial Issue Summary:**
