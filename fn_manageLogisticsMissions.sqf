@@ -262,6 +262,121 @@ logi_fnc_getRouteDistance = {
 };
 
 // =========================================================================
+// HELPER: CONTEXTUAL SPOTLIGHT MAP MARKER HIERARCHY (OPTION 3)
+// Dynamic local alpha manager for pickup, dropoff, service, and area pads.
+// Non-logistics players: Alpha 0 (Clean tactical map, 0 clutter).
+// Logistics overview (no active route): Alpha 1.0 icons, 0.25 area triggers.
+// Logistics active route:
+//   - Active Pickup & Dropoff Pads (+ Service on active bases): Alpha 1.0 (Area: 0.45).
+//   - Secondary Alternative Pads (All other bases): Alpha 0.25 (Area: 0.10).
+// Master Base Markers (SB_Main, FOB_*, MSR) remain permanently visible at 1.0.
+// =========================================================================
+logi_fnc_updateMarkerSpotlight = {
+    params [
+        ["_isLogiDriver", false],
+        ["_activeFromBase", ""],
+        ["_activeTargetBase", ""]
+    ];
+
+    if (!hasInterface) exitWith {};
+
+    private _hasActiveRoute = (_isLogiDriver && _activeFromBase != "" && _activeTargetBase != "");
+    private _fromBaseLower = toLowerANSI _activeFromBase;
+    private _targetBaseLower = toLowerANSI _activeTargetBase;
+
+    {
+        private _m = toLowerANSI _x;
+        private _isArea = (_m find "area_" == 0);
+        private _isPickup = (_m find "pickup_" == 0);
+        private _isDropoff = (_m find "dropoff_" == 0);
+        private _isService = (_m find "service_" == 0);
+
+        if (_isArea || _isPickup || _isDropoff || _isService) then {
+            if (!_isLogiDriver) then {
+                // Non-logistics players: completely hidden locally
+                _x setMarkerAlphaLocal 0;
+            } else {
+                if (!_hasActiveRoute) then {
+                    // Logistics driver without assigned route (overview mode)
+                    if (_isArea) then {
+                        _x setMarkerAlphaLocal 0.25;
+                    } else {
+                        _x setMarkerAlphaLocal 1.0;
+                    };
+                } else {
+                    // Active route mode: Identify if marker belongs to active pickup or dropoff base
+                    private _basePart = "";
+                    if (_isArea) then {
+                        _basePart = _m select [5]; // strip "area_"
+                    } else {
+                        if (_isPickup) then {
+                            _basePart = _m select [7]; // strip "pickup_"
+                        } else {
+                            if (_isDropoff) then {
+                                _basePart = _m select [8]; // strip "dropoff_"
+                            } else {
+                                _basePart = _m select [8]; // strip "service_"
+                            };
+                        };
+                    };
+
+                    // Check prefix matching against active base keys
+                    private _matchesFrom = false;
+                    if (_fromBaseLower != "") then {
+                        private _len = count _fromBaseLower;
+                        if ((_basePart find _fromBaseLower) == 0) then {
+                            private _nextChar = _basePart select [_len, 1];
+                            if (_nextChar == "" || _nextChar == "_") then {
+                                _matchesFrom = true;
+                            };
+                        };
+                    };
+
+                    private _matchesTarget = false;
+                    if (_targetBaseLower != "") then {
+                        private _len = count _targetBaseLower;
+                        if ((_basePart find _targetBaseLower) == 0) then {
+                            private _nextChar = _basePart select [_len, 1];
+                            if (_nextChar == "" || _nextChar == "_") then {
+                                _matchesTarget = true;
+                            };
+                        };
+                    };
+
+                    // Contextual role check:
+                    // Origin base: Pickup pads and Service pads are spotlighted
+                    // Destination base: Dropoff pads and Service pads are spotlighted
+                    private _isActivePad = false;
+                    if (_isArea) then {
+                        if (_matchesFrom && ("_pickup" in _m || "_service" in _m)) then { _isActivePad = true; };
+                        if (_matchesTarget && ("_dropoff" in _m || "_service" in _m)) then { _isActivePad = true; };
+                    } else {
+                        if (_matchesFrom && (_isPickup || _isService)) then { _isActivePad = true; };
+                        if (_matchesTarget && (_isDropoff || _isService)) then { _isActivePad = true; };
+                    };
+
+                    if (_isActivePad) then {
+                        // SPOTLIGHT: Full prominence for primary route operations
+                        if (_isArea) then {
+                            _x setMarkerAlphaLocal 0.45;
+                        } else {
+                            _x setMarkerAlphaLocal 1.0;
+                        };
+                    } else {
+                        // SECONDARY: Dimmed to 25% for alternate/emergency dropoff awareness
+                        if (_isArea) then {
+                            _x setMarkerAlphaLocal 0.10;
+                        } else {
+                            _x setMarkerAlphaLocal 0.25;
+                        };
+                    };
+                };
+            };
+        };
+    } forEach allMapMarkers;
+};
+
+// =========================================================================
 // HELPER: DELETE SUB-TASKS UNDER A PARENT ROUTE TASK
 // =========================================================================
 logi_fnc_deleteRouteSubTasks = {
@@ -299,6 +414,10 @@ logi_fnc_updateRouteTasks = {
 
     ([_vehicle, _pickupBaseKey] call logi_fnc_getCompatiblePickupTrigger) params ["_pickupTrig", "_pickupPos", "_pickupGrid", "_speedRule"];
     ([_vehicle, _destBaseKey] call logi_fnc_getDropoffLocation) params ["_dropoffTrig", "_dropoffPos", "_dropoffGrid"];
+
+    // Update contextual marker spotlight hierarchy for active route leg
+    [true, _pickupBaseKey, _destBaseKey] call logi_fnc_updateMarkerSpotlight;
+
 
     private _pickupClean = (_pickupBaseKey splitString "_") joinString " ";
     private _destClean   = (_destBaseKey splitString "_") joinString " ";
@@ -491,6 +610,8 @@ createClientLogiTasks = {
 // =========================================================================
 [] spawn {
     waitUntil { !isNil "logisticsBases" };
+    // Initialize map marker visibility for client (combat units start with clean map)
+    [false] call logi_fnc_updateMarkerSpotlight;
     private _wasLogisticsDriver = false;
     private _lastVehicle = objNull;
     private _wasLoaded = false;
@@ -507,6 +628,7 @@ createClientLogiTasks = {
         // =====================================================================
         if (_wasLogisticsDriver && (!alive _vehicle || isNull _vehicle)) then {
             call logi_fnc_clearAllLogiTasks;
+            [false] call logi_fnc_updateMarkerSpotlight;
             _wasLogisticsDriver = false;
             _lastVehicle = objNull;
             _wasLoaded = false;
@@ -520,6 +642,7 @@ createClientLogiTasks = {
 
         if (!_isLogisticsDriver && _wasLogisticsDriver) then {
             call logi_fnc_clearAllLogiTasks;
+            [false] call logi_fnc_updateMarkerSpotlight;
             _wasLogisticsDriver = false;
             _lastVehicle = objNull;
             _wasLoaded = false;
@@ -535,6 +658,7 @@ createClientLogiTasks = {
             if (!_wasLogisticsDriver || _vehicle != _lastVehicle) then {
                 call logi_fnc_clearAllLogiTasks;
                 [_vehicleRoles] call createClientLogiTasks;
+                [true] call logi_fnc_updateMarkerSpotlight;
                 _wasLogisticsDriver = true;
                 _lastVehicle = _vehicle;
                 _wasLoaded = false;
@@ -608,6 +732,7 @@ createClientLogiTasks = {
                     _lockedAssignment = false;
                     _vehicle setVariable ["logistics_intended_fob", "", true];
                     player setVariable ["logistics_current_assigned_category", "", true];
+                    [true] call logi_fnc_updateMarkerSpotlight;
                 } else {
                     if (_stickyTaskID != "") then {
                         // Unloaded prematurely outside delivery zone!

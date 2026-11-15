@@ -453,6 +453,14 @@ Enhance the Logistics Mission Routing Engine (`fn_manageLogisticsMissions.sqf`) 
   - [x] Master base markers (`SB_Main`, `FOB_*`, `MSR`) remain visible on the map and display their clean human-readable name (`Main Supply Base`, `Agia Marina Base`, `MSR Supply Hub`).
   - [x] All text labels are removed (`setMarkerText ""`) from individual Pickup (`mil_pickup` Blue), Dropoff (`mil_end` Green), and Service (`b_maint` Yellow) pad icons, preventing the distracting "wall-of-text" across the map when zoomed out.
   - [x] Every individual numbered trigger pad (e.g. `MSR_pickup_1` through `5`) receives its own clean icon and transparent boundary box on the map.
+- [x] **Spotlight Contextual Map Marker Hierarchy (Option 3):**
+  - [x] **Non-Logistics Players:** Combat players (Infantry, Armor, CAS pilots, Snipers) have all logistics pad icons (`Pickup_*`, `Dropoff_*`, `Service_*`) and area trigger boundaries (`Area_*`) completely hidden locally (`setMarkerAlphaLocal 0`), maintaining an uncluttered tactical map.
+  - [x] **Logistics Overview Mode:** Drivers mounting an authorized logistics vehicle without an active locked route see all logistics pad icons at `1.0` and area boundaries at `0.25` for global situational awareness.
+  - [x] **Active Route Spotlight Mode:**
+    - **Active Route Pads (Assigned Origin Pickup & Destination Dropoff):** Spotlighted at full brightness (`setMarkerAlphaLocal 1.0` for icons, `0.45` for trigger area boundaries).
+    - **Secondary / Alternative Pads (All other bases):** Dimmed subtly to 25% opacity (`setMarkerAlphaLocal 0.25` for icons, `0.10` for trigger area boundaries). Provides clear operational priority while allowing immediate visibility of alternate or emergency divert dropoff bases.
+  - [x] **Zero Network Overhead & Safe Position Queries:** Implemented purely client-side via `setMarkerAlphaLocal` with default global server alpha `0`. Marker coordinates remain intact for distance calculations, HUD waypoints, and journal manifests.
+
 
 ### 4.11 Ground Vehicle Road Driving Distance vs. Air Flight Routing
 
