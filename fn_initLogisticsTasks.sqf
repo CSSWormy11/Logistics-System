@@ -255,21 +255,75 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
 // =========================================================================
 // HELPER: CONTEXTUAL SPOTLIGHT MAP MARKER HIERARCHY (OPTION 3)
 // Dynamic local alpha manager for pickup, dropoff, service, and area pads.
-// Non-logistics players: Alpha 0 (Clean tactical map, 0 clutter).
-// Logistics overview (no active route): Alpha 1.0 icons, 0.25 area triggers.
-// Logistics active route:
-//   - Active Pickup & Dropoff Pads (+ Service on active bases): Alpha 1.0 (Area: 0.45).
-//   - Secondary Alternative Pads (All other bases): Alpha 0.25 (Area: 0.10).
-// Master Base Markers (SB_Main, FOB_*, MSR) remain permanently visible at 1.0.
+//
+// 1. INFANTRY ON FOOT (vehicle player == player):
+//    - All Pickup, Dropoff, Service, and Area markers: Alpha 0 (Clean map, 0 clutter).
+//
+// 2. ANY PLAYER IN A VEHICLE (Combat aircraft, Tanks, APCs, Boats, Cars, Transports):
+//    - Service Markers (Service_* & Area_*_service*):
+//      * Nominal Status: Alpha 0.50 (Area: 0.20) for global base repair/refuel awareness.
+//      * Distress / Damaged (>25% dmg, <50% fuel, or low ammo): Spotlighted at Alpha 1.0 (Area: 0.45).
+//    - Pickup & Dropoff Markers:
+//      * Non-logistics vehicles (Wipeout, Slammer, etc.): Alpha 0 (No cargo clutter).
+//
+// 3. LOGISTICS DRIVERS (Authorized Logistics Transport):
+//    - Overview Mode (no active route locked):
+//      * Pad Icons: Alpha 1.0, Area triggers: Alpha 0.25.
+//    - Active Route Mode (Route locked with origin & destination):
+//      * Active Assigned Route Pads (Origin Pickup & Dest Dropoff): Alpha 1.0 (Area: 0.45).
+//      * Secondary Alternative Pads (All other bases): Alpha 0.25 (Area: 0.10).
+//      * Service Pads: Alpha 1.0 on active bases, Alpha 0.50 on secondary bases (or 1.0 if damaged).
+//
+// 4. MASTER BASE MARKERS (SB_Main, FOB_*, MSR):
+//    - Always visible to all players at Alpha 1.0 with human-readable labels.
 // =========================================================================
 logi_fnc_updateMarkerSpotlight = {
     params [
         ["_isLogiDriver", false],
         ["_activeFromBase", ""],
-        ["_activeTargetBase", ""]
+        ["_activeTargetBase", ""],
+        ["_inAnyVehicleOverride", nil],
+        ["_needsServiceOverride", nil]
     ];
 
     if (!hasInterface) exitWith {};
+
+    private _localVeh = vehicle player;
+    private _inAnyVehicle = if (!isNil "_inAnyVehicleOverride") then {
+        _inAnyVehicleOverride
+    } else {
+        (_localVeh != player && alive _localVeh)
+    };
+
+    private _needsService = if (!isNil "_needsServiceOverride") then {
+        _needsServiceOverride
+    } else {
+        if (!_inAnyVehicle) then {
+            false
+        } else {
+            private _req = (damage _localVeh > 0.25) || (fuel _localVeh < 0.50);
+            if (!_req) then {
+                private _hitDmg = getAllHitPointsDamage _localVeh param [2, []];
+                if (_hitDmg findIf { _x > 0.25 } != -1) then { _req = true; };
+            };
+            if (!_req) then {
+                private _mags = magazinesAmmo _localVeh;
+                if (count _mags > 0) then {
+                    private _initMags = _localVeh getVariable ["QM_InitialMagTotal", -1];
+                    private _currentAmmoSum = 0;
+                    { _currentAmmoSum = _currentAmmoSum + (_x # 1); } forEach _mags;
+                    if (_initMags == -1) then {
+                        _localVeh setVariable ["QM_InitialMagTotal", _currentAmmoSum];
+                    } else {
+                        if (_initMags > 0 && { _currentAmmoSum <= (_initMags * 0.50) }) then {
+                            _req = true;
+                        };
+                    };
+                };
+            };
+            _req
+        }
+    };
 
     private _hasActiveRoute = (_isLogiDriver && _activeFromBase != "" && _activeTargetBase != "");
     private _fromBaseLower = toLowerANSI _activeFromBase;
@@ -283,82 +337,112 @@ logi_fnc_updateMarkerSpotlight = {
         private _isService = (_m find "service_" == 0);
 
         if (_isArea || _isPickup || _isDropoff || _isService) then {
-            if (!_isLogiDriver) then {
-                // Non-logistics players: completely hidden locally
-                _x setMarkerAlphaLocal 0;
-            } else {
-                if (!_hasActiveRoute) then {
-                    // Logistics driver without assigned route (overview mode)
-                    if (_isArea) then {
-                        _x setMarkerAlphaLocal 0.25;
-                    } else {
-                        _x setMarkerAlphaLocal 1.0;
-                    };
+            private _isServiceArea = (_isArea && { "_service" in _m });
+            private _isServiceRelated = (_isService || _isServiceArea);
+
+            if (_isServiceRelated) then {
+                // =============================================================
+                // SERVICE PAD VISIBILITY RULES
+                // =============================================================
+                if (!_inAnyVehicle) then {
+                    // Infantry on foot: hidden
+                    _x setMarkerAlphaLocal 0;
                 } else {
-                    // Active route mode: Identify if marker belongs to active pickup or dropoff base
-                    private _basePart = "";
-                    if (_isArea) then {
-                        _basePart = _m select [5]; // strip "area_"
-                    } else {
-                        if (_isPickup) then {
-                            _basePart = _m select [7]; // strip "pickup_"
-                        } else {
-                            if (_isDropoff) then {
-                                _basePart = _m select [8]; // strip "dropoff_"
-                            } else {
-                                _basePart = _m select [8]; // strip "service_"
-                            };
-                        };
-                    };
-
-                    // Check prefix matching against active base keys
-                    private _matchesFrom = false;
-                    if (_fromBaseLower != "") then {
-                        private _len = count _fromBaseLower;
-                        if ((_basePart find _fromBaseLower) == 0) then {
-                            private _nextChar = _basePart select [_len, 1];
-                            if (_nextChar == "" || _nextChar == "_") then {
-                                _matchesFrom = true;
-                            };
-                        };
-                    };
-
-                    private _matchesTarget = false;
-                    if (_targetBaseLower != "") then {
-                        private _len = count _targetBaseLower;
-                        if ((_basePart find _targetBaseLower) == 0) then {
-                            private _nextChar = _basePart select [_len, 1];
-                            if (_nextChar == "" || _nextChar == "_") then {
-                                _matchesTarget = true;
-                            };
-                        };
-                    };
-
-                    // Contextual role check:
-                    // Origin base: Pickup pads and Service pads are spotlighted
-                    // Destination base: Dropoff pads and Service pads are spotlighted
-                    private _isActivePad = false;
-                    if (_isArea) then {
-                        if (_matchesFrom && ("_pickup" in _m || "_service" in _m)) then { _isActivePad = true; };
-                        if (_matchesTarget && ("_dropoff" in _m || "_service" in _m)) then { _isActivePad = true; };
-                    } else {
-                        if (_matchesFrom && (_isPickup || _isService)) then { _isActivePad = true; };
-                        if (_matchesTarget && (_isDropoff || _isService)) then { _isActivePad = true; };
-                    };
-
-                    if (_isActivePad) then {
-                        // SPOTLIGHT: Full prominence for primary route operations
-                        if (_isArea) then {
+                    // In any vehicle (Combat plane, tank, boat, or logistics truck)
+                    if (_needsService) then {
+                        // Vehicle damaged >25%, fuel <50%, or low ammo: Spotlight at 100%
+                        if (_isServiceArea) then {
                             _x setMarkerAlphaLocal 0.45;
                         } else {
                             _x setMarkerAlphaLocal 1.0;
                         };
                     } else {
-                        // SECONDARY: Dimmed to 25% for alternate/emergency dropoff awareness
-                        if (_isArea) then {
-                            _x setMarkerAlphaLocal 0.10;
+                        // Vehicle in nominal condition: Check if active logistics base
+                        private _basePart = if (_isArea) then { _m select [5] } else { _m select [8] };
+                        private _isActiveLogiBase = false;
+                        if (_hasActiveRoute) then {
+                            if (_fromBaseLower != "" && { (_basePart find _fromBaseLower) == 0 }) then {
+                                private _len = count _fromBaseLower;
+                                private _next = _basePart select [_len, 1];
+                                if (_next == "" || _next == "_") then { _isActiveLogiBase = true; };
+                            };
+                            if (_targetBaseLower != "" && { (_basePart find _targetBaseLower) == 0 }) then {
+                                private _len = count _targetBaseLower;
+                                private _next = _basePart select [_len, 1];
+                                if (_next == "" || _next == "_") then { _isActiveLogiBase = true; };
+                            };
+                        };
+
+                        if (_isActiveLogiBase) then {
+                            if (_isServiceArea) then { _x setMarkerAlphaLocal 0.45; } else { _x setMarkerAlphaLocal 1.0; };
                         } else {
+                            // Baseline vehicle visibility (50% icon, 20% area boundary)
+                            if (_isServiceArea) then { _x setMarkerAlphaLocal 0.20; } else { _x setMarkerAlphaLocal 0.50; };
+                        };
+                    };
+                };
+            } else {
+                // =============================================================
+                // CARGO PICKUP & DROPOFF VISIBILITY RULES (Logistics Only)
+                // =============================================================
+                if (!_isLogiDriver) then {
+                    // Non-logistics players & combat vehicles: hidden
+                    _x setMarkerAlphaLocal 0;
+                } else {
+                    if (!_hasActiveRoute) then {
+                        // Logistics overview mode (all pads visible)
+                        if (_isArea) then {
                             _x setMarkerAlphaLocal 0.25;
+                        } else {
+                            _x setMarkerAlphaLocal 1.0;
+                        };
+                    } else {
+                        // Active route mode: Identify if marker belongs to active pickup or dropoff base
+                        private _basePart = if (_isArea) then {
+                            _m select [5] // strip "area_"
+                        } else {
+                            if (_isPickup) then { _m select [7] } else { _m select [8] }
+                        };
+
+                        private _matchesFrom = false;
+                        if (_fromBaseLower != "") then {
+                            private _len = count _fromBaseLower;
+                            if ((_basePart find _fromBaseLower) == 0) then {
+                                private _nextChar = _basePart select [_len, 1];
+                                if (_nextChar == "" || _nextChar == "_") then { _matchesFrom = true; };
+                            };
+                        };
+
+                        private _matchesTarget = false;
+                        if (_targetBaseLower != "") then {
+                            private _len = count _targetBaseLower;
+                            if ((_basePart find _targetBaseLower) == 0) then {
+                                private _nextChar = _basePart select [_len, 1];
+                                if (_nextChar == "" || _nextChar == "_") then { _matchesTarget = true; };
+                            };
+                        };
+
+                        private _isActivePad = false;
+                        if (_isArea) then {
+                            if (_matchesFrom && ("_pickup" in _m)) then { _isActivePad = true; };
+                            if (_matchesTarget && ("_dropoff" in _m)) then { _isActivePad = true; };
+                        } else {
+                            if (_matchesFrom && _isPickup) then { _isActivePad = true; };
+                            if (_matchesTarget && _isDropoff) then { _isActivePad = true; };
+                        };
+
+                        if (_isActivePad) then {
+                            if (_isArea) then {
+                                _x setMarkerAlphaLocal 0.45;
+                            } else {
+                                _x setMarkerAlphaLocal 1.0;
+                            };
+                        } else {
+                            if (_isArea) then {
+                                _x setMarkerAlphaLocal 0.10;
+                            } else {
+                                _x setMarkerAlphaLocal 0.25;
+                            };
                         };
                     };
                 };

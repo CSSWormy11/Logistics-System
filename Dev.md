@@ -454,7 +454,11 @@ Enhance the Logistics Mission Routing Engine (`fn_manageLogisticsMissions.sqf`) 
   - [x] All text labels are removed (`setMarkerText ""`) from individual Pickup (`mil_pickup` Blue), Dropoff (`mil_end` Green), and Service (`b_maint` Yellow) pad icons, preventing the distracting "wall-of-text" across the map when zoomed out.
   - [x] Every individual numbered trigger pad (e.g. `MSR_pickup_1` through `5`) receives its own clean icon and transparent boundary box on the map.
 - [x] **Spotlight Contextual Map Marker Hierarchy (Option 3):**
-  - [x] **Non-Logistics Players:** Combat players (Infantry, Armor, CAS pilots, Snipers) have all logistics pad icons (`Pickup_*`, `Dropoff_*`, `Service_*`) and area trigger boundaries (`Area_*`) completely hidden locally (`setMarkerAlphaLocal 0`), maintaining an uncluttered tactical map.
+  - [x] **Infantry on Foot:** Combat players on foot have all logistics pad icons (`Pickup_*`, `Dropoff_*`, `Service_*`) and area trigger boundaries (`Area_*`) completely hidden locally (`setMarkerAlphaLocal 0`), maintaining an uncluttered tactical map.
+  - [x] **Any Player in a Vehicle (Combat Aircraft, Tanks, APCs, Boats, Transports):**
+    - **Service Markers (`Service_*` & `Area_*_service*`):** Always visible at `0.50` (`setMarkerAlphaLocal 0.50` for icons, `0.20` for trigger area boundaries) so pilots and vehicle crews always know where base R4-C repair/rearm/refuel stations are.
+    - **Dynamic Service Distress Spotlight:** If the vehicle receives >25% overall or subsystem damage, falls below 50% fuel, or exhausts >50% ammo, service markers dynamically spotlight to full brightness (`setMarkerAlphaLocal 1.0` for icons, `0.45` for trigger area boundaries).
+    - **Cargo Pads for Combat Vehicles:** Pickup and Dropoff pads remain hidden (`setMarkerAlphaLocal 0`) for non-logistics combat assets, preventing cargo clutter.
   - [x] **Logistics Overview Mode:** Drivers mounting an authorized logistics vehicle without an active locked route see all logistics pad icons at `1.0` and area boundaries at `0.25` for global situational awareness.
   - [x] **Active Route Spotlight Mode:**
     - **Active Route Pads (Assigned Origin Pickup & Destination Dropoff):** Spotlighted at full brightness (`setMarkerAlphaLocal 1.0` for icons, `0.45` for trigger area boundaries).
