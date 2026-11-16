@@ -629,6 +629,26 @@ Explore transitioning Motorpool vehicle procurement costs from manually authored
   - If a vehicle in `spawnableVehicleTemplate.sqf` provides an explicit cost array, that array takes precedence (allowing custom balancing or mission-specific pricing).
   - If the vehicle's cost array is empty `[]` or omitted, the server automatically computes the dynamic config-driven cost.
 
+### [x] 5.6 Universal Base Supply Ledger for All Players (Map Diary & Informational Tasks) (Verified Resolved)
+
+Ensure all players—including combat infantry, tank crews, snipers, attack pilots, and commanders—can view the real-time supply inventory (Cargo, Ammo, Fuel, Medical, Repair, Vehicle, Troops) of every base across Stratis directly from their map screen, without being assigned logistics delivery waypoints or tasking:
+
+- [x] **Root Cause of Restricted Visibility:**
+  - Base stockpile inventories were previously only exposed through the task descriptions of `Logi_Strategic_Task` and `Logi_Tactical_Task` (`fn_manageLogisticsMissions.sqf`).
+  - Because these tasks were exclusively assigned to players actively seated in the driver seat of an authorized logistics vehicle (`_isLogisticsDriver`), all other players (and logistics drivers on foot) had those tasks deleted, leaving them unable to inspect base supplies on the map.
+  - The client Diary subject `BasesManifestTab` in `qm_clientFunctions.sqf` was executed during early init before `player` was non-null, lacked respawn lifecycle restoration, and had no single-page theater overview.
+- [x] **Dual-Channel Map Access (Diary & Tasks):**
+  - **1. Map Diary Subject (`BasesManifestTab` / "Base Supply Manifest"):**
+    - Features a primary **"0. Theater Overview (All Bases)"** record summarizing all Staging Bases (SBs), Forward Operating Bases (FOBs), and Main Supply Route (MSR) hubs in a unified, color-coded status table.
+    - Features individual base records for detailed inspection of specific base stockpiles.
+  - **2. Global Read-Only Informational Task (`Logi_Base_Ledger_Task`):**
+    - Created with title `"Base Supply Ledger [Theater Overview]"`.
+    - Configured with `destination: objNull`, `priority: -1`, and `showNotification: false`.
+    - Appears in the map's Tasks list for quick reference without creating 3D HUD waypoint arrows, map waypoint markers, or overriding active combat routes.
+- [x] **Persistent Lifecycle Daemon Across Respawns:**
+  - Implemented client daemon in `qm_clientFunctions.sqf` that monitors player lifecycle and automatically re-initializes both the Diary subject and Informational Task whenever the player respawns or changes units.
+  - Live background updater refreshes values every 4 seconds from `missionNamespace` variables (`LogiScore_*`).
+
 ---
 
 **Ongoing Development Tracking**

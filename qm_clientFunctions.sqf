@@ -213,48 +213,177 @@ QM_fnc_addPylonAction = {
     };
 };
 
-// --- C. Client-Side Base Manifest Ledger (Diary UI) ---
-player createDiarySubject ["BasesManifestTab", "Base Supply Manifest"];
+// --- C. Client-Side Universal Base Supply Manifest Ledger (Diary & Map Tasks) ---
+// Accessible by ALL players (infantry, armor, pilots, logistics) regardless of role.
+// Provides both a dedicated Map Diary subject and an informational Map Task (with no 3D waypoints).
 
-[] spawn {
+QM_fnc_initBaseSupplyLedger = {
+    if (!hasInterface) exitWith {};
+
+    // 1. Ensure player unit and base database are fully available
+    if (isNull player || !alive player) exitWith {};
+    if (isNil "logisticsBases" || { count logisticsBases == 0 }) exitWith {};
+
+    // 2. Initialize Map Diary Subject
+    if !(player diarySubjectExists "BasesManifestTab") then {
+        player createDiarySubject ["BasesManifestTab", "Base Supply Manifest"];
+    };
+
+    // Master Theater Overview Record
+    private _overviewHandle = player createDiaryRecord ["BasesManifestTab", ["0. Theater Overview (All Bases)", "Synchronizing base ledger..."]];
+
+    // Individual Base Records
     private _diaryHandlesMap = createHashMap;
+    _diaryHandlesMap set ["__OVERVIEW__", _overviewHandle];
+
     {
         private _cleanBase = (_x splitString "_") joinString " ";
-        private _recordHandle = player createDiaryRecord ["BasesManifestTab", [_cleanBase, "Synchronizing UI layers..."]];
+        private _recordHandle = player createDiaryRecord ["BasesManifestTab", [_cleanBase, "Synchronizing base data..."]];
         _diaryHandlesMap set [_x, _recordHandle];
     } forEach logisticsBases;
 
-    while {true} do {
-        {
-            private _base = _x;
-            private _cleanBase = (_base splitString "_") joinString " ";
-            private _cPoints = missionNamespace getVariable [format["LogiScore_%1_Cargo", _base], 0];
-            private _aPoints = missionNamespace getVariable [format["LogiScore_%1_Ammo", _base], 0];
-            private _fPoints = missionNamespace getVariable [format["LogiScore_%1_Fuel", _base], 0];
-            private _mPoints = missionNamespace getVariable [format["LogiScore_%1_Medical", _base], 0];
-            private _rPoints = missionNamespace getVariable [format["LogiScore_%1_Repair", _base], 0];
-            private _vPoints = missionNamespace getVariable [format["LogiScore_%1_Vehicle", _base], 0];
-            private _tPoints = missionNamespace getVariable [format["LogiScore_%1_Troops", _base], 0];
+    // 3. Initialize Global Informational Map Task (No 3D Waypoint, Never Overrides Current Route)
+    if !(["Logi_Base_Ledger_Task"] call BIS_fnc_taskExists) then {
+        [
+            player, 
+            "Logi_Base_Ledger_Task", 
+            ["Synchronizing theater base supply ledger...", "Base Supply Ledger [Theater Overview]", ""], 
+            objNull, 
+            "CREATED", 
+            -1, 
+            false, 
+            "whiteboard", 
+            false
+        ] call BIS_fnc_taskCreate;
+    };
 
-            private _cStr = [_cPoints] call logi_fnc_formatPoints;
-            private _aStr = [_aPoints] call logi_fnc_formatPoints;
-            private _fStr = [_fPoints] call logi_fnc_formatPoints;
-            private _mStr = [_mPoints] call logi_fnc_formatPoints;
-            private _rStr = [_rPoints] call logi_fnc_formatPoints;
-            private _vStr = [_vPoints] call logi_fnc_formatPoints;
-            private _tStr = [_tPoints] call logi_fnc_formatPoints;
+    // 4. Terminate any previous updater thread on this client to prevent duplicate loops
+    private _existingThread = player getVariable ["QM_BaseSupplyLedgerThread", scriptNull];
+    if (!isNull _existingThread) then { terminate _existingThread; };
 
-            private _reportText = format [
-                "<br/><font color='#00FFFF' size='16'>%1 Supply Manifest Ledger</font><br/><br/>  [Cargo Pool]: <font color='#FFFF00'>%2</font> Points<br/>  [Ammo Pool]: <font color='#FFFF00'>%3</font> Resources<br/>  [Fuel Pool]: <font color='#FFFF00'>%4</font> Liters<br/>  [Medical Pool]: <font color='#FFFF00'>%5</font> Supplies<br/>  [Repair Pool]: <font color='#FFFF00'>%6</font> Kits<br/>  [Vehicle Pool]: <font color='#FFFF00'>%7</font> Material<br/>  [Troops Pool]: <font color='#FFFF00'>%8</font> Personnel<br/>", 
-                _cleanBase, _cStr, _aStr, _fStr, _mStr, _rStr, _vStr, _tStr
-            ];
+    // 5. Spawn Live Background Updater Daemon
+    private _thread = [_diaryHandlesMap] spawn {
+        params ["_diaryMap"];
 
-            private _activeHandle = _diaryHandlesMap get _base;
-            if (!isNil "_activeHandle") then {
-                player setDiaryRecordText [["BasesManifestTab", _activeHandle], [_cleanBase, _reportText]];
+        while { alive player } do {
+            private _allSBs = logisticsBases select { "SB" in toUpper _x };
+            private _allFOBs = logisticsBases select { "FOB" in toUpper _x };
+            private _allOthers = logisticsBases select { !("SB" in toUpper _x) && !("FOB" in toUpper _x) };
+
+            // --- A. COMPILE THEATER MASTER OVERVIEW REPORT ---
+            private _masterText = "<br/><font color='#00FFFF' size='16'>THEATER BASE SUPPLY MANIFEST</font><br/>";
+            _masterText = _masterText + "<font color='#999999'>Real-time logistics inventory across all bases in theater.</font><br/><br/>";
+
+            if (count _allSBs > 0) then {
+                _masterText = _masterText + "<font color='#00d0ff' size='14'>=== STAGING BASES (REAR RESERVES) ===</font><br/>";
+                {
+                    private _base = _x;
+                    private _cleanName = (_base splitString "_") joinString " ";
+                    _masterText = _masterText + format ["<br/><font color='#ffffff' size='13'>■ %1</font><br/>", _cleanName];
+                    {
+                        private _cat = _x;
+                        private _pts = missionNamespace getVariable [format ["LogiScore_%1_%2", _base, _cat], 0];
+                        private _ptsStr = [_pts] call logi_fnc_formatPoints;
+                        private _col = if (_pts == -1) then { "#00ff88" } else { if (_pts < 500) then { "#ff4444" } else { "#ffcc00" } };
+                        _masterText = _masterText + format ["  <font color='#aaaaaa'>%1:</font> <font color='%2'>%3</font><br/>", _cat, _col, _ptsStr];
+                    } forEach ["Cargo", "Ammo", "Fuel", "Medical", "Repair", "Vehicle", "Troops"];
+                    _masterText = _masterText + "<font color='#444444'>----------------------------------------</font><br/>";
+                } forEach _allSBs;
             };
-        } forEach logisticsBases;
-        uiSleep 4;
+
+            if (count _allFOBs > 0) then {
+                _masterText = _masterText + "<br/><font color='#00ff88' size='14'>=== FORWARD OPERATING BASES (FRONT-LINE) ===</font><br/>";
+                {
+                    private _base = _x;
+                    private _cleanName = (_base splitString "_") joinString " ";
+                    _masterText = _masterText + format ["<br/><font color='#ffffff' size='13'>■ %1</font><br/>", _cleanName];
+                    {
+                        private _cat = _x;
+                        private _pts = missionNamespace getVariable [format ["LogiScore_%1_%2", _base, _cat], 0];
+                        private _ptsStr = [_pts] call logi_fnc_formatPoints;
+                        private _col = if (_pts == -1) then { "#00ff88" } else { if (_pts < 300) then { "#ff4444" } else { "#ffcc00" } };
+                        _masterText = _masterText + format ["  <font color='#aaaaaa'>%1:</font> <font color='%2'>%3</font><br/>", _cat, _col, _ptsStr];
+                    } forEach ["Cargo", "Ammo", "Fuel", "Medical", "Repair", "Vehicle", "Troops"];
+                    _masterText = _masterText + "<font color='#444444'>----------------------------------------</font><br/>";
+                } forEach _allFOBs;
+            };
+
+            if (count _allOthers > 0) then {
+                _masterText = _masterText + "<br/><font color='#ffbb00' size='14'>=== MAIN SUPPLY ROUTE & SPECIAL HUBS ===</font><br/>";
+                {
+                    private _base = _x;
+                    private _cleanName = (_base splitString "_") joinString " ";
+                    _masterText = _masterText + format ["<br/><font color='#ffffff' size='13'>■ %1</font><br/>", _cleanName];
+                    {
+                        private _cat = _x;
+                        private _pts = missionNamespace getVariable [format ["LogiScore_%1_%2", _base, _cat], 0];
+                        private _ptsStr = [_pts] call logi_fnc_formatPoints;
+                        _masterText = _masterText + format ["  <font color='#aaaaaa'>%1:</font> <font color='#00ff88'>%2</font><br/>", _cat, _ptsStr];
+                    } forEach ["Cargo", "Ammo", "Fuel", "Medical", "Repair", "Vehicle", "Troops"];
+                    _masterText = _masterText + "<font color='#444444'>----------------------------------------</font><br/>";
+                } forEach _allOthers;
+            };
+
+            // Update Master Overview Diary Record
+            private _ovHandle = _diaryMap get "__OVERVIEW__";
+            if (!isNil "_ovHandle") then {
+                player setDiaryRecordText [["BasesManifestTab", _ovHandle], ["0. Theater Overview (All Bases)", _masterText]];
+            };
+
+            // Update Global Read-Only Informational Task Description
+            if (["Logi_Base_Ledger_Task"] call BIS_fnc_taskExists) then {
+                private _ledgerTask = ["Logi_Base_Ledger_Task", player] call BIS_fnc_taskReal;
+                if (!isNull _ledgerTask) then {
+                    _ledgerTask setSimpleTaskDescription [_masterText, "Base Supply Ledger [Theater Overview]", ""];
+                };
+            };
+
+            // --- B. UPDATE INDIVIDUAL BASE DIARY ENTRIES ---
+            {
+                private _base = _x;
+                private _cleanBase = (_base splitString "_") joinString " ";
+                private _cPoints = missionNamespace getVariable [format["LogiScore_%1_Cargo", _base], 0];
+                private _aPoints = missionNamespace getVariable [format["LogiScore_%1_Ammo", _base], 0];
+                private _fPoints = missionNamespace getVariable [format["LogiScore_%1_Fuel", _base], 0];
+                private _mPoints = missionNamespace getVariable [format["LogiScore_%1_Medical", _base], 0];
+                private _rPoints = missionNamespace getVariable [format["LogiScore_%1_Repair", _base], 0];
+                private _vPoints = missionNamespace getVariable [format["LogiScore_%1_Vehicle", _base], 0];
+                private _tPoints = missionNamespace getVariable [format["LogiScore_%1_Troops", _base], 0];
+
+                private _cStr = [_cPoints] call logi_fnc_formatPoints;
+                private _aStr = [_aPoints] call logi_fnc_formatPoints;
+                private _fStr = [_fPoints] call logi_fnc_formatPoints;
+                private _mStr = [_mPoints] call logi_fnc_formatPoints;
+                private _rStr = [_rPoints] call logi_fnc_formatPoints;
+                private _vStr = [_vPoints] call logi_fnc_formatPoints;
+                private _tStr = [_tPoints] call logi_fnc_formatPoints;
+
+                private _reportText = format [
+                    "<br/><font color='#00FFFF' size='16'>%1 Supply Manifest Ledger</font><br/><br/>  [Cargo Pool]: <font color='#FFFF00'>%2</font> Points<br/>  [Ammo Pool]: <font color='#FFFF00'>%3</font> Resources<br/>  [Fuel Pool]: <font color='#FFFF00'>%4</font> Liters<br/>  [Medical Pool]: <font color='#FFFF00'>%5</font> Supplies<br/>  [Repair Pool]: <font color='#FFFF00'>%6</font> Kits<br/>  [Vehicle Pool]: <font color='#FFFF00'>%7</font> Material<br/>  [Troops Pool]: <font color='#FFFF00'>%8</font> Personnel<br/>", 
+                    _cleanBase, _cStr, _aStr, _fStr, _mStr, _rStr, _vStr, _tStr
+                ];
+
+                private _activeHandle = _diaryMap get _base;
+                if (!isNil "_activeHandle") then {
+                    player setDiaryRecordText [["BasesManifestTab", _activeHandle], [_cleanBase, _reportText]];
+                };
+            } forEach logisticsBases;
+
+            uiSleep 4;
+        };
+    };
+
+    player setVariable ["QM_BaseSupplyLedgerThread", _thread];
+};
+
+// Lifecycle daemon: guarantees Base Supply Ledger persistence across all respawns and JIP
+[] spawn {
+    while { true } do {
+        waitUntil { !isNull player && alive player };
+        waitUntil { !isNil "logisticsBases" && { count logisticsBases > 0 } };
+        [] call QM_fnc_initBaseSupplyLedger;
+        waitUntil { !alive player };
+        waitUntil { alive player };
     };
 };
 
