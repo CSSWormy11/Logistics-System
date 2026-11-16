@@ -95,7 +95,11 @@ if (_cargoName == "") then { _cargoName = typeOf _cargoObj; };
 private _vehName = getText (configFile >> "CfgVehicles" >> typeOf _veh >> "displayName");
 if (_vehName == "") then { _vehName = typeOf _veh; };
 
+_cargoObj setVariable ["QM_ManifestValidated", true];
+_veh setVariable ["QM_SystemLoading", true];
 private _loaded = _veh setVehicleCargo _cargoObj;
+_veh setVariable ["QM_SystemLoading", false];
+_cargoObj setVariable ["QM_ManifestValidated", nil];
 
 if (_loaded) then {
     _veh setVariable ["logistics_is_loaded", true, true];

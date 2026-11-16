@@ -454,11 +454,14 @@ QM_fnc_processGarageSpawn = {
 
                 if (_typeSuffix == "BOAT") then {
                     _veh = createVehicle [_class, [0,0,200], [], 0, "NONE"];
+                    _veh setVariable ["QM_SystemLoaded", true, true];
                     private _loadedIntoRack = false;
 
                     // 1. Check if the pad object itself can carry the boat (e.g. Boat Rack named <Base>_Garage_Boat_...)
                     if (((_padObj canVehicleCargo _veh) select 0) && { count (getVehicleCargo _padObj) == 0 }) then {
+                        _padObj setVariable ["QM_SystemLoading", true];
                         _loadedIntoRack = _padObj setVehicleCargo _veh;
+                        _padObj setVariable ["QM_SystemLoading", false];
                     };
 
                     // 2. Otherwise check for an adjacent Boat Rack within 20m of the pad object
@@ -467,7 +470,9 @@ QM_fnc_processGarageSpawn = {
                         private _validRack = objNull;
                         { if (count (getVehicleCargo _x) == 0 && { (_x canVehicleCargo _veh) select 0 }) exitWith { _validRack = _x; }; } forEach _racks;
                         if (!isNull _validRack) then {
+                            _validRack setVariable ["QM_SystemLoading", true];
                             _loadedIntoRack = _validRack setVehicleCargo _veh;
+                            _validRack setVariable ["QM_SystemLoading", false];
                         };
                     };
 

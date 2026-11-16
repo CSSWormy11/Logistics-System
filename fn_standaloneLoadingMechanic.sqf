@@ -21,10 +21,13 @@
 // ============================================================================
 
 // --- HELPER 1: DETECT IF VEHICLE IS INSIDE A DESIGNATED LOADING ZONE ---
+// Comprehensive base recognition: Pickup triggers, Dropoff triggers, 3D facility objects,
+// Naval Capital Ships (Destroyer, Carrier), and master base marker perimeters.
 QM_fnc_isInsideLoadingZone = {
     params [["_vehicle", objNull]];
     if (isNull _vehicle) exitWith { false };
 
+    // 1. Check pickup triggers (all bases)
     private _allPickupTriggers = missionNamespace getVariable ["Logi_AllPickupTriggers", []];
     if (count _allPickupTriggers == 0) then {
         {
@@ -33,8 +36,34 @@ QM_fnc_isInsideLoadingZone = {
         } forEach (missionNamespace getVariable ["logisticsBases", []]);
         missionNamespace setVariable ["Logi_AllPickupTriggers", _allPickupTriggers];
     };
+    if ({ _vehicle inArea _x } count _allPickupTriggers > 0) exitWith { true };
 
-    ({ _vehicle inArea _x } count _allPickupTriggers > 0)
+    // 2. Check dropoff triggers (all bases)
+    private _allDropoffTriggers = missionNamespace getVariable ["Logi_AllDropoffTriggers", []];
+    if (count _allDropoffTriggers == 0) then {
+        {
+            private _trigs = missionNamespace getVariable [format ["LogiDropoffTriggers_%1", _x], []];
+            _allDropoffTriggers append _trigs;
+        } forEach (missionNamespace getVariable ["logisticsBases", []]);
+        missionNamespace setVariable ["Logi_AllDropoffTriggers", _allDropoffTriggers];
+    };
+    if ({ _vehicle inArea _x } count _allDropoffTriggers > 0) exitWith { true };
+
+    // 3. Check proximity to any base 3D facility object (Arsenal, Terminal, Garage, Spawn) within 75m
+    private _nearBases = nearestObjects [_vehicle, ["VirtualReammoBox_camonet_F", "Land_HelipadEmpty_F", "Land_Destroyer_01_Boat_Rack_01_F", "Land_Boat_Rack_01_F", "Land_Cargo_House_V1_F", "Land_Cargo_House_V3_F"], 75];
+    if (count _nearBases > 0) exitWith { true };
+
+    // 4. Check proximity to Naval Capital Ships (Destroyer, Carrier) within 90m
+    private _nearShips = nearestObjects [_vehicle, ["Land_Destroyer_01_base_F", "Land_Carrier_01_base_F"], 90];
+    if (count _nearShips > 0) exitWith { true };
+
+    // 5. Check proximity to master base markers (within 250m of any base marker)
+    private _inBaseMarker = (missionNamespace getVariable ["logisticsBases", []]) findIf {
+        private _mPos = getMarkerPos _x;
+        (_mPos distance2D [0,0,0] > 10) && { (_vehicle distance2D _mPos) <= 250 }
+    } != -1;
+
+    _inBaseMarker
 };
 
 // --- HELPER 2: RESOLVE CARGO RESOURCE CATEGORY ---
@@ -99,6 +128,23 @@ QM_fnc_validateVehicleCargoLoad = {
 
     // Authoritative Server Validation to eliminate MP race conditions and duplicate messages
     if (!isServer) exitWith {};
+
+    // --- CASE 0: SYSTEM-DRIVEN OR MANIFEST-VALIDATED LOADING BYPASS ---
+    // Automated logistics trigger loading, boat spawning into racks, and manifest dialog operations
+    // are executed or pre-validated by the system and must NEVER be rejected by field restrictions.
+    if (
+        _cargo getVariable ["QM_SystemLoaded", false] ||
+        _vehicle getVariable ["QM_SystemLoading", false] ||
+        _cargo getVariable ["isLogisticsCargo", false] ||
+        _cargo getVariable ["QM_ManifestValidated", false] ||
+        _vehicle isKindOf "Land_Destroyer_01_Boat_Rack_01_F" ||
+        _vehicle isKindOf "Land_Boat_Rack_01_F" ||
+        _vehicle isKindOf "Land_BoatRack_01_F"
+    ) exitWith {
+        _vehicle setVariable ["logistics_is_loaded", true, true];
+        private _cargoType = [_cargo] call QM_fnc_getCargoCategory;
+        _vehicle setVariable ["logistics_loaded_type", _cargoType, true];
+    };
 
     private _inLoadingZone = [_vehicle] call QM_fnc_isInsideLoadingZone;
     private _vehClass = typeOf _vehicle;

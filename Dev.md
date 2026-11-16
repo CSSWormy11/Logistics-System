@@ -580,6 +580,45 @@ Explore solutions to prevent non-cargo scene objects and ambient base clutter (s
   - Uses native engine ViV calls (`setVehicleCargo`, `canVehicleCargo`) and standard vehicle actions, operating harmoniously alongside ACE3, Boxloader, or Drongo's DYEL without conflicts.
   - Resolved RPT script error on startup by replacing non-existent command check with native Bohemia `CfgVehicles >> VehicleTransport >> Carrier` config verification, separated server-authoritative event handlers from client `addAction` attachments, and added client proximity daemon / `GetInMan` hooks so all vehicles reliably receive the interactive actions.
 
+### [x] 5.4 System-Driven Cargo Spawning Exemption & Base Zone Recognition (Verified Resolved)
+
+Resolve issues where system-automated cargo and vehicle operations (such as spawning boats into Destroyer Boat Racks or loading supply assets via pickup triggers) triggered false field-loading rejections, and expand base loading zone recognition:
+
+- [x] **Core Issue & Unintended Handler Interception:**
+  - The native engine `CargoLoaded` event handler in `fn_standaloneLoadingMechanic.sqf` was intercepting *all* `setVehicleCargo` operations indiscriminately.
+  - When the server spawned a boat into a Destroyer Boat Rack (`qm_serverFunctions.sqf`) or spawned cargo nets into transport vehicles via pickup triggers (`fn_spawnLoadSupply.sqf`), the handler evaluated the parent object as a field vehicle rather than an automated base transaction.
+  - Because boats and cargo nets exceed 250 lbs and Boat Racks/Destroyers lacked explicit pickup triggers, the system rejected the load and force-ejected the boat/cargo from the rack.
+- [x] **System Spawning & Loading Exemption (Case 0 Bypass):**
+  - Automated system transactions (`_cargo getVariable ["QM_SystemLoaded", false]`, `_vehicle getVariable ["QM_SystemLoading", false]`, `_cargo getVariable ["isLogisticsCargo", false]`, and interactive manifest pre-validated loads `QM_ManifestValidated`) completely bypass field loading rules.
+  - Base fixtures (Destroyer and Land Boat Racks `Land_Destroyer_01_Boat_Rack_01_F`, `Land_Boat_Rack_01_F`) are permanently exempted from field weight checks.
+- [x] **Comprehensive Base Loading Zone Recognition (`QM_fnc_isInsideLoadingZone`):**
+  - Upgraded `QM_fnc_isInsideLoadingZone` in `fn_standaloneLoadingMechanic.sqf` to evaluate all base infrastructure:
+    1. Pickup triggers (`LogiPickupTriggers_*`).
+    2. Dropoff triggers (`LogiDropoffTriggers_*`).
+    3. Proximity to any base 3D facility object (`_Arsenal`, `_Terminal`, `_Garage`, `_Spawn`) within 75 meters.
+    4. Proximity to Naval Capital Ships (`Land_Destroyer_01_base_F`, `Land_Carrier_01_base_F`) within 90 meters.
+    5. Proximity to master base markers (`logisticsBases`) within 250 meters.
+  - Players using the Cargo Manifest dialog anywhere at a base or on a naval vessel are correctly identified as being in a Base Loading Zone.
+
+### 5.5 [PROPOSAL / OPTIONAL] Dynamic Config-Driven Vehicle Procurement Costing Architecture
+
+Explore transitioning Motorpool vehicle procurement costs from manually authored static template arrays into a dynamic, Bohemia config-driven valuation engine:
+
+- [ ] **Current Static Template Limitations:**
+  - `spawnableVehicleTemplate.sqf` currently requires mission makers to hardcode static arrays for all 7 resource pools per vehicle (e.g. `[["Cargo", 3000], ["Ammo", 0], ["Fuel", 28], ["Vehicle", 10942], ["Troops", 1]]`).
+  - This requires extensive manual authoring and does not automatically account for variations in native vehicle inventory, ammunition loads, or fuel capacity across large mod packs (RHS, CUP, 3CB).
+- [ ] **Proposed Dynamic Config Derivation Engine:**
+  - **Chassis Cost (`Vehicle`):** Calculated dynamically from physical vehicle mass via `getNumber (configFile >> "CfgVehicles" >> _class >> "mass")` or `getMass` (e.g. 1 point per 1 KG chassis mass).
+  - **Fuel Cost (`Fuel`):** Calculated dynamically from internal tank volume via `getNumber (configFile >> "CfgVehicles" >> _class >> "fuelCapacity")` (e.g. 1 point per Liter).
+  - **Ammunition Cost (`Ammo`):** Calculated dynamically by inspecting default turret magazines and pylon ordnance, summing weapon munition mass.
+  - **Cargo & Equipment Cost (`Cargo`):** Calculated dynamically from default vehicle inventory (`TransportWeapons`, `TransportMagazines`, `TransportItems`, `TransportBackpacks`) and internal ViV capacity (`class VehicleTransport`).
+  - **Manpower Cost (`Troops`):** 1 Troop if autonomous/UAV, or dynamically billed based on requested AI crew seats.
+- [ ] **Global Scaling Multipliers (`logisticsBaseDefaults.sqf`):**
+  - Mission makers can set global cost multipliers (e.g. `QM_CostMultiplier_Chassis = 1.0`, `QM_CostMultiplier_Fuel = 1.0`, `QM_CostMultiplier_Ammo = 2.0`), scaling economy balance across all vehicles simultaneously.
+- [ ] **Backward-Compatible Hybrid Architecture:**
+  - If a vehicle in `spawnableVehicleTemplate.sqf` provides an explicit cost array, that array takes precedence (allowing custom balancing or mission-specific pricing).
+  - If the vehicle's cost array is empty `[]` or omitted, the server automatically computes the dynamic config-driven cost.
+
 ---
 
 **Ongoing Development Tracking**
