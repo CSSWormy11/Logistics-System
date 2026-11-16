@@ -61,10 +61,11 @@ Replaces clunky script actions with a modern, high-fidelity cargo management sui
   * **Intelligent Environment Filtering:** Distinguishes between loose cargo and non-loadable world props (terminals, arsenal crates, hangars, fences, cones, flags, and static structures are automatically filtered out).
   * **Selective Loading & Unloading:** Players click on the exact item they want loaded into or unloaded from the transport rather than suffering blind LIFO (Last-In-First-Out) stacking.
 * **Comprehensive Field Loading Capabilities (`logisticsFieldLoadingTemplate.sqf`):**
-  * **Base Loading Zone:** Vehicles parked inside official `<BaseKey>_pickup` triggers can freely load and unload supplies.
-  * **Flatbed Winch:** Vehicles equipped with flatbed winches (e.g. flatbed recovery trucks) can pull light and medium cargo up ramps.
-  * **Field Crane Support:** Heavy trucks equipped with hydraulic cranes (e.g. `B_Truck_01_mover_F`) or nearby stationary cranes can lift heavy containers, vehicles, and pallets anywhere on the map.
-  * **Multi-Man Lift:** Ground infantry can collaborate to manually lift light supplies (ammo boxes, medical crates) when at least 2 players are within 5 meters of the cargo.
+  * **Strict Scoping to Cargo Manifest GUI:** Custom field capability rules (weight limits, winches, cranes, team lifts) are strictly evaluated inside the interactive Cargo Manifest GUI (`fn_manifestLoadExecute.sqf`). Native Arma 3 engine loading (scroll-wheel ViV actions), third-party mods (Drongo's DYEL, Boxloader, ACE3 cargo), and system-automated spawning/loading operate 100% unrestricted with zero interference or force-ejection.
+  * **Base Loading Zone:** Vehicles parked inside official base loading zones or near base infrastructure can freely load and unload supplies.
+  * **Flatbed Winch:** Vehicles equipped with container winches (e.g. HEMTT Flatbed) can pull Huron containers up ramps in austere field conditions.
+  * **Field Crane Support:** Heavy trucks equipped with hydraulic cranes (e.g. RHS M1084, KamAZ Crane) can lift heavy containers, vehicles, and pallets anywhere on the map.
+  * **Multi-Man Lift:** Ground infantry can collaborate to manually lift medium supplies (121 - 250 lbs) in austere field conditions when at least 2 players are within 12 meters of the cargo. Light cargo ($\le 120$ lbs) can be loaded anywhere by a single player; heavy cargo ($> 250$ lbs) requires a base loading zone or vehicle crane.
 * **Full Multi-Modal ViV Integration:**
   * Uses engine commands `canVehicleCargo`, `setVehicleCargo`, and `getVehicleCargo`.
   * Fully supports internal drive-on loading (boats onto Destroyer racks, quad bikes/small vehicles into cargo planes, crates into container trucks).

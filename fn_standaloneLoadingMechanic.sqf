@@ -121,30 +121,19 @@ QM_fnc_getFieldLoadingCapabilities = {
     _caps
 };
 
-// --- CORE VALIDATOR: EVALUATE VIV CARGO LOAD ATTEMPT ---
+// --- EVALUATE CARGO LOAD RULES (FOR AUDITING & MANIFEST VALIDATION) ---
+// Note: Per architectural design, loading restrictions (weight limits, winches, cranes, team lifts)
+// are enforced strictly within the custom Cargo Manifest dialog (fn_manifestLoadExecute.sqf).
+// Native Arma 3 engine loading (ViV actions), third-party mods (DYEL, Boxloader, ACE3),
+// and system automated spawns are 100% unrestricted and must NEVER be force-ejected.
 QM_fnc_validateVehicleCargoLoad = {
     params ["_vehicle", "_cargo"];
-    if (isNull _vehicle || isNull _cargo) exitWith {};
+    if (isNull _vehicle || isNull _cargo) exitWith { [true, "Valid"] };
 
-    // Authoritative Server Validation to eliminate MP race conditions and duplicate messages
-    if (!isServer) exitWith {};
-
-    // --- CASE 0: SYSTEM-DRIVEN OR MANIFEST-VALIDATED LOADING BYPASS ---
-    // Automated logistics trigger loading, boat spawning into racks, and manifest dialog operations
-    // are executed or pre-validated by the system and must NEVER be rejected by field restrictions.
-    if (
-        _cargo getVariable ["QM_SystemLoaded", false] ||
-        _vehicle getVariable ["QM_SystemLoading", false] ||
-        _cargo getVariable ["isLogisticsCargo", false] ||
-        _cargo getVariable ["QM_ManifestValidated", false] ||
-        _vehicle isKindOf "Land_Destroyer_01_Boat_Rack_01_F" ||
-        _vehicle isKindOf "Land_Boat_Rack_01_F" ||
-        _vehicle isKindOf "Land_BoatRack_01_F"
-    ) exitWith {
-        _vehicle setVariable ["logistics_is_loaded", true, true];
-        private _cargoType = [_cargo] call QM_fnc_getCargoCategory;
-        _vehicle setVariable ["logistics_loaded_type", _cargoType, true];
-    };
+    // Update tracking variables immediately
+    _vehicle setVariable ["logistics_is_loaded", true, true];
+    private _cargoType = [_cargo] call QM_fnc_getCargoCategory;
+    _vehicle setVariable ["logistics_loaded_type", _cargoType, true];
 
     private _inLoadingZone = [_vehicle] call QM_fnc_isInsideLoadingZone;
     private _vehClass = typeOf _vehicle;
@@ -154,11 +143,9 @@ QM_fnc_validateVehicleCargoLoad = {
 
     // --- CASE 1: INSIDE DESIGNATED BASE LOADING ZONE ---
     if (_inLoadingZone) exitWith {
-        _vehicle setVariable ["logistics_is_loaded", true, true];
-        private _cargoType = [_cargo] call QM_fnc_getCargoCategory;
-        _vehicle setVariable ["logistics_loaded_type", _cargoType, true];
         private _msg = format ["[LOADING ZONE]: %1 secured into %2.", _cargoName, getText (configFile >> "CfgVehicles" >> _vehClass >> "displayName")];
         [_msg] remoteExec ["systemChat", 0];
+        [true, "Base Loading Zone"]
     };
 
     // --- CASE 2: FIELD LOADING (AUSTERE NON-LOADING ZONE) ---
@@ -167,22 +154,18 @@ QM_fnc_validateVehicleCargoLoad = {
     private _hasContainerWinch = ("Huron_Containers" in _caps || "Slingload_01_Base_F" in _caps);
     private _isHuronContainer = (_cargo isKindOf "Slingload_01_Base_F" || "B_Slingload_01_" in _cargoClass);
 
-    // RULE A: Full Field Crane (RHS M1084, KamAZ Crane, etc.) - Authorized to load anything that fits
+    // RULE A: Full Field Crane (RHS M1084, KamAZ Crane, etc.)
     if (_hasCrane) exitWith {
-        _vehicle setVariable ["logistics_is_loaded", true, true];
-        private _cargoType = [_cargo] call QM_fnc_getCargoCategory;
-        _vehicle setVariable ["logistics_loaded_type", _cargoType, true];
         private _msg = format ["[FIELD CRANE]: %1 loaded via onboard hydraulic crane.", _cargoName];
         [_msg] remoteExec ["systemChat", 0];
+        [true, "Field Crane"]
     };
 
-    // RULE B: Container Winch Specialization (HEMTT Flatbed) - Authorized for Huron containers only
+    // RULE B: Container Winch Specialization (HEMTT Flatbed)
     if (_hasContainerWinch && _isHuronContainer) exitWith {
-        _vehicle setVariable ["logistics_is_loaded", true, true];
-        private _cargoType = [_cargo] call QM_fnc_getCargoCategory;
-        _vehicle setVariable ["logistics_loaded_type", _cargoType, true];
         private _msg = format ["[FLATBED WINCH]: %1 loaded via onboard container winch.", _cargoName];
         [_msg] remoteExec ["systemChat", 0];
+        [true, "Flatbed Winch"]
     };
 
     // Calculate effective weight/mass
@@ -193,60 +176,30 @@ QM_fnc_validateVehicleCargoLoad = {
 
     // RULE C: Heavy Cargo (> 250 lbs) or Huron Containers without appropriate handling gear
     if (_mass > 250 || _isHuronContainer) exitWith {
-        [_vehicle, _cargo, _cargoName, _mass, _isHuronContainer, _hasContainerWinch] spawn {
-            params ["_v", "_c", "_name", "_m", "_isHuron", "_hasWinch"];
-            sleep 0.1;
-            private _unloaded = objNull setVehicleCargo _c;
-            if (!_unloaded) then {
-                private _dropPos = _v modelToWorld [0, -12, 0];
-                _dropPos set [2, 0];
-                _c setPosATL _dropPos;
-            };
-            private _reason = if (_isHuron) then {
-                "Huron containers in the field require a vehicle equipped with a container winch (e.g. HEMTT Flatbed) or a Base Loading Zone"
-            } else {
-                if (_hasWinch) then {
-                    format ["exceeds field handling capacity (%1 lbs > 250 lbs limit). Flatbed container winch cannot load cargo nets/boxes in the field; requires a Base Loading Zone", round _m]
-                } else {
-                    format ["exceeds field handling capacity (%1 lbs > 250 lbs limit). Heavy cargo requires a designated Base Loading Zone (or an onboard crane)", round _m]
-                }
-            };
-            private _msg = format ["[LOADING REJECTED]: %1 %2!", _name, _reason];
-            [_msg] remoteExec ["systemChat", 0];
+        private _reason = if (_isHuronContainer) then {
+            "Huron containers in the field require a vehicle equipped with a container winch (e.g. HEMTT Flatbed) or a Base Loading Zone"
+        } else {
+            format ["exceeds field handling capacity (%1 lbs > 250 lbs limit). Heavy cargo requires a designated Base Loading Zone (or onboard crane)", round _mass]
         };
+        [false, _reason]
     };
 
     // RULE D: Medium Cargo (121 - 250 lbs) requires at least TWO players nearby to team-lift
     if (_mass > 120 && _mass <= 250) exitWith {
         private _nearbyPlayers = allPlayers select { alive _x && { (_x distance _vehicle) <= 12 || (_x distance _cargo) <= 12 } };
         if (count _nearbyPlayers < 2) then {
-            [_vehicle, _cargo, _cargoName, _mass] spawn {
-                params ["_v", "_c", "_name", "_m"];
-                sleep 0.1;
-                private _unloaded = objNull setVehicleCargo _c;
-                if (!_unloaded) then {
-                    private _dropPos = _v modelToWorld [0, -8, 0];
-                    _dropPos set [2, 0];
-                    _c setPosATL _dropPos;
-                };
-                private _msg = format ["[TEAM LIFT REQUIRED]: %1 weighs %2 lbs. Loading this item in the field requires at least TWO players nearby!", _name, round _m];
-                [_msg] remoteExec ["systemChat", 0];
-            };
+            [false, format ["Cargo weighs %1 lbs. Loading medium items in the field requires at least TWO players nearby!", round _mass]]
         } else {
-            _vehicle setVariable ["logistics_is_loaded", true, true];
-            private _cargoType = [_cargo] call QM_fnc_getCargoCategory;
-            _vehicle setVariable ["logistics_loaded_type", _cargoType, true];
             private _msg = format ["[TEAM LIFT SUCCESS]: %1 loaded by 2-person crew.", _cargoName];
             [_msg] remoteExec ["systemChat", 0];
+            [true, "Team Lift"]
         };
     };
 
     // RULE E: Lightweight Cargo (<= 120 lbs) - Single player can load anywhere
-    _vehicle setVariable ["logistics_is_loaded", true, true];
-    private _cargoType = [_cargo] call QM_fnc_getCargoCategory;
-    _vehicle setVariable ["logistics_loaded_type", _cargoType, true];
     private _msg = format ["[CARGO SECURED]: %1 loaded by personnel.", _cargoName];
     [_msg] remoteExec ["systemChat", 0];
+    [true, "Lightweight Cargo"]
 };
 
 // --- INITIALIZE VEHICLE CARGO RULES & WINCH/CRANE ACTIONS ---
@@ -255,12 +208,15 @@ QM_fnc_initVehicleCargoRules = {
     if (isNull _veh || !alive _veh) exitWith {};
 
     // 1. Authoritative Server Event Handlers
+    // Note: CargoLoaded passively synchronizes state variables and never ejects cargo.
     if (isServer && {!(_veh getVariable ["QM_CargoRulesServerActive", false])}) then {
         _veh setVariable ["QM_CargoRulesServerActive", true];
 
         _veh addEventHandler ["CargoLoaded", {
             params ["_parentVehicle", "_cargoVehicle"];
-            [_parentVehicle, _cargoVehicle] call QM_fnc_validateVehicleCargoLoad;
+            _parentVehicle setVariable ["logistics_is_loaded", true, true];
+            private _cargoType = [_cargoVehicle] call QM_fnc_getCargoCategory;
+            _parentVehicle setVariable ["logistics_loaded_type", _cargoType, true];
         }];
 
         _veh addEventHandler ["CargoUnloaded", {

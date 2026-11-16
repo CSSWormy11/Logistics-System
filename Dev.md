@@ -580,17 +580,27 @@ Explore solutions to prevent non-cargo scene objects and ambient base clutter (s
   - Uses native engine ViV calls (`setVehicleCargo`, `canVehicleCargo`) and standard vehicle actions, operating harmoniously alongside ACE3, Boxloader, or Drongo's DYEL without conflicts.
   - Resolved RPT script error on startup by replacing non-existent command check with native Bohemia `CfgVehicles >> VehicleTransport >> Carrier` config verification, separated server-authoritative event handlers from client `addAction` attachments, and added client proximity daemon / `GetInMan` hooks so all vehicles reliably receive the interactive actions.
 
-### [x] 5.4 System-Driven Cargo Spawning Exemption & Base Zone Recognition (Verified Resolved)
+### [x] 5.4 Decoupling Native Engine / Third-Party Mod Loading from Custom Manifest Restrictions & Passive Handler Architecture (Verified Resolved)
 
-Resolve issues where system-automated cargo and vehicle operations (such as spawning boats into Destroyer Boat Racks or loading supply assets via pickup triggers) triggered false field-loading rejections, and expand base loading zone recognition:
+Ensure that custom field loading restrictions (mass limits, onboard cranes, container winches, 2-player team lifts, loading zone requirements) apply **strictly and exclusively** when players use the custom interactive Cargo Manifest dialog (`fn_manifestLoadExecute.sqf` / `qm_manifestMenu.hpp`), guaranteeing zero interference with native Arma 3 engine mechanics or external mods:
 
-- [x] **Core Issue & Unintended Handler Interception:**
-  - The native engine `CargoLoaded` event handler in `fn_standaloneLoadingMechanic.sqf` was intercepting *all* `setVehicleCargo` operations indiscriminately.
-  - When the server spawned a boat into a Destroyer Boat Rack (`qm_serverFunctions.sqf`) or spawned cargo nets into transport vehicles via pickup triggers (`fn_spawnLoadSupply.sqf`), the handler evaluated the parent object as a field vehicle rather than an automated base transaction.
-  - Because boats and cargo nets exceed 250 lbs and Boat Racks/Destroyers lacked explicit pickup triggers, the system rejected the load and force-ejected the boat/cargo from the rack.
-- [x] **System Spawning & Loading Exemption (Case 0 Bypass):**
-  - Automated system transactions (`_cargo getVariable ["QM_SystemLoaded", false]`, `_vehicle getVariable ["QM_SystemLoading", false]`, `_cargo getVariable ["isLogisticsCargo", false]`, and interactive manifest pre-validated loads `QM_ManifestValidated`) completely bypass field loading rules.
-  - Base fixtures (Destroyer and Land Boat Racks `Land_Destroyer_01_Boat_Rack_01_F`, `Land_Boat_Rack_01_F`) are permanently exempted from field weight checks.
+- [x] **Core Architectural Rule & Decoupling:**
+  - Field loading capability restrictions (weight limits, winches, cranes, team lifts) belong **strictly inside `fn_manifestLoadExecute.sqf`**.
+  - **Native Engine Loading (Zero Restrictions):** Native Arma 3 engine loading (the built-in ViV `Load in vehicle cargo` scroll-wheel action) operates 100% unrestricted across all vehicles, boat racks, and assets.
+  - **Third-Party Mod Interoperability (Zero Interference):** Third-party cargo and logistics systems (Drongo's DYEL, Boxloader, ACE3 Cargo) operate completely unhindered without ejection or validation overrides from our framework.
+  - **System-Automated Loading (Instant & Unrestricted):** System spawning routines (spawning boats into Destroyer Boat Racks via `qm_serverFunctions.sqf`, garage motorpool spawns, and logistics trigger spawns via `fn_spawnLoadSupply.sqf`) load immediately into vehicles without zone or weight restrictions.
+- [x] **Removal of Force-Ejection from `CargoLoaded` Event Handler:**
+  - The Bohemia engine `CargoLoaded` event handler in `fn_standaloneLoadingMechanic.sqf` has been converted to a strictly passive synchronization listener.
+  - It **never** validates, blocks, or force-ejects cargo (`objNull setVehicleCargo _c`).
+  - Its exclusive responsibility is maintaining state variables:
+    ```sqf
+    _parentVehicle setVariable ["logistics_is_loaded", true, true];
+    private _cargoType = [_cargoVehicle] call QM_fnc_getCargoCategory;
+    _parentVehicle setVariable ["logistics_loaded_type", _cargoType, true];
+    ```
+- [x] **`QM_fnc_validateVehicleCargoLoad` Converted to Non-Ejecting Auditor:**
+  - Removed all asynchronous force-ejection spawn blocks (`sleep 0.1; objNull setVehicleCargo _c`).
+  - Function now returns informational status `[_isAuthorized, _reason]` without disturbing loaded cargo.
 - [x] **Comprehensive Base Loading Zone Recognition (`QM_fnc_isInsideLoadingZone`):**
   - Upgraded `QM_fnc_isInsideLoadingZone` in `fn_standaloneLoadingMechanic.sqf` to evaluate all base infrastructure:
     1. Pickup triggers (`LogiPickupTriggers_*`).
