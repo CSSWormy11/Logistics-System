@@ -610,24 +610,25 @@ Ensure that custom field loading restrictions (mass limits, onboard cranes, cont
     5. Proximity to master base markers (`logisticsBases`) within 250 meters.
   - Players using the Cargo Manifest dialog anywhere at a base or on a naval vessel are correctly identified as being in a Base Loading Zone.
 
-### 5.5 [PROPOSAL / OPTIONAL] Dynamic Config-Driven Vehicle Procurement Costing Architecture
+### [x] 5.5 Vehicle Procurement Costing: Empty Vehicle Troops & Cargo Deduction Elimination (Phase 1 Implemented & Verified)
 
-Explore transitioning Motorpool vehicle procurement costs from manually authored static template arrays into a dynamic, Bohemia config-driven valuation engine:
+Refine Motorpool vehicle procurement costing so that purchasing empty, unoccupied vehicles does not penalize base personnel or cargo stockpiles:
 
-- [ ] **Current Static Template Limitations:**
-  - `spawnableVehicleTemplate.sqf` currently requires mission makers to hardcode static arrays for all 7 resource pools per vehicle (e.g. `[["Cargo", 3000], ["Ammo", 0], ["Fuel", 28], ["Vehicle", 10942], ["Troops", 1]]`).
-  - This requires extensive manual authoring and does not automatically account for variations in native vehicle inventory, ammunition loads, or fuel capacity across large mod packs (RHS, CUP, 3CB).
-- [ ] **Proposed Dynamic Config Derivation Engine:**
-  - **Chassis Cost (`Vehicle`):** Calculated dynamically from physical vehicle mass via `getNumber (configFile >> "CfgVehicles" >> _class >> "mass")` or `getMass` (e.g. 1 point per 1 KG chassis mass).
-  - **Fuel Cost (`Fuel`):** Calculated dynamically from internal tank volume via `getNumber (configFile >> "CfgVehicles" >> _class >> "fuelCapacity")` (e.g. 1 point per Liter).
-  - **Ammunition Cost (`Ammo`):** Calculated dynamically by inspecting default turret magazines and pylon ordnance, summing weapon munition mass.
-  - **Cargo & Equipment Cost (`Cargo`):** Calculated dynamically from default vehicle inventory (`TransportWeapons`, `TransportMagazines`, `TransportItems`, `TransportBackpacks`) and internal ViV capacity (`class VehicleTransport`).
-  - **Manpower Cost (`Troops`):** 1 Troop if autonomous/UAV, or dynamically billed based on requested AI crew seats.
-- [ ] **Global Scaling Multipliers (`logisticsBaseDefaults.sqf`):**
-  - Mission makers can set global cost multipliers (e.g. `QM_CostMultiplier_Chassis = 1.0`, `QM_CostMultiplier_Fuel = 1.0`, `QM_CostMultiplier_Ammo = 2.0`), scaling economy balance across all vehicles simultaneously.
-- [ ] **Backward-Compatible Hybrid Architecture:**
-  - If a vehicle in `spawnableVehicleTemplate.sqf` provides an explicit cost array, that array takes precedence (allowing custom balancing or mission-specific pricing).
-  - If the vehicle's cost array is empty `[]` or omitted, the server automatically computes the dynamic config-driven cost.
+- [x] **Elimination of Troop Deductions for Empty Vehicles:**
+  - Vehicles spawned from the motorpool (`QM_fnc_processGarageSpawn`) are unoccupied, player-driven transports.
+  - While template entries in `spawnableVehicleTemplate.sqf` track passenger capacity or crew figures for external AI systems (`["Troops", 1]`), motorpool procurement now treats troop costs as `0` for empty player vehicles.
+  - Drivable vehicles will never be blocked by insufficient troop points, and base troop pools (`LogiScore_*_Troops`) remain 100% untouched upon vehicle delivery.
+- [x] **Elimination of Phantom Cargo Deductions for Empty Vehicles:**
+  - Vehicles spawn with empty cargo bays and only default factory glovebox inventory (e.g. 2 first aid kits).
+  - Theoretical cargo capacities in `spawnableVehicleTemplate.sqf` (e.g. `["Cargo", 3000]`) are no longer billed during empty chassis procurement.
+  - Dedicated logistics supply objects (cargo nets, fuel bladders, ammo crates under the Supply tab) continue to deduct their respective cargo/resource costs normally.
+- [x] **UI Cost Label Synchronization (`c_vehicleTabs.sqf`):**
+  - Updated the Motorpool listbox formatter to ignore `Trp` and `Crg` tags for drivable empty vehicles, displaying only real billing requirements (e.g. `[10942 Veh | 28 Fuel] - HEMTT Transport`).
+- [x] **100% Symmetrical Salvage & Early Destruction Refunds:**
+  - Vehicles track their exact effective procurement cost in `QM_Spawn_CostArray`.
+  - Salvaging via Dropoff Zones or early destruction refunds the exact effective resources paid, preserving closed-economy balance without phantom troop or cargo credits.
+- [ ] **Phase 2 (Optional Future Proposal): Dynamic Config-Driven Chassis, Fuel & Ordnance Costing:**
+  - Dynamic derivation of chassis cost from physical mass (`getMass`), fuel from tank capacity (`fuelCapacity`), and armament from turret/pylon magazines.
 
 ### [x] 5.6 Universal Base Supply Ledger for All Players (Map Diary & Informational Tasks) (Verified Resolved)
 

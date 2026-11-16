@@ -209,7 +209,9 @@ private _allGarages = [];
                 private _costStringArray = [];
                 {
                     _x params ["_poolName", "_poolVal"];
-                    if (_poolVal > 0 && _poolVal < 1000000) then { 
+                    // If drivable vehicle, ignore Troops and Cargo costs since vehicle spawns empty
+                    private _isIgnored = (!_isSupply && !_isDrone && (_poolName in ["Troops", "Cargo"]));
+                    if (!_isIgnored && _poolVal > 0 && _poolVal < 1000000) then { 
                         private _shortName = switch (_poolName) do {
                             case "Vehicle": { "Veh" }; case "Cargo": { "Crg" }; case "Ammo": { "Ammo" };
                             case "Fuel": { "Fuel" }; case "Medical": { "Med" }; case "Repair": { "Rep" };

@@ -51,11 +51,29 @@ QM_fnc_serverVehicleSale = {
     if (_baseKey == "" || isNull _vehicle || isNull _playerUnit) exitWith {};
 
     private _class = typeOf _vehicle;
-    private _blueprintIdx = G_Procureable_Vehicles findIf { ((_x select 1) select 0) == _class };
+    private _costArray = _vehicle getVariable ["QM_Spawn_CostArray", []];
 
-    if (_blueprintIdx != -1) then {
-        private _costArray = (G_Procureable_Vehicles select _blueprintIdx) select 2;
-        
+    // If vehicle lacks runtime spawn cost tracking, fall back to template costs (excluding Troops/Cargo for empty drivable vehicles)
+    if (count _costArray == 0) then {
+        private _blueprintIdx = G_Procureable_Vehicles findIf { ((_x select 1) select 0) == _class };
+        if (_blueprintIdx != -1) then {
+            private _rawCost = (G_Procureable_Vehicles select _blueprintIdx) select 2;
+            private _isSupply = !(_class isKindOf "Ship" || _class isKindOf "Plane" || _class isKindOf "Helicopter" || _class isKindOf "LandVehicle" || _class isKindOf "Air");
+            private _isDrone = getNumber(configFile >> "CfgVehicles" >> _class >> "isUav") == 1;
+
+            {
+                _x params ["_rawPoolName", "_poolCost"];
+                private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
+                private _eff = _poolCost;
+                if (!_isSupply && !_isDrone) then {
+                    if (_poolName in ["Troops", "Cargo"]) then { _eff = 0; };
+                };
+                if (_eff > 0 && _eff < 1000000) then { _costArray pushBack [_poolName, _eff]; };
+            } forEach _rawCost;
+        };
+    };
+
+    if (count _costArray > 0) then {
         {
             _x params ["_rawPoolName", "_poolCost"];
             private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
@@ -312,11 +330,30 @@ QM_fnc_processGarageSpawn = {
     private _capData = [_classname] call QM_CAP_fnc_checkCurrentActiveCount;
     if !(_capData select 0) exitWith { [format ["PROCURMENT DENIED: Cap limit reached [%1/%2].", _capData select 1, _capData select 2]] remoteExec ["hint", _clientPlayer]; };
 
-    private _canAfford = true;
-    private _missingPool = "";
+    // Determine asset profile (supply container vs drone vs drivable vehicle)
+    private _isSupply = !(_classname isKindOf "Ship" || _classname isKindOf "Plane" || _classname isKindOf "Helicopter" || _classname isKindOf "LandVehicle" || _classname isKindOf "Air");
+    private _isDrone = getNumber (configFile >> "CfgVehicles" >> _classname >> "isUav") == 1;
+
+    // Filter effective cost array: empty drivable vehicles do not deduct Troops or unspawned Cargo
+    private _effectiveCostArray = [];
     {
         _x params ["_rawPoolName", "_poolCost"];
         private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
+        private _effectiveCost = _poolCost;
+
+        if (!_isSupply && !_isDrone) then {
+            if (_poolName in ["Troops", "Cargo"]) then { _effectiveCost = 0; };
+        };
+
+        if (_effectiveCost > 0 && _effectiveCost < 1000000) then {
+            _effectiveCostArray pushBack [_poolName, _effectiveCost];
+        };
+    } forEach _costArray;
+
+    private _canAfford = true;
+    private _missingPool = "";
+    {
+        _x params ["_poolName", "_poolCost"];
         if (_poolCost > 0 && _poolCost < 1000000) then {
             private _poolVar = format ["LogiScore_%1_%2", _baseKey, _poolName];
             private _currentPool = missionNamespace getVariable [_poolVar, 0];
@@ -325,7 +362,7 @@ QM_fnc_processGarageSpawn = {
                 _missingPool = _poolName;
             };
         };
-    } forEach _costArray;
+    } forEach _effectiveCostArray;
 
     if (!_canAfford) exitWith { [format ["MANAGEMENT: Insufficient %1 supply points.", _missingPool]] remoteExec ["systemChat", _clientPlayer]; };
 
@@ -405,16 +442,15 @@ QM_fnc_processGarageSpawn = {
     _locations = _sortedLocations apply { _x select 1 }; 
 
     {
-        _x params ["_rawPoolName", "_poolCost"];
-        private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
+        _x params ["_poolName", "_poolCost"];
         if (_poolCost > 0 && _poolCost < 1000000) then {
             private _poolVar = format ["LogiScore_%1_%2", _baseKey, _poolName];
             private _currentPool = missionNamespace getVariable [_poolVar, 0];
             if (_currentPool != -1) then { missionNamespace setVariable [_poolVar, (_currentPool - _poolCost) max 0, true]; };
         };
-    } forEach _costArray;
+    } forEach _effectiveCostArray;
 
-    [_locations, _classname, _clientPlayer, _baseKey, _costArray, _typeSuffix] spawn {
+    [_locations, _classname, _clientPlayer, _baseKey, _effectiveCostArray, _typeSuffix] spawn {
         params ["_locations", "_class", "_player", "_bKey", "_costArray", "_typeSuffix"];
     
         private _spawned = false;
