@@ -454,11 +454,14 @@ QM_fnc_processGarageSpawn = {
 
                 if (_typeSuffix == "BOAT") then {
                     _veh = createVehicle [_class, [0,0,200], [], 0, "NONE"];
+                    _veh setVariable ["QM_SystemLoaded", true, true];
                     private _loadedIntoRack = false;
 
                     // 1. Check if the pad object itself can carry the boat (e.g. Boat Rack named <Base>_Garage_Boat_...)
                     if (((_padObj canVehicleCargo _veh) select 0) && { count (getVehicleCargo _padObj) == 0 }) then {
+                        _padObj setVariable ["QM_SystemLoading", true];
                         _loadedIntoRack = _padObj setVehicleCargo _veh;
+                        _padObj setVariable ["QM_SystemLoading", false];
                     };
 
                     // 2. Otherwise check for an adjacent Boat Rack within 20m of the pad object
@@ -467,7 +470,9 @@ QM_fnc_processGarageSpawn = {
                         private _validRack = objNull;
                         { if (count (getVehicleCargo _x) == 0 && { (_x canVehicleCargo _veh) select 0 }) exitWith { _validRack = _x; }; } forEach _racks;
                         if (!isNull _validRack) then {
+                            _validRack setVariable ["QM_SystemLoading", true];
                             _loadedIntoRack = _validRack setVehicleCargo _veh;
+                            _validRack setVariable ["QM_SystemLoading", false];
                         };
                     };
 
@@ -520,6 +525,9 @@ QM_fnc_processGarageSpawn = {
                 }];
 
                 [_veh, _class] call QM_CAP_fnc_registerNewVehicle;
+                if (!isNil "QM_fnc_initVehicleCargoRules") then {
+                    [_veh] remoteExec ["QM_fnc_initVehicleCargoRules", 0, true];
+                };
                 ["MANAGEMENT: Allocation authorized. Vehicle deployed successfully."] remoteExec ["systemChat", _player];
             } else {
                 if (_attempts == 0) then {
@@ -550,7 +558,7 @@ QM_fnc_processGarageSpawn = {
 // -----------------------------------------------------------------------
 QM_fnc_serverProcessR4C = {
     params ["_baseKey", "_vehicle", "_playerUnit", "_serviceType", "_calculatedCost"];
-    if (_baseKey == "" || isNull _vehicle || isNull _playerUnit || _serviceType == "") exitWith { false };
+    if (_baseKey == "" || (toUpper _baseKey) find "MSR" >= 0 || isNull _vehicle || isNull _playerUnit || _serviceType == "") exitWith { false };
 
     private _poolSuffix = switch (_serviceType) do {
         case "REPAIR": { "Repair" };
@@ -585,7 +593,7 @@ QM_fnc_serverProcessR4C = {
 
 QM_fnc_serverR4CCreateVehicleCrew = {
     params ["_baseKey", "_vehicle", "_playerUnit", "_missingSeatCount", "_totalCost"];
-    if (!isServer) exitWith {};
+    if (!isServer || (toUpper _baseKey) find "MSR" >= 0) exitWith {};
 
     private _troopVar = format ["LogiScore_%1_Troops", _baseKey];
     private _currentPool = missionNamespace getVariable [_troopVar, 0];

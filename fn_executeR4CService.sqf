@@ -21,6 +21,11 @@ private _baseKey = _triggerName;
 private _idx = (toLowerANSI _baseKey) find "_service";
 if (_idx != -1) then { _baseKey = _baseKey select [0, _idx]; };
 
+// MSR is strictly an off-map supply pipeline corridor, not a service base
+if ((toUpper _baseKey) find "MSR" >= 0) exitWith {
+    _veh sideChat "R4-C SYSTEMS ERROR: MSR is an off-map supply corridor. Maintenance and vehicle service facilities are unavailable.";
+};
+
 private _vehType = getText(configFile >> "CfgVehicles" >> typeOf _veh >> "DisplayName");
 _veh sideChat format ["R4-C SYSTEMS: Establishing connection link to %1 Base Ledger. Analyzing %2 profile...", _baseKey, _vehType];
 sleep _delay;

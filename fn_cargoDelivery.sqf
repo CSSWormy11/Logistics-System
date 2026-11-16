@@ -21,104 +21,138 @@ _triggerArea setVariable ["isProcessingLogistics", true];
 
 private _isMSR = "MSR" in (toUpper _baseKey);
 private _hasGreetedDriver = false;
+private _anyDeliveryRecorded = false;
+private _cleanBase = _baseKey splitString "_" joinString " ";
 
 while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
 
-    private _allTrucksInZone = vehicles select {_x inArea _triggerArea && (typeOf _x in allowedLogisticsVehicles)};
-    if (count _allTrucksInZone == 0) exitWith {
-        _triggerArea setVariable ["isProcessingLogistics", false];
-    };
+    // --- PROXIMITY ARRIVAL GUIDANCE (IF A LOGISTICS TRUCK IS PRESENT) ---
+    private _allTrucksInZone = vehicles select { _x inArea _triggerArea && (typeOf _x in allowedLogisticsVehicles) };
+    private _activeTruck = if (count _allTrucksInZone > 0) then { _allTrucksInZone # 0 } else { objNull };
 
-    private _activeTruck = _allTrucksInZone # 0;
-    private _currentLoadedType = _activeTruck getVariable ["logistics_loaded_type", ""];
-    
-    if (_currentLoadedType == "" || _currentLoadedType == "Troops") exitWith {
-        _triggerArea setVariable ["isProcessingLogistics", false];
-    };
-
-    // --- PROXIMITY ARRIVAL GUIDANCE ---
-    if (!_hasGreetedDriver && abs (speed _activeTruck) < 1) then {
-        private _templateIndex = allowedLogisticsVehicles find (typeOf _activeTruck);
-        private _cargoList = [];
-        if (_templateIndex != -1) then {
-            private _entry = logisticsCargoTemplates # _templateIndex;
-            private _allVehicleSupplies = if (count _entry > 2 && { (_entry # 2) isEqualType [] }) then { _entry # 2 } else { _entry # 1 };
-            if (_allVehicleSupplies isEqualType []) then {
-                { if (_x # 0 == _currentLoadedType) exitWith { _cargoList = _x # 1; }; } forEach _allVehicleSupplies;
-                if (count _cargoList > 0 && { (_cargoList # 0) isEqualType [] }) then {
-                    _cargoList = (_cargoList # 0) # 1;
-                };
-            };
-        };
-        
-        private _displayAssetName = "Supplies";
-        if (count _cargoList > 0) then {
-            _displayAssetName = getText (configFile >> "CfgVehicles" >> (_cargoList # 0) >> "displayName");
-        };
-
-        private _cleanBase = _baseKey splitString "_" joinString " ";
-        private _driver = driver _activeTruck;
-        private _msg = format ["[LOGISTICS CAPTAIN]: Welcome to %1 terminal. Unload the [%2] here to register points.", _cleanBase, _displayAssetName];
-        if (!isNull _driver && isPlayer _driver) then {
-            [_msg] remoteExec ["systemChat", _driver];
-        } else {
-            systemChat _msg;
-        };
-        _hasGreetedDriver = true;
-    };
-
-    private _deliveryRecorded = false;
-    private _allInternalCargo = getVehicleCargo _activeTruck;
-    private _hasSlingLoadAttached = !isNull (getSlingLoad _activeTruck);
-
-    if (count _allInternalCargo > 0 || _hasSlingLoadAttached) then {
-        sleep 1;
-    } else {
-        private _triggerPos = getPos _triggerArea;
-        private _triggerScale = (((triggerArea _triggerArea) # 0) max ((triggerArea _triggerArea) # 1)) + 8; 
-        private _nearbyObjects = nearestObjects [_triggerPos, ["Strategic", "ReammoBox_F", "Cargo_base_F", "AllVehicles", "ThingX", "Air"], _triggerScale];
-
-        {
-            private _object = _x;
-            private _type = typeOf _object;
-            private _isWithinUnloadRadius = (_object distance2D _triggerPos) <= _triggerScale;
-            private _isNotTheTransportTruck = !(_object in allowedLogisticsVehicles) && _object != _activeTruck;
-
-            if (_isWithinUnloadRadius && isNull (attachedTo _object) && _isNotTheTransportTruck && !(_type isKindOf "Man")) then {
-                if (!_isMSR) then {
-                    // FIXED CASE INSENSITIVITY: Forces matching check loop to bypass class letter case mismatches
-                    private _lowerSearchType = toLowerANSI _type;
-                    private _scoreIndex = supplyScores findIf { toLowerANSI (_x # 0) == _lowerSearchType };
-                    
-                    if (_scoreIndex != -1) then {
-                        {
-                            private _poolName = if (toUpper (_x # 0) in ["VEHICLE", "VEHICLES"]) then { "Vehicle" } else { _x # 0 };
-                            private _targetVar = format ["LogiScore_%1_%2", _baseKey, _poolName];
-                            private _curVal = missionNamespace getVariable [_targetVar, 0];
-                            if (_curVal != -1) then {
-                                missionNamespace setVariable [_targetVar, _curVal + (_x # 1), true];
-                            };
-                        } forEach ((supplyScores # _scoreIndex) # 1);
-                        _deliveryRecorded = true;
+    if (!isNull _activeTruck && !_hasGreetedDriver && abs (speed _activeTruck) < 1) then {
+        private _currentLoadedType = _activeTruck getVariable ["logistics_loaded_type", ""];
+        if (_currentLoadedType != "" && _currentLoadedType != "Troops") then {
+            private _templateIndex = allowedLogisticsVehicles find (typeOf _activeTruck);
+            private _cargoList = [];
+            if (_templateIndex != -1) then {
+                private _entry = logisticsCargoTemplates # _templateIndex;
+                private _allVehicleSupplies = if (count _entry > 2 && { (_entry # 2) isEqualType [] }) then { _entry # 2 } else { _entry # 1 };
+                if (_allVehicleSupplies isEqualType []) then {
+                    { if (_x # 0 == _currentLoadedType) exitWith { _cargoList = _x # 1; }; } forEach _allVehicleSupplies;
+                    if (count _cargoList > 0 && { (_cargoList # 0) isEqualType [] }) then {
+                        _cargoList = (_cargoList # 0) # 1;
                     };
                 };
-                deleteVehicle _object;
             };
-        } forEach _nearbyObjects;
+            
+            private _displayAssetName = "Supplies";
+            if (count _cargoList > 0) then {
+                _displayAssetName = getText (configFile >> "CfgVehicles" >> (_cargoList # 0) >> "displayName");
+            };
+
+            private _driver = driver _activeTruck;
+            private _msg = format ["[LOGISTICS CAPTAIN]: Welcome to %1 terminal. Unload the [%2] here to register points.", _cleanBase, _displayAssetName];
+            if (!isNull _driver && isPlayer _driver) then {
+                [_msg] remoteExec ["systemChat", _driver];
+            } else {
+                systemChat _msg;
+            };
+            _hasGreetedDriver = true;
+        };
     };
 
-    if (_deliveryRecorded) exitWith {
-        private _driver = driver _activeTruck;
-        private _receiptMsg = format ["LOGISTICS RECEIPT: Cargo safely verified on tarmac. Caches increased at %1.", _baseKey splitString "_" joinString " "];
-        if (!isNull _driver && isPlayer _driver) then {
-            [_receiptMsg] remoteExec ["systemChat", _driver];
-        } else {
-            systemChat _receiptMsg;
-        };
+    // --- IMMEDIATE CRATE DETECTION, CREDITING & ANTI-COLLISION DELETION ---
+    // Scans the tarmac every tick and instantly deletes/credits each unloaded crate,
+    // completely eliminating Arma physics crate-on-crate collisions.
+    private _triggerPos = getPos _triggerArea;
+    private _tArea = triggerArea _triggerArea;
+    private _triggerScale = (((_tArea # 0) max (_tArea # 1)) max 15) + 5; 
+    private _nearbyObjects = nearestObjects [_triggerPos, ["Strategic", "ReammoBox_F", "Cargo_base_F", "AllVehicles", "ThingX", "Air"], _triggerScale];
+
+    private _activeCratesFound = 0;
+
+    {
+        private _object = _x;
+        private _type = typeOf _object;
+        private _isWithinUnloadZone = (_object inArea _triggerArea) || { (_object distance2D _triggerPos) <= 15 };
         
-        _activeTruck setVariable ["logistics_is_loaded", false, true];
-        _activeTruck setVariable ["logistics_loaded_type", "", true];
-        _activeTruck setVariable ["logistics_loaded_weight", 0, true];
+        // STRICT SAFETY CHECK 1: Drivable vehicles (LandVehicle, Air, Ship) are NEVER deleted by the cargo offload scanner!
+        private _isDrivableVehicle = (_object isKindOf "LandVehicle" || _object isKindOf "Air" || _object isKindOf "Ship");
+
+        // STRICT SAFETY CHECK 2: Never delete base infrastructure, Arsenals, Terminals, or player assets
+        private _objName = vehicleVarName _object;
+        private _objNameUpper = toUpperANSI _objName;
+        private _isBaseInfrastructure = (
+            (_object getVariable ["QM_Crate_OwningBase", ""]) != "" ||
+            { _object getVariable ["QM_TerminalUnifiedActionsActive", false] } ||
+            { _object in (missionNamespace getVariable ["QM_Global_Terminals", []]) } ||
+            { !isNull (_object getVariable ["bis_fnc_arsenal_action", objNull]) } ||
+            { "ARSENAL" in _objNameUpper || "TERMINAL" in _objNameUpper || "SERVICE" in _objNameUpper || "_AMMO" in _objNameUpper || "_FUEL" in _objNameUpper || "_REPAIR" in _objNameUpper || "_SPAWN" in _objNameUpper || "_GARAGE" in _objNameUpper }
+        );
+
+        if (!_isDrivableVehicle && _isWithinUnloadZone && isNull (attachedTo _object) && !(_type isKindOf "Man") && !_isBaseInfrastructure) then {
+            private _lowerSearchType = toLowerANSI _type;
+            private _scoreIndex = supplyScores findIf { toLowerANSI (_x # 0) == _lowerSearchType };
+
+            if (!_isMSR) then {
+                // Only credit and delete valid supply score items
+                if (_scoreIndex != -1) then {
+                    _activeCratesFound = _activeCratesFound + 1;
+                    {
+                        private _poolName = if (toUpper (_x # 0) in ["VEHICLE", "VEHICLES"]) then { "Vehicle" } else { _x # 0 };
+                        private _targetVar = format ["LogiScore_%1_%2", _baseKey, _poolName];
+                        private _curVal = missionNamespace getVariable [_targetVar, 0];
+                        if (_curVal != -1) then {
+                            missionNamespace setVariable [_targetVar, _curVal + (_x # 1), true];
+                        };
+                    } forEach ((supplyScores # _scoreIndex) # 1);
+                    _anyDeliveryRecorded = true;
+                    deleteVehicle _object;
+                };
+            } else {
+                // At MSR, only delete if verified cargo item
+                if (_scoreIndex != -1 || (_object getVariable ["isLogisticsCargo", false])) then {
+                    _activeCratesFound = _activeCratesFound + 1;
+                    _anyDeliveryRecorded = true;
+                    deleteVehicle _object;
+                };
+            };
+        };
+    } forEach _nearbyObjects;
+
+    // --- CHECK UNLOAD / COMPLETION STATUS ---
+    // If a transport truck was unloading, check if it has completely finished
+    if (!isNull _activeTruck) then {
+        private _allInternalCargo = getVehicleCargo _activeTruck;
+        private _hasSlingLoadAttached = !isNull (getSlingLoad _activeTruck);
+
+        if (count _allInternalCargo == 0 && !_hasSlingLoadAttached && _anyDeliveryRecorded) then {
+            private _driver = driver _activeTruck;
+            private _receiptMsg = format ["LOGISTICS RECEIPT: Cargo safely verified on tarmac. Caches increased at %1.", _cleanBase];
+            if (!isNull _driver && isPlayer _driver) then {
+                [_receiptMsg] remoteExec ["systemChat", _driver];
+            } else {
+                systemChat _receiptMsg;
+            };
+            
+            _activeTruck setVariable ["logistics_is_loaded", false, true];
+            _activeTruck setVariable ["logistics_loaded_type", "", true];
+            _activeTruck setVariable ["logistics_loaded_weight", 0, true];
+            _activeTruck setVariable ["logistics_intended_fob", "", true];
+        };
+    } else {
+        // Ad-hoc dropoff (foot delivery, slingload drop & depart, recovered salvage crate)
+        if (_anyDeliveryRecorded && _activeCratesFound == 0) then {
+            private _receiptMsg = format ["LOGISTICS RECEIPT: Supplies processed into base stores. Caches increased at %1.", _cleanBase];
+            [_receiptMsg] remoteExec ["systemChat", 0];
+            _anyDeliveryRecorded = false;
+        };
+    };
+
+    // If no cargo remains on the tarmac and no truck with cargo is in the zone, exit the loop
+    private _truckStillHasCargo = !isNull _activeTruck && { count (getVehicleCargo _activeTruck) > 0 || !isNull (getSlingLoad _activeTruck) };
+    if (_activeCratesFound == 0 && !_truckStillHasCargo) exitWith {
         _triggerArea setVariable ["isProcessingLogistics", false];
     };
 

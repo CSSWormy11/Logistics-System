@@ -124,6 +124,7 @@ class QM_PylonDialog {
         class GunHeader: RscText {
             idc = 8300;
             text = "INTERNAL WEAPON SYSTEMS";
+            show = 0;
             x = 0.63 * safezoneW + safezoneX;
             y = 0.72 * safezoneH + safezoneY;
             w = 0.20 * safezoneW;
@@ -132,6 +133,7 @@ class QM_PylonDialog {
         };
         class GunSlider: RscXSliderH {
             idc = 8301;
+            show = 0;
             x = 0.63 * safezoneW + safezoneX;
             y = 0.75 * safezoneH + safezoneY;
             w = 0.16 * safezoneW;
@@ -140,6 +142,7 @@ class QM_PylonDialog {
         class GunSliderText: RscText {
             idc = 8302;
             text = "100%";
+            show = 0;
             x = 0.79 * safezoneW + safezoneX;
             y = 0.75 * safezoneH + safezoneY;
             w = 0.04 * safezoneW;
@@ -148,6 +151,7 @@ class QM_PylonDialog {
 
         class CamoDropdown: RscCombo {
             idc = 8400;
+            show = 0;
             wholeHeight = 0.25;
             x = 0.17 * safezoneW + safezoneX;
             y = 0.75 * safezoneH + safezoneY;

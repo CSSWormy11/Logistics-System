@@ -33,6 +33,7 @@ if (fileExists "spawnableInfantryTemplate.sqf") then { call compile preprocessFi
 if (fileExists "spawnableVehicleTemplate.sqf") then { call compile preprocessFileLineNumbers "spawnableVehicleTemplate.sqf"; };
 if (fileExists "qm_vehicleCapsTemplate.sqf") then { call compile preprocessFileLineNumbers "qm_vehicleCapsTemplate.sqf"; } else { QM_CAP_ConfigMatrix = []; };
 if (fileExists "logisticsVehicleRoles.sqf") then { call compile preprocessFileLineNumbers "logisticsVehicleRoles.sqf"; }; // LOAD THE Vehicle Role TEMPLATE
+if (fileExists "logisticsFieldLoadingTemplate.sqf") then { call compile preprocessFileLineNumbers "logisticsFieldLoadingTemplate.sqf"; } else { logisticsFieldLoadingTemplate = []; };
 
 // ---------------------------------------------------------------------------
 // Global derived lists
@@ -40,7 +41,11 @@ if (fileExists "logisticsVehicleRoles.sqf") then { call compile preprocessFileLi
 if (isNil "QM_AutoCloseMotorpool") then { QM_AutoCloseMotorpool = 1; };
 publicVariable "QM_AutoCloseMotorpool";
 
+if (isNil "QM_Respawn_FOBCooldown") then { QM_Respawn_FOBCooldown = 120; }; // Default 120s cooldown for FOBs (SBs have 0 cooldown)
+publicVariable "QM_Respawn_FOBCooldown";
+
 allowedLogisticsVehicles = logisticsCargoTemplates apply {_x select 0};
+publicVariable "allowedLogisticsVehicles";
 
 
 // ---------------------------------------------------------------------------
@@ -98,6 +103,7 @@ QM_fnc_getLocationsByPrefix = {
 // ---------------------------------------------------------------------------
 if (fileExists "fn_initLogisticsTasks.sqf") then { [] execVM "fn_initLogisticsTasks.sqf"; };
 if (fileExists "fn_manageLogisticsMissions.sqf") then { [] execVM "fn_manageLogisticsMissions.sqf"; };
+if (fileExists "fn_standaloneLoadingMechanic.sqf") then { [] execVM "fn_standaloneLoadingMechanic.sqf"; };
 if (fileExists "fn_startupMarkerDiagnostics.sqf") then { [] execVM "fn_startupMarkerDiagnostics.sqf"; };
 
 
@@ -123,27 +129,37 @@ if (isServer) then {
         ((_m find "fob" >= 0) || (_m find "sb" >= 0) || (_m find "msr" >= 0)) &&
         { ["spawn", "garage", "terminal", "arsenal", "service", "pickup", "dropoff"] findIf { _m find _x >= 0 } == -1 }
     };
+    
+    // Ensure "MSR" base key is always present in logisticsBases for infinite supply pool accounting
+    if !("MSR" in logisticsBases) then {
+        logisticsBases pushBackUnique "MSR";
+    };
     publicVariable "logisticsBases"; 
 
-    // Broadcast to clients
-    {
-        if ("_GARAGE" in toUpper _x) then { _x setMarkerAlpha 0; };
-    } forEach allMapMarkers;
-
     // --- Initialize Base Ledger Economy ---
+    private _sbCount = { (["SB", _x] call BIS_fnc_inString) } count logisticsBases;
+    private _sbMultiplier = if (_sbCount <= 1) then { 2 } else { 1 };
+
     {
         private _baseName = _x; 
-        _baseName setMarkerAlpha 0;
+        if (getMarkerColor _baseName != "") then {
+            _baseName setMarkerAlpha 1; // Master base marker remains visible on map
+        };
         
         private _baseType = "FOB";
-        if (["MSR", _baseName] call BIS_fnc_inString) then { _baseType = "MSR"; };
-        if (["SB", _baseName] call BIS_fnc_inString) then { _baseType = "SB"; };
+        if (["MSR", _baseName] call BIS_fnc_inString || { "MSR" in (toUpper _baseName) }) then { _baseType = "MSR"; };
+        if (["SB", _baseName] call BIS_fnc_inString || { "SB" in (toUpper _baseName) }) then { _baseType = "SB"; };
 
         // Read directly from logisticsBaseDefaults.sqf
         private _typeIndex = logisticsBaseDefaults findIf {_x # 0 == _baseType};
         if (_typeIndex != -1) then {
             { 
-                missionNamespace setVariable [format ["LogiScore_%1_%2", _baseName, _x # 0], _x # 1, true]; 
+                private _cat = _x # 0;
+                private _val = _x # 1;
+                if (_val != -1 && _baseType == "SB") then {
+                    _val = _val * _sbMultiplier;
+                };
+                missionNamespace setVariable [format ["LogiScore_%1_%2", _baseName, _cat], _val, true]; 
             } forEach ((logisticsBaseDefaults # _typeIndex) # 1);
         };
     } forEach logisticsBases;
@@ -170,6 +186,7 @@ if (hasInterface) then {
     if (fileExists "fn_pylonManager.sqf") then { QM_fnc_pylonManager = compile preprocessFileLineNumbers "fn_pylonManager.sqf"; };
     if (fileExists "qm_clientActionCompiler.sqf") then { call compile preprocessFileLineNumbers "qm_clientActionCompiler.sqf"; };
     if (fileExists "fn_equipmentTrader.sqf") then { [] execVM "fn_equipmentTrader.sqf"; };
+    if (fileExists "qm_clientRespawnManager.sqf") then { [] execVM "qm_clientRespawnManager.sqf"; };
 
     // --- TACTICAL COMMAND CENTER CLIENT DAEMONS ---
     if (fileExists "tsk_clientMapIntel.sqf") then { [] execVM "tsk_clientMapIntel.sqf"; };

@@ -23,6 +23,8 @@ private _serverFaction = toUpper (missionNamespace getVariable ["QM_ServerFactio
 while {true} do {
     {
         private _baseKey = _x;
+        // MSR is strictly an off-map supply pipeline corridor, not a base with arsenals/terminals
+        if (toUpper _baseKey == "MSR") then { continue; };
         
         // ====================================================================
         // 1. TERMINALS & ARSENALS (Editor-Placed 3D Objects Only)

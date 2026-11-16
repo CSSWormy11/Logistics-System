@@ -89,14 +89,15 @@ private _totalCargoPointWeight = 0;
 } forEach _cargoList;
 
 // Stock storage verification protection guard (top-level exitWith so it properly halts script)
+private _isMSR = "MSR" in (toUpper _pickupBaseKey);
 private _targetVar = format ["LogiScore_%1_%2", _pickupBaseKey, _supplyType];
-private _availablePoints = missionNamespace getVariable [_targetVar, 0];
+private _availablePoints = if (_isMSR) then { -1 } else { missionNamespace getVariable [_targetVar, 0] };
 
-if (_availablePoints != -1 && _availablePoints < _totalCargoPointWeight) exitWith {
+if (!_isMSR && _availablePoints != -1 && _availablePoints < _totalCargoPointWeight) exitWith {
     [west, "HQ"] sideChat format ["WARNING: Stores low on %1 at %2.", _supplyType, _pickupBaseKey];
 };
 
-if (_availablePoints != -1) then {
+if (!_isMSR && _availablePoints != -1) then {
     missionNamespace setVariable [_targetVar, 0 max (_availablePoints - _totalCargoPointWeight), true];
 };
 
@@ -164,7 +165,14 @@ if (_supplyType == "Troops") exitWith {
 // --- STANDARD FREIGHT CARGO AND VEHICLE SLINGLOAD / VIV PACKING PROFILE ---
 if (_isPlane && !_isHelicopter && _heightAboveSurface > 30) exitWith {
     systemChat format ["LOGISTICS COMMAND: Flight deck cargo internal pack: [%1].", _displayAssetName];
-    { private _cargoObj = _x createVehicle [0,0,0]; _vehicle setVehicleCargo _cargoObj; } forEach _cargoList;
+    { 
+        private _cargoObj = _x createVehicle [0,0,0]; 
+        _cargoObj setVariable ["isLogisticsCargo", true, true];
+        _cargoObj setVariable ["QM_SystemLoaded", true, true];
+        _vehicle setVariable ["QM_SystemLoading", true];
+        _vehicle setVehicleCargo _cargoObj; 
+        _vehicle setVariable ["QM_SystemLoading", false];
+    } forEach _cargoList;
     _vehicle setVariable ["logistics_is_loaded", true, true];
     _vehicle setVariable ["logistics_loaded_type", _supplyType, true];
     _vehicle setVariable ["logistics_loaded_weight", _totalCargoPointWeight, true];
@@ -187,6 +195,8 @@ if (_isHelicopter) exitWith {
 
     {
         private _pod = createVehicle [_x, [0, 0, 500], [], 0, "CAN_COLLIDE"];
+        _pod setVariable ["isLogisticsCargo", true, true];
+        _pod setVariable ["QM_SystemLoaded", true, true];
         private _rayStart = [_basePadPos2D # 0, _basePadPos2D # 1, (_vehPosASL # 2) + 50];
         private _rayEnd   = [_basePadPos2D # 0, _basePadPos2D # 1, -20];
         private _podHits  = lineIntersectsSurfaces [_rayStart, _rayEnd, _pod, _vehicle, true, 1, "GEOM", "NONE"];
@@ -204,7 +214,18 @@ if (_isHelicopter) exitWith {
 };
 
 systemChat format ["LOGISTICS COMMAND: Surface cargo grid storage locked down: [%1].", _displayAssetName];
-{ private _cargoObj = _x createVehicle [0,0,0]; _vehicle setVehicleCargo _cargoObj; } forEach _cargoList;
+{
+    private _cargoObj = _x createVehicle [0,0,0];
+    _cargoObj setVariable ["isLogisticsCargo", true, true];
+    _cargoObj setVariable ["QM_SystemLoaded", true, true];
+    _vehicle setVariable ["QM_SystemLoading", true];
+    private _loadedViV = _vehicle setVehicleCargo _cargoObj;
+    _vehicle setVariable ["QM_SystemLoading", false];
+    if (!_loadedViV) then {
+        deleteVehicle _cargoObj;
+        diag_log format ["[LOGISTICS ERROR]: setVehicleCargo failed to load %1 into %2", _x, typeOf _vehicle];
+    };
+} forEach _cargoList;
 
 _vehicle setVariable ["logistics_is_loaded", true, true];
 _vehicle setVariable ["logistics_loaded_type", _supplyType, true];
