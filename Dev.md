@@ -909,6 +909,7 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
     - **`FOB`**: Forward Operating Base (Land outpost stores)
     - **`DDG`**: Guided-Missile Destroyer (Surface escort & light aviation)
     - **`DD`**: Gun Destroyer (Surface escort)
+    - **`LPD`**: Amphibious Transport Dock (Expeditionary connector & littoral staging)
     - **`CON`**: Contested Base Sector (Frontline capture sector, $0$ starting supplies)
   - **Syntax & Display Name Parsing:**
     - The first segment before the first underscore designates the **Base Type** (e.g. `CVN`, `DDG`, `FOB`, `CON`).

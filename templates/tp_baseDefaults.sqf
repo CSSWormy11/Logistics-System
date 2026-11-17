@@ -4,7 +4,7 @@
 // Description: Defines the starting economy limits, operational roles, and
 //              supply pool configurations for all first-class base types.
 //              MSR & CS (Cargo Ships) hubs have infinite (-1) resources.
-//              SB, CVN, LHA, FOB, DDG, DD have tailored starting pools.
+//              SB, CVN, LHA, FOB, LPD, DDG, DD have tailored starting pools.
 //              CON (Contested Bases) initialize with 0 across all pools.
 // Called By: init.sqf (Compiled during server/master initialization)
 // ============================================================================
@@ -119,6 +119,19 @@ logisticsBaseDefaults = [
             ["Repair", 15000],
             ["Vehicle", 50000],
             ["Troops", 20]
+        ]
+    ],
+    [
+        "LPD", // Amphibious Transport Dock (Expeditionary Connector / Littoral Staging)
+        [
+            ["Role", "TACTICAL"],
+            ["Cargo", 60000],
+            ["Ammo", 50000],
+            ["Fuel", 30000],
+            ["Medical", 20000],
+            ["Repair", 30000],
+            ["Vehicle", 300000],
+            ["Troops", 100]
         ]
     ],
 
