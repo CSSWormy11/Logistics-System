@@ -650,6 +650,97 @@ Ensure all players—including combat infantry, tank crews, snipers, attack pilo
   - Implemented client daemon in `qm_clientFunctions.sqf` that monitors player lifecycle and automatically re-initializes both the Diary subject and Informational Task whenever the player respawns or changes units.
   - Live background updater refreshes values every 4 seconds from `missionNamespace` variables (`LogiScore_*`).
 
+### 5.7 [PROPOSAL] Modular Workspace Directory Restructuring & Standardized File Prefix Migration (`logistics/`, `templates/`, `tp_*`)
+
+Organize the root mission workspace into clean, modular subdirectories (`templates/` and `logistics/`), introduce standardized system prefixes (`tp_*`, `logi_*`, `qm_*`), and update all file paths, includes, and GUI script references across the codebase:
+
+- [ ] **Core Architectural Motivation:**
+  - As Framework V8 expanded to over 35 scripts, housing all template configurations, UI dialogs, server functions, and logistics mechanics in the flat mission root makes file discovery, version control, and modular packaging difficult.
+  - Establishing clear directory boundaries separates **static mission configuration data** (`templates/`) from **runtime operational engines** (`logistics/`), keeping the mission root pristine (`init.sqf`, `description.ext`, `defines.hpp`, `mission.sqm`, docs).
+  - External modules (such as Combat Tasking / Intel `tsk_*`) will remain untouched in the root for now, deferred for dedicated refactoring when addressing those systems.
+
+- [ ] **Standardized Prefixing Taxonomy:**
+  - **`tp_*` (Templates & Blueprints):** All configuration matrices, base defaults, vehicle roles, scoring tables, and spawn templates housed in `templates/` will be prefixed with `tp_` for instant recognition.
+  - **`logi_*` (Logistics Engine & Cargo Operations):** Routing, manifest inspection, loading/unloading mechanics, delivery validation, and depot triggers housed in `logistics/`.
+  - **`qm_*` (Quartermaster Base Services & UI):** Motorpool dealership, recruiter, equipment trader, R4-C vehicle servicing, and pylon management housed in `logistics/`.
+  - **`tsk_*` (Tactical Command & Intel):** Preserved as-is for future modularization.
+
+- [ ] **Technical Guide: How Bohemia Engine Pathing & Subfolder Referencing Works:**
+  - **1. Relative SQF Script Paths:**
+    - In Arma 3, script commands (`execVM`, `preprocessFileLineNumbers`, `compileScript`, `fileExists`) resolve paths **relative to the root of the active mission folder**.
+    - When a file moves to a subfolder, prefixing the subfolder name with a backslash or forward slash directs the engine into that directory:
+      - *Root:* `call compile preprocessFileLineNumbers "logisticsCargoTemplates.sqf";`
+      - *Subfolder:* `call compile preprocessFileLineNumbers "templates\tp_cargoTemplates.sqf";`
+      - *Execution:* `[_veh, _base] execVM "logistics\logi_spawnLoadSupply.sqf";`
+  - **2. Preprocessor Includes in `description.ext`:**
+    - Dialog resource files moved to `logistics/` are included via relative path:
+      - `#include "logistics\qm_quartermasterUI.hpp"`
+      - `#include "logistics\qm_manifestMenu.hpp"`
+      - `#include "logistics\qm_pylonMenu.hpp"`
+  - **3. Dialog Action Strings inside `.hpp` Files:**
+    - Button `action` and `onLoad` strings inside UI dialog definitions must reference the new subfolder path:
+      - `action = "[] execVM 'logistics\qm_newCarDealership.sqf';";`
+      - `action = "[] execVM 'logistics\logi_manifestLoadExecute.sqf';";`
+  - **4. Eden Editor Triggers & Runtime Hot-Patching Protection:**
+    - Because `fn_initLogisticsTasks.sqf` (becoming `logi_initTasks.sqf`) dynamically scans all Eden triggers and rewrites trigger statements (`setTriggerStatements`) in memory at mission start, **mission makers do NOT need to manually edit `mission.sqm` in Eden Editor**.
+    - Updating the runtime string generator inside `logi_initTasks.sqf` automatically routes all physical trigger pads on Stratis to the new `logistics/` directory with zero manual Eden Editor intervention.
+
+- [ ] **Exhaustive File-by-File Migration Mapping:**
+
+| Current Root Filename | Target Subdirectory & Proposed Name | System Classification | Primary Referencing Scripts |
+| :--- | :--- | :--- | :--- |
+| **`logisticsBaseDefaults.sqf`** | `templates\tp_baseDefaults.sqf` | Template (Base Stockpiles) | `init.sqf` |
+| **`logisticsCargoTemplates.sqf`** | `templates\tp_cargoTemplates.sqf` | Template (Vehicle Cargo Lists) | `init.sqf`, `logi_manageMissions.sqf`, `logi_spawnLoadSupply.sqf`, `logi_cargoDelivery.sqf` |
+| **`logisticsFieldLoadingTemplate.sqf`** | `templates\tp_fieldLoadingTemplate.sqf` | Template (Field Capability Rules) | `init.sqf`, `logi_standaloneLoading.sqf`, `logi_manifestLoadExecute.sqf` |
+| **`logisticsVehicleRoles.sqf`** | `templates\tp_vehicleRoles.sqf` | Template (Strategic/Tactical/CLT) | `init.sqf`, `logi_manageMissions.sqf` |
+| **`qm_vehicleCapsTemplate.sqf`** | `templates\tp_vehicleCaps.sqf` | Template (Active Vehicle Limits) | `init.sqf`, `qm_serverFunctions.sqf` |
+| **`spawnableInfantryTemplate.sqf`** | `templates\tp_spawnableInfantry.sqf` | Template (Recruiter Blueprints) | `init.sqf`, `qm_recruiterList.sqf` |
+| **`spawnableVehicleTemplate.sqf`** | `templates\tp_spawnableVehicles.sqf` | Template (Motorpool Blueprints) | `init.sqf`, `qm_vehicleTabs.sqf`, `qm_newCarDealership.sqf`, `qm_serverFunctions.sqf` |
+| **`SupplyScores.sqf`** | `templates\tp_supplyScores.sqf` | Template (Asset Point Weights) | `init.sqf`, `logi_manageMissions.sqf`, `logi_spawnLoadSupply.sqf`, `logi_cargoDelivery.sqf`, `logi_manifestMenuPopulate.sqf` |
+| **`virtualArsenalTemplate.sqf`** | `templates\tp_virtualArsenal.sqf` | Template (Whitelisted Armaments) | `init.sqf`, `qm_serverFunctions.sqf` |
+| **`fn_initLogisticsTasks.sqf`** | `logistics\logi_initTasks.sqf` | Logistics Core (Triggers & Alpha) | `init.sqf` |
+| **`fn_manageLogisticsMissions.sqf`** | `logistics\logi_manageMissions.sqf` | Logistics Core (Dynamic Tasking) | `init.sqf` |
+| **`fn_spawnLoadSupply.sqf`** | `logistics\logi_spawnLoadSupply.sqf` | Logistics Core (Supply Spawner) | `init.sqf`, `logi_initTasks.sqf` |
+| **`fn_cargoDelivery.sqf`** | `logistics\logi_cargoDelivery.sqf` | Logistics Core (Dropoff Offloader) | `logi_initTasks.sqf` |
+| **`fn_standaloneLoadingMechanic.sqf`**| `logistics\logi_standaloneLoading.sqf` | Logistics Core (ViV Daemons) | `init.sqf` |
+| **`fn_startupMarkerDiagnostics.sqf`** | `logistics\logi_markerDiagnostics.sqf` | Diagnostics (Map Audit) | `init.sqf` |
+| **`qm_manifestMenu.hpp`** | `logistics\qm_manifestMenu.hpp` | Cargo Manifest GUI (IDD 5500) | `description.ext` |
+| **`fn_manifestMenuOpen.sqf`** | `logistics\qm_manifestMenuOpen.sqf` | Cargo Manifest Dialog Launcher | `logi_standaloneLoading.sqf` |
+| **`fn_manifestMenuPopulate.sqf`** | `logistics\qm_manifestMenuPopulate.sqf` | Cargo Manifest Perimeter Scanner | `qm_manifestMenu.hpp`, `qm_manifestLoadExecute.sqf`, `qm_manifestUnloadExecute.sqf` |
+| **`fn_manifestLoadExecute.sqf`** | `logistics\qm_manifestLoadExecute.sqf` | Cargo Manifest Load Action | `qm_manifestMenu.hpp` |
+| **`fn_manifestUnloadExecute.sqf`** | `logistics\qm_manifestUnloadExecute.sqf` | Cargo Manifest Unload Action | `qm_manifestMenu.hpp` |
+| **`qm_quartermasterUI.hpp`** | `logistics\qm_quartermasterUI.hpp` | Quartermaster Master GUI | `description.ext` |
+| **`c_vehicleTabs.sqf`** | `logistics\qm_vehicleTabs.sqf` | Motorpool UI Category Filter | `qm_quartermasterUI.hpp` |
+| **`fn_newCarDealership.sqf`** | `logistics\qm_newCarDealership.sqf` | Motorpool Purchase Dispatcher | `qm_quartermasterUI.hpp` |
+| **`fn_recruiter.sqf`** | `logistics\qm_recruiter.sqf` | Barracks Recruit Dispatcher | `qm_quartermasterUI.hpp` |
+| **`fn_recruiter_list.sqf`** | `logistics\qm_recruiterList.sqf` | Barracks UI Populator | `qm_quartermasterUI.hpp` |
+| **`fn_equipmentTrader.sqf`** | `logistics\qm_equipmentTrader.sqf` | Equipment Trader Client UI | `init.sqf` |
+| **`fn_usedCarSalesman.sqf`** | `logistics\qm_usedCarSalesman.sqf` | Legacy Salvage Client Action | `init.sqf` |
+| **`fn_executeR4CService.sqf`** | `logistics\qm_executeR4CService.sqf` | R4-C Base Service Handler | `logi_initTasks.sqf` |
+| **`qm_pylonMenu.hpp`** | `logistics\qm_pylonMenu.hpp` | Pylon GUI Resource | `description.ext` |
+| **`fn_pylonManager.sqf`** | `logistics\qm_pylonManager.sqf` | Pylon Manager Engine | `init.sqf`, `qm_clientFunctions.sqf` |
+| **`qm_clientFunctions.sqf`** | `logistics\qm_clientFunctions.sqf` | Client Framework Library | `init.sqf` |
+| **`qm_serverFunctions.sqf`** | `logistics\qm_serverFunctions.sqf` | Server Framework Library | `init.sqf` |
+| **`qm_clientActionCompiler.sqf`** | `logistics\qm_clientActionCompiler.sqf` | Terminal Action Compiler | `init.sqf` |
+| **`qm_supplyPhysicalController.sqf`** | `logistics\qm_supplyPhysicalController.sqf`| Base Crate Physical Spawner | `init.sqf` |
+| **`qm_serverGarrisonManager.sqf`** | `logistics\qm_serverGarrisonManager.sqf` | Server Garrison Controller | `init.sqf` |
+| **`qm_serverRespawnManager.sqf`** | `logistics\qm_serverRespawnManager.sqf` | Server Respawn Manager | `init.sqf` |
+| **`qm_clientRespawnManager.sqf`** | `logistics\qm_clientRespawnManager.sqf` | Client Respawn UI Manager | `init.sqf` |
+
+- [ ] **Execution & Phased Implementation Strategy:**
+  - **Phase 1: Directory Setup & Git-Tracking Relocation:**
+    - Execute `git mv` operations to move files into `templates/` and `logistics/` with new standardized prefixes, retaining 100% of Git commit history and blame data.
+  - **Phase 2: Master Entrypoint Path Remapping:**
+    - Update `init.sqf` to compile from `templates\tp_*.sqf` and execute from `logistics\*.sqf`.
+    - Update `description.ext` `#include` statements to reference `logistics\*.hpp`.
+  - **Phase 3: Internal Inter-Script & Dialog Action Remapping:**
+    - Update all UI `.hpp` `action` and `onLoad` strings.
+    - Update internal script calls (`execVM`, `preprocessFileLineNumbers`).
+    - Update `logi_initTasks.sqf` dynamic trigger statement injection.
+  - **Phase 4: Comprehensive Verification:**
+    - Run `check_brackets.ps1` across all relocated files.
+    - Validate that `mission.sqm` remains completely unstaged and untouched.
+
 ---
 
 **Ongoing Development Tracking**
