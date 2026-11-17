@@ -790,11 +790,11 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ### [ ] 6.1 Destroyer Flight Deck Naval Aviation (Ghost Hawk & Light Heli Spawns at Naval FOBs)
 - **1. Context & User Requirement:**
-  - Destroyers (e.g., `FOB_Destroyer_086`, `FOB_Destroyer_011`, utilizing `Land_Destroyer_01_base_F`) feature an aft helicopter flight deck and hangar bay.
+  - Destroyers (e.g., `FOB_Destroyer_086`, `FOB_Destroyer_011`, transitioning to US Navy hull codes like `FOB_DDG_086`, `FOB_DDG_011`) feature an aft helicopter flight deck and hangar bay.
   - Operationally, Destroyers should deploy Medium and Light maritime helicopters that realistically fit their flight deck and hangar footprint:
     - **Authorized Assets:** `UH-80 Ghost Hawk` (including stub-wing armed variants: `B_Heli_Transport_01_F`, `B_Heli_Transport_01_pylons_F`, CTRG variants), `MH-9 Hummingbird` (`B_Heli_Light_01_F`), and `AH-9 Pawnee` (`B_Heli_Light_01_dynamicLoadout_F`).
     - **Strictly Prohibited Assets:** Heavy-lift helicopters such as `CH-67 Huron` (`B_Heli_Transport_03_F`, `B_Heli_Transport_03_unarmed_F`), Super/King Stallions, or large transport aircraft, which physically exceed destroyer deck dimensions and should only be operated from large amphibious assault ships (LHAs) or fleet aircraft carriers (`SB_Carrier`).
-  - **The Dilemma:** Destroyers are currently designated as **FOBs** (`FOB_Destroyer_*`). In the current framework, FOBs are strictly prevented from spawning helicopters because virtually all Western helicopters in `templates\tp_spawnableVehicles.sqf` are locked to `"SB"` (Supply Base only). The mission maker does *not* want to reclassify Destroyers as full Supply Bases (SBs), nor do they want generic land FOBs (e.g. `FOB_1`) suddenly gaining access to all helicopters.
+  - **The Dilemma:** Destroyers are currently designated as **FOBs** (`FOB_DDG_*` / `FOB_Destroyer_*`). In the current framework, FOBs are strictly prevented from spawning helicopters because virtually all Western helicopters in `templates\tp_spawnableVehicles.sqf` are locked to `"SB"` (Supply Base only). The mission maker does *not* want to reclassify Destroyers as full Supply Bases (SBs), nor do they want generic land FOBs (e.g. `FOB_1`) suddenly gaining access to all helicopters.
 
 - **2. Technical Analysis & Design Rationale:**
   - **Why Helicopters are Categorized as `"OPEN"` Size:**
@@ -809,10 +809,10 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
   - **Approach 1: Template-Level Base Keyword Restriction Array (Recommended for Simplicity)**
     - *How it works:* In `templates\tp_spawnableVehicles.sqf`, change the restriction column for Ghost Hawks, Hummingbirds, and Pawnees from `"SB"` to an Array:
-      - `["SB", "DESTROYER"]`
+      - `["SB", "DDG", "DD"]`
     - *UI Logic in `qm_vehicleTabs.sqf`:* Lines 156–161 already support Array restrictions (`_restrictionType isEqualType []`). Adding a check:
       ```sqf
-      if ("DESTROYER" in _restList && ("DESTROYER" in _bkUpper)) then { _validBaseRestriction = true; };
+      if (("DDG" in _restList && ("DDG" in _bkUpper)) || ("DD" in _restList && ("DD" in _bkUpper))) then { _validBaseRestriction = true; };
       ```
     - *Pros:*
       - 100% clean and transparent. No hardcoded classnames in functional scripts.
@@ -820,14 +820,14 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
       - Regular land FOBs (`FOB_1`, `FOB_Alpha`) remain restricted to ground vehicles.
       - Preserves Destroyers as FOBs across all economy, ledger, and respawn systems.
 
-  - **Approach 2: Dedicated Base Type Taxonomy (`"DESTROYER"` Base Tier)**
-    - *How it works:* Introduce `"DESTROYER"` as a first-class base type in `logisticsBaseDefaults.sqf` alongside `"SB"`, `"FOB"`, and `"MSR"`.
-    - In `tp_spawnableVehicles.sqf`, templates explicitly list an array of allowed base types (e.g. `["SB", "DESTROYER"]`, `["SB", "FOB"]`, or `["DESTROYER"]`).
+  - **Approach 2: Dedicated Base Type Taxonomy (`"DDG"` / `"DD"` Base Tier)**
+    - *How it works:* Introduce `"DDG"` / `"DD"` as first-class base types in `logisticsBaseDefaults.sqf` alongside `"SB"`, `"FOB"`, and `"MSR"`.
+    - In `tp_spawnableVehicles.sqf`, templates explicitly list an array of allowed base types (e.g. `["SB", "DDG"]`, `["SB", "FOB"]`, or `["DDG"]`).
     - *Pros:* Fully modular; cleanly differentiates Destroyers, LHAs, and land FOBs without fuzzy string matching.
     - *Cons:* Requires updating base defaults and ledger initialization to recognize the new base type key.
 
   - **Approach 3: Base Capability / Subtype Profile System**
-    - *How it works:* Introduce a capability metadata layer for bases (e.g., `missionNamespace setVariable ["QM_BaseCapabilities_FOB_Destroyer_086", ["NAVAL_AVIATION_LIGHT", "BOAT"]]`).
+    - *How it works:* Introduce a capability metadata layer for bases (e.g., `missionNamespace setVariable ["QM_BaseCapabilities_FOB_DDG_086", ["NAVAL_AVIATION_LIGHT", "BOAT"]]`).
     - In `qm_vehicleTabs.sqf`, if a base is a FOB but possesses `"NAVAL_AVIATION_LIGHT"`, it grants an exception for rotary-wing aircraft categorized as light/medium transport.
     - *Pros:* Highly extensible for future special bases (e.g. `FOB_Airfield`, `FOB_Seaport`, `FOB_LHA`).
     - *Cons:* Requires defining capability lists for each base type.
@@ -837,6 +837,44 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
     - *Pros:* Zero risk, zero code changes, prevents vehicle clutter on naval decks, and promotes realistic multi-base logistics.
 
 - **4. Status:** **Under Consideration / Backlog Evaluation** (Retained in Section 6 as a structured proposal; awaiting final gameplay decision before implementing).
+
+---
+
+### [ ] 6.2 Standardized US Navy Hull Classification Architecture (DD, DDG, CVN, LHA/LHD Base Echelons)
+- **1. Context & Standardized Naval Taxonomy:**
+  - Real-world United States Navy hull classification codes use standard two- or three-letter designations followed by hull numbers, rather than arbitrary text:
+    - **`DD`**: Destroyer (General / Gun Destroyer)
+    - **`DDG`**: Guided-Missile Destroyer (e.g., *Arleigh Burke*-class / USS *Liberty* `Land_Destroyer_01_base_F`)
+    - **`CVN`**: Aircraft Carrier, Nuclear-powered (e.g., *Nimitz* / *Gerald R. Ford*-class / USS *Freedom* `Land_Carrier_01_base_F`)
+    - **`LHA` / `LHD`**: Landing Helicopter Assault / Dock (Amphibious Assault Capital Ships, e.g., *America* / *Wasp*-class)
+    - **`LPD`**: Amphibious Transport Dock (e.g., *San Antonio*-class)
+    - **`LSD`**: Dock Landing Ship (e.g., *Whidbey Island* / *Harpers Ferry*-class)
+  - **Immediate Mission Maker Implementation (Safe & Non-Breaking):**
+    - Mission maker is updating Eden Editor base marker names to incorporate standard hull codes while retaining the `FOB_` prefix:
+      - e.g., `FOB_Destroyer_086` $\rightarrow$ `FOB_DDG_086`
+      - e.g., `FOB_Destroyer_011` $\rightarrow$ `FOB_DDG_011`
+    - Because the string `"FOB"` remains present at the start of the identifier, all current engine scripts (`init.sqf`, `qm_vehicleTabs.sqf`, `logi_initTasks.sqf`, ledger displays) continue running seamlessly without breaking or requiring immediate code alterations.
+
+- **2. Strategic Value of Hull-Code Base Echelons (Future Implementation Roadmap):**
+  - Moving to recognized hull classification codes allows the logistics framework to establish distinct, authentic operational profiles across two key pillars:
+  
+  - **Pillar A: Tailored Starting Supply Ledgers (`tp_baseDefaults.sqf`):**
+    | Naval Hull Tier | Operational Role | Recommended Ledger Profile |
+    | :--- | :--- | :--- |
+    | **`CVN`** (Fleet Carrier) | Strategic Maritime Base | **Massive Aviation Reserves:** Maximum Fuel & Ammo for fixed-wing strike fighters, large Vehicle Material pool for carrier deck tractors and aircraft, high Troop capacity (hundreds of naval aviators & sailors). Unlimited or semi-infinite. |
+    | **`LHA` / `LHD`** (Amphibious Assault) | Expeditionary Task Force Hub | **Marine Expeditionary Stores:** High rotary-wing & STOVL Fuel/Ammo, elevated Troop reserves for embarked Marine rifle platoons, dedicated Vehicle Material for amphibious armor (AAVs) and transport helis. |
+    | **`DDG` / `DD`** (Guided Destroyer) | Escort & Surface Combatant | **Specialized Escort Stores:** Tailored guided-missile Munitions, precision Repair components, moderate aviation Fuel calibrated for 1–2 embarked maritime helicopters, ~30–50 personnel, dedicated boat reserves for RHIBs. |
+    | **`LPD` / `LSD`** (Dock Ships) | Amphibious Connector | **Connector Stores:** Specialized Cargo & Vehicle pools for LCAC hovercraft, utility landing craft (LCU), and combat engineering equipment. |
+    | **`FOB`** (Land Outpost) | Forward Ground Base | Standard ground-combat stockpile (10% of SB baseline). |
+    | **`SB`** (Main Depot) | Strategic Mainland Depot | Baseline continental supply depot. |
+
+  - **Pillar B: Granular Vehicle Spawn Whitelists (`tp_spawnableVehicles.sqf`):**
+    - Vehicle templates can list allowed hull types in their restriction array (e.g., `["CVN"]`, `["LHA", "CVN"]`, `["DDG", "LHA", "CVN"]`, `["SB"]`, `["FOB"]`):
+      - **`CVN` Exclusives:** Fixed-wing carrier-capable strike jets (`F/A-18`, `F-35C`), carrier AEW airborne early warning, heavy logistics transports.
+      - **`LHA` / `LHD` Assets:** STOVL strike aircraft (`F-35B`, `AV-8B Harrier`), tiltrotors (`V-22 Osprey`, `Blackfish`), heavy-lift rotary (`CH-67 Huron`, `Super Stallion`), attack & utility helicopters (`AH-1Z Viper`, `UH-1Y Venom`, `UH-80 Ghost Hawk`), and amphibious surface craft.
+      - **`DDG` / `DD` Assets:** Flight-deck-rated maritime helicopters only (`UH-80 Ghost Hawk` standard & stub wings, `MH-9 Hummingbird`, `AH-9 Pawnee`), alongside deployed RHIBs / speedboats (`B_Boat_Transport_01_F`, `B_Boat_Armed_01_minigun_F`). Fixed-wing jets and heavy-lift helicopters are strictly excluded.
+
+- **3. Status:** **Logged as Strategic Architectural Proposal** (Pre-staged for future implementation as mission maker updates base names in Eden Editor).
 
 ---
 
