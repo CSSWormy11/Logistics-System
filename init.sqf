@@ -181,8 +181,12 @@ if (isServer) then {
         
         private _baseType = [_baseName] call logi_fnc_getBaseType;
 
-        // Read directly from tp_baseDefaults.sqf
-        private _typeIndex = logisticsBaseDefaults findIf { toUpper (_x select 0) == _baseType };
+        // Read directly from tp_baseDefaults.sqf (supports per-base override or base-type defaults)
+        private _bNameUpper = toUpper _baseName;
+        private _typeIndex = logisticsBaseDefaults findIf { toUpper (_x select 0) == _bNameUpper };
+        if (_typeIndex == -1) then {
+            _typeIndex = logisticsBaseDefaults findIf { toUpper (_x select 0) == _baseType };
+        };
         if (_typeIndex != -1) then {
             { 
                 private _cat = _x select 0;
