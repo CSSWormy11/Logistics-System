@@ -378,12 +378,34 @@ Replace the current blind radius-based salvage check (`fn_usedCarSalesman.sqf`) 
   - [x] If confirmed YES: despawns vehicle, refunds chassis/cargo points to base pool, and unregisters its vehicle cap (`QM_CAP`) via `QM_fnc_serverVehicleSale`. If NO: leaves vehicle untouched.
   - [x] Registered direct look-at `addAction` on the player (`[SALVAGE CONTROL] Recycle Vehicle to Base`) for ad-hoc salvage of unoccupied vehicles inside any base dropoff pad.
 
-### 4.6 Contested Bases (`Contested_*`) Mechanics & Integration (Low Priority)
+### 4.6 Contested Bases (`Contested_*`) Conquest Mechanics & Modular Integration
+- **1. Architectural Scope & Folder Isolation:**
+  - Contested Bases represent dynamic frontline territory control (Battlefield Conquest game mode), which is an independent tactical system that *interfaces* with logistics.
+  - To prevent coupling or regressions in core logistics, all Conquest scripts, triggers, and daemons will reside in their own dedicated directory: `conquest/` (prefixed with `conq_*`).
+  - **Zero-Dependency Guard:** If a mission maker does not place any `Contested_*` markers or triggers on the map, the conquest module idles or exits immediately with zero CPU overhead. If present, it binds dynamically to the logistics framework.
 
-Design and implement the frontline Contested Base (`Contested_*`, e.g., `Contested_Stadium`) mechanics once core `MSR`, `SB`, and `FOB` logistics operations are finalized and verified.
+- **2. Capture Mechanics & Faction State Handover:**
+  - **Dominance Radius Watchdog (`conq_captureDaemon.sqf`):** Monitors physical presence inside the base capture zone. When opposing forces attain numerical dominance, capture progress shifts toward Neutral ($0\%$), then climbs toward $100\%$ enemy control.
+  - **Visual & Tactical Handover:**
+    - Updates map marker icon and color dynamically (`b_installation` / `ColorWEST` $\leftrightarrow$ `o_installation` / `ColorEAST` $\leftrightarrow$ `n_installation` / `ColorCivilian`).
+    - Flips physical flag pole texture to match active faction.
+  - **Infrastructure Gating:**
+    - Quartermaster Terminals and Virtual Arsenals check player side (`side player == _baseControllingSide`); enemy players are locked out.
+    - R4-C Service Pads only refuel, rearm, and repair vehicles belonging to the controlling faction.
+    - Base Respawn Manager (`qm_serverRespawnManager.sqf`) unregisters the respawn position from the losing faction and binds it to the capturing faction.
 
-- [ ] Define how `Contested_*` bases interact with the logistics supply pools and capture/frontline state.
-- [ ] Transition `Contested_*` facility markers (`_Arsenal`, `_Garage`, `_Spawn`, `_Service`) to 3D editor objects when Contested Base rules are finalized.
+- **3. Supply Handover Model (Plunder / Spoils of War):**
+  - **The Plunder Rule:** The capturing faction inherits whatever remaining ledger points exist in the base at the exact instant the capture is finalized.
+  - **Live Resupply During Contested State:** Logistics pilots and drivers are authorized to deliver supplies to a contested base up until the exact moment ownership flips. If the base trades hands while supplies are on the ground or in transit, the newly capturing side reaps the benefits.
+  - **Stockpile Volatility:** High supply stockpiles raise the strategic stakes of holding or losing a contested outpost—stocking 50,000 Ammo or Vehicle Material means an enemy capturing the base can immediately procure heavy armor and ordnance from your former garages.
+
+- **4. Contested Base Infrastructure Restoration:**
+  - Upon successful capture, all base infrastructure (terminals, arsenals, helipads, garages) is claimed by the new faction. Intact facilities become immediately operational.
+  - Destroyed infrastructure adheres to the 1-hour supply reconstruction rules detailed in Section 6.4.
+
+- [ ] Transition `Contested_*` facility markers (`_Arsenal`, `_Garage`, `_Spawn`, `_Service`) to 3D editor objects in `mission.sqm`.
+- [ ] Build isolated `conquest/conq_captureDaemon.sqf` with dominance radius math and faction state synchronization.
+- [ ] Implement Plunder ledger transfer and terminal/respawn handover callbacks.
 
 ### 4.7 Route-Tiered & Difficulty-Scaled Cargo Templates (`Strategic` / `Tactical` / `CLT`)
 
@@ -876,6 +898,27 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 - **3. Status:** **Logged as Strategic Architectural Proposal** (Pre-staged for future implementation as mission maker updates base names in Eden Editor).
 
+- **4. Base Type Equivalence Arrays Architecture (Anti-Hardcoding Pattern):**
+  - Rather than hardcoding string checks across multiple scripts, the framework will define three centralized equivalence arrays in `templates/tp_baseDefaults.sqf`:
+    ```sqf
+    // Echelon Classification Equivalence Arrays
+    QM_Echelon_SB  = ["SB", "CVN", "LHA"];                 // Strategic Rear Bases (Depots & Fleet Capital Ships)
+    QM_Echelon_FOB = ["FOB", "DDG", "DD", "LPD", "LSD"];   // Forward Outposts (Land Garrisons & Escort Ships)
+    QM_Echelon_MSR = ["MSR", "CS"];                        // Infinite Pipelines (Land Corridors & Cargo Ships)
+    ```
+  - **`CS` (Cargo Ship):** Formally designated as the naval equivalent of `MSR`. Offshore cargo ships spawn containerized supplies for naval logistics craft and heavy-lift aircraft, featuring infinite reserves (`-1`) and zero garrison or repair services.
+  - **Universal Echelon Resolver (`QM_fnc_getBaseEchelon`):**
+    ```sqf
+    QM_fnc_getBaseEchelon = {
+        params ["_baseKey"];
+        private _bkUpper = toUpper _baseKey;
+        if ({ _bkUpper find (toUpper _x) >= 0 } count QM_Echelon_MSR > 0) exitWith { "MSR" };
+        if ({ _bkUpper find (toUpper _x) >= 0 } count QM_Echelon_SB > 0) exitWith { "SB" };
+        "FOB" // Default fallback for FOB, DDG, DD, LPD, and custom bases
+    };
+    ```
+  - Mission makers can reclassify any hull type (e.g. moving `LHA` from SB to FOB) simply by adjusting the array in `tp_baseDefaults.sqf`—all UI procurement, mission routing, and ledger displays adapt instantly without touching functional code.
+
 ---
 
 ### [ ] 6.3 Map Marker True-North Normalization & Scope Boundaries
@@ -910,6 +953,53 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
     - This guarantees all base HQ icons display upright and professional on all client map displays, regardless of whether a mission maker accidentally rotated a marker in Eden Editor, while preserving 100% of custom tactical mission graphics.
 
 - **4. Status:** **Logged in Section 6 / Ready for Implementation** (Implementation requires 1 line of non-breaking code in `init.sqf`).
+
+---
+
+### [ ] 6.4 Base Supply Depletion Gating & 1-Hour Infrastructure Reconstruction Timer
+- **1. Context & Architectural Requirement:**
+  - In a realistic logistics economy, depleted base supply pools must have tangible operational consequences on available combat power.
+  - Currently in V8, the Virtual Arsenal populates all whitelist gear regardless of current base points, and `QM_fnc_processGarageSpawn` deducts costs using `(_currentPool - _poolCost) max 0`, which permits vehicle spawning even when the pool is completely exhausted ($0$).
+  - Furthermore, base facility objects (arsenals, terminals, garages, service pads) are vulnerable to player ordnance, artillery, and airstrikes. When destroyed, they should not instantly respawn, nor should they remain permanently broken for the rest of a multi-day campaign.
+
+- **2. Supply Depletion Gating (Arsenals, Motorpools, & R4-C):**
+  - **Virtual Arsenal & Physical Ammo Caches:**
+    - If a base's `Cargo` or `Ammo` supply pool drops to $0$, the Virtual Arsenal wipes all virtual gear (`removeVirtualWeaponCargo`, etc.), displaying an empty armory locker with system notification:
+      `"LOGISTICS ALERT: Base armory depleted. Deliver Cargo and Ammo crates to restore arsenal inventory."`
+    - Physical crate contents inside `_Arsenal` containers are similarly cleared or locked until replenished.
+  - **Garage Motorpool Gating:**
+    - In `QM_fnc_processGarageSpawn` ([qm_serverFunctions.sqf](file:///C:/Users/JSHer/OneDrive/Documents/Arma 3/missions/Mine/Testing/Logistics/Logistics%20System/logistics/qm_serverFunctions.sqf#L464-L472)), pre-validate the base's available points against `_costArray` before executing `createVehicle`.
+    - If the base lacks the required `Vehicle`, `Fuel`, or `Ammo` points, abort deployment with client warning:
+      `"PROCUREMENT ABORTED: Insufficient base resources. Requisition requires %1 %2."`
+  - **R4-C Pad Gating:**
+    - If a base has $0$ `Fuel`, R4-C service pads cannot refuel vehicles.
+    - If a base has $0$ `Ammo`, R4-C service pads cannot rearm vehicle pylons or turrets.
+    - If a base has $0$ `Repair`, R4-C service pads cannot repair hull or engine damage.
+
+- **3. Base Infrastructure Destruction & 1-Hour Reconstruction Daemon:**
+  - **Destruction Watchdog (`QM_fnc_serverTrackInfrastructure`):**
+    - The server monitors all registered base facilities (`_Arsenal`, `_Terminal`, `_Garage`, `_Service`, `_Helipad`).
+    - When a facility object is killed/destroyed, its state is captured in a server registry:
+      `[varName, baseKey, originalClass, posASL, vectorDirAndUp, getPosWorld, destructionTimestamp]`.
+  - **Two-Gate Reconstruction Conditions:**
+    A destroyed facility will rebuild/respawn if and only if:
+    1. **Time Elapsed:** At least **1 hour (3600 seconds)** has passed since destruction.
+    2. **Supply Pool Availability:** The owning base possesses sufficient `Repair` / `Vehicle` supply points (e.g. 5,000 Repair points per facility) to fund reconstruction.
+  - **Contested Base Integration:**
+    - When a contested base trades hands in Conquest mode, all surviving intact facilities immediately flip to the capturing faction.
+    - Destroyed facilities continue their 1-hour rebuild timer under the new ownership, respawning once time has elapsed and the new owners stock the required `Repair` supplies.
+
+- **4. Status:** **Logged as Core System Specification** (Ready for phased implementation alongside Conquest mechanics).
+
+---
+
+### [ ] 6.5 Direct MSR-to-FOB Resupply Route Proposal (Under Consideration)
+- **1. Concept Description:**
+  - Evaluates an alternative logistical pipeline where heavy-lift airframes (`CH-67 Huron`, `V-44X Blackfish`) or heavy logistics convoys (`HEMTT Flatbed`) can load supplies at an MSR hub or offshore Cargo Ship (`CS`) and transport them directly to a frontline FOB, bypassing the intermediate Staging Base (`SB`).
+- **2. Trade-Off Analysis:**
+  - *Pros:* Simulates direct strategic airlift from theater entry points straight into besieged outposts or remote island FOBs.
+  - *Cons / Risks:* Bypasses the rear-line Staging Base entirely, disincentivizing players from defending and stocking mainland supply depots.
+- **3. Status:** **Logged as Exploratory Proposal** (Retained for community feedback; deferred while standard MSR $\rightarrow$ SB $\rightarrow$ FOB pipelines are finalized).
 
 ---
 
