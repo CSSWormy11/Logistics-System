@@ -193,7 +193,7 @@ QM_fnc_addPylonAction = {
 };
 
 // --- B. JIP Safe Pipeline For Action Menus ---
-// Safely adds actions to terminals once they locally exist for the player.
+// Safely adds actions to terminals and medical facilities once they locally exist for the player.
 [] spawn {
     private _processedHubs = [];
     while {true} do {
@@ -209,6 +209,19 @@ QM_fnc_addPylonAction = {
                 };
             };
         } forEach _globalHubs;
+
+        private _globalMeds = missionNamespace getVariable ["QM_Global_MedicalFacilities", []];
+        {
+            private _medHub = _x;
+            if (!isNull _medHub && !(_medHub in _processedHubs)) then {
+                private _baseKey = _medHub getVariable ["QM_Crate_OwningBase", ""];
+                if (_baseKey != "") then {
+                    if (!isNil "QM_fnc_clientRegisterMedicalActions") then { [_medHub, _baseKey] call QM_fnc_clientRegisterMedicalActions; };
+                    _processedHubs pushBack _medHub;
+                };
+            };
+        } forEach _globalMeds;
+
         uiSleep 3;
     };
 };

@@ -965,9 +965,9 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
   - **Garage Motorpool Gating (`qm_serverFunctions.sqf`):**
     - [x] In `QM_fnc_processGarageSpawn`, the server pre-validates base resources against `_costArray` before attempting deployment.
     - [x] If the base lacks required `Vehicle`, `Fuel`, or `Ammo` points, deployment is aborted with client notification (`"MECHANIC: Deployment rejected. Insufficient base resources: %1"`), eliminating the zero-point spawn exploit.
-  - **Medical Supply Integration (`qm_supplyPhysicalController.sqf`):**
-    - [x] Added `_medical` recognition. Any physical base object named `<BaseKey>_medical` (or numbered) links dynamically to the base's `Medical` ledger.
-    - [x] Wounded friendly infantry within 15 meters are treated and healed, billing the base `Medical` ledger proportionally. Drains when points hit $0$.
+  - **Medical Supply Integration (`qm_supplyPhysicalController.sqf` & `qm_clientActionCompiler.sqf`):**
+    - [x] Added `_medical` recognition. Any physical base object named `<BaseKey>_medical` (or numbered, such as the Huron Medical Container or medical pod) links dynamically to the base's `Medical` ledger.
+    - [x] Engine Container Interaction (No AOE): Rather than an automatic proximity aura, players physically walk up to the medical container and receive field treatment. The amount healed is deducted from the base's `Medical` ledger points. Drains and denies treatment when points hit $0$. (AOE healing remains reserved for custom trigger areas placed by mission makers).
   - **R4-C Pad Gating (`qm_serverFunctions.sqf` & `qm_executeR4CService.sqf`):**
     - If a base has $0$ `Fuel`, R4-C service pads cannot refuel vehicles.
     - If a base has $0$ `Ammo`, R4-C service pads cannot rearm vehicle pylons or turrets.

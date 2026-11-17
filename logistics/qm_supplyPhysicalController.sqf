@@ -55,7 +55,13 @@ private _infrastructureBlueprints = createHashMap;
                         case "Fuel": { _x setFuelCargo _startState; };
                         case "Ammo": { _x setAmmoCargo _startState; };
                         case "Repair": { _x setRepairCargo _startState; };
-                        case "Medical": { /* Medical facility mapped */ };
+                        case "Medical": {
+                            _x setVariable ["QM_Crate_OwningBase", _base, true];
+                            _x setVariable ["QM_MedicalSupplied", (_startState > 0), true];
+                            private _globalMeds = missionNamespace getVariable ["QM_Global_MedicalFacilities", []];
+                            _globalMeds pushBackUnique _x;
+                            missionNamespace setVariable ["QM_Global_MedicalFacilities", _globalMeds, true];
+                        };
                     };
                     
                     diag_log format ["[PART 3B REGISTRY INITIAL SCAN]: Mapped Hybrid Object '%1' -> Lane: %2", _objName, _supplyLane];
@@ -86,30 +92,21 @@ while {true} do {
             
             // Turn container off/on based on base funds (-1 = infinite)
             if (_currentMasterPool <= 0 && _currentMasterPool != -1) then {
-                switch (_lane) do { case "Fuel": { _obj setFuelCargo 0; }; case "Ammo": { _obj setAmmoCargo 0; }; case "Repair": { _obj setRepairCargo 0; }; };
+                switch (_lane) do { 
+                    case "Fuel": { _obj setFuelCargo 0; }; 
+                    case "Ammo": { _obj setAmmoCargo 0; }; 
+                    case "Repair": { _obj setRepairCargo 0; }; 
+                    case "Medical": { _obj setVariable ["QM_MedicalSupplied", false, true]; };
+                };
             } else {
-                switch (_lane) do { case "Fuel": { _obj setFuelCargo 1; }; case "Ammo": { _obj setAmmoCargo 1; }; case "Repair": { _obj setRepairCargo 1; }; };
-                
-                // Track infantry within 15m of active medical facility
-                if (_lane == "Medical") then {
-                    private _nearInfantry = _obj nearEntities [["Man"], 15];
-                    {
-                        if (alive _x && damage _x > 0.01) then {
-                            private _dmg = damage _x;
-                            private _healCost = ceil (_dmg * 20); // 20 Medical points for 100% heal
-                            if (_currentMasterPool == -1 || _currentMasterPool >= _healCost) then {
-                                _x setDamage 0;
-                                if (_currentMasterPool != -1) then {
-                                    _currentMasterPool = (_currentMasterPool - _healCost) max 0;
-                                    missionNamespace setVariable [_poolVar, _currentMasterPool, true];
-                                };
-                                [format ["MEDICAL FACILITY: Treated injuries (-%1 Medical points).", _healCost]] remoteExec ["systemChat", _x];
-                            };
-                        };
-                    } forEach _nearInfantry;
+                switch (_lane) do { 
+                    case "Fuel": { _obj setFuelCargo 1; }; 
+                    case "Ammo": { _obj setAmmoCargo 1; }; 
+                    case "Repair": { _obj setRepairCargo 1; }; 
+                    case "Medical": { _obj setVariable ["QM_MedicalSupplied", true, true]; };
                 };
                 
-                // Track vehicles within 20m of the active container
+                // Track vehicles within 20m of the active container (Fuel, Ammo, Repair)
                 private _nearVehs = _obj nearEntities [["LandVehicle", "Air", "Ship"], 20];
                 {
                     private _v = _x;
