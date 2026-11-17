@@ -786,6 +786,71 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
+## 6. Quality of Life (QoL) Improvements & Special Infrastructure Proposals
+
+### [ ] 6.1 Destroyer Flight Deck Naval Aviation (Ghost Hawk & Light Heli Spawns at Naval FOBs)
+- **1. Context & User Requirement:**
+  - Destroyers (e.g., `FOB_Destroyer_086`, `FOB_Destroyer_011`, utilizing `Land_Destroyer_01_base_F`) feature an aft helicopter flight deck and hangar bay.
+  - Operationally, Destroyers should deploy Medium and Light maritime helicopters that realistically fit their flight deck and hangar footprint:
+    - **Authorized Assets:** `UH-80 Ghost Hawk` (including stub-wing armed variants: `B_Heli_Transport_01_F`, `B_Heli_Transport_01_pylons_F`, CTRG variants), `MH-9 Hummingbird` (`B_Heli_Light_01_F`), and `AH-9 Pawnee` (`B_Heli_Light_01_dynamicLoadout_F`).
+    - **Strictly Prohibited Assets:** Heavy-lift helicopters such as `CH-67 Huron` (`B_Heli_Transport_03_F`, `B_Heli_Transport_03_unarmed_F`), Super/King Stallions, or large transport aircraft, which physically exceed destroyer deck dimensions and should only be operated from large amphibious assault ships (LHAs) or fleet aircraft carriers (`SB_Carrier`).
+  - **The Dilemma:** Destroyers are currently designated as **FOBs** (`FOB_Destroyer_*`). In the current framework, FOBs are strictly prevented from spawning helicopters because virtually all Western helicopters in `templates\tp_spawnableVehicles.sqf` are locked to `"SB"` (Supply Base only). The mission maker does *not* want to reclassify Destroyers as full Supply Bases (SBs), nor do they want generic land FOBs (e.g. `FOB_1`) suddenly gaining access to all helicopters.
+
+- **2. Technical Analysis of Current Restriction System:**
+  - **Restriction Level A (Template Base Tier):**
+    - In `templates\tp_spawnableVehicles.sqf`, every Western helicopter entry defines element index `# 3` as `"SB"`:
+      - `["UH-80 Ghost Hawk", ["B_Heli_Transport_01_F"], [...], "SB", "WEST", ...]`
+      - `["CH-67 Huron", ["B_Heli_Transport_03_F"], [...], "SB", "WEST", ...]`
+    - In `logistics\qm_vehicleTabs.sqf` (Lines 154–168), the UI checks:
+      - `if (_restUpper == "SB" && _isSB) then { _validBaseRestriction = true; };`
+      - Since a Destroyer has `"FOB"` in its base key, `_isSB` is `false`, filtering out all `"SB"` helicopters from the Motorpool list.
+  - **Restriction Level B (Physical Pad Sizing Index):**
+    - In `tp_spawnableVehicles.sqf`, all helicopters are currently listed with size `"OPEN"` (index `6`), rather than distinct physical size tiers (`"S"`, `"M"`, `"L"`).
+    - In `qm_vehicleTabs.sqf`, if a garage pad object has a size suffix (e.g., `_Garage_Heli_M_1` has max size `3`), vehicles requiring `"OPEN"` (`6`) will be filtered out as unable to fit (`_canFit = false`).
+
+- **3. Evaluated Architectural Approaches:**
+
+  - **Approach 1: Template-Level Base Keyword Restriction Array (Recommended for Simplicity)**
+    - *How it works:* In `templates\tp_spawnableVehicles.sqf`, change the restriction column for Ghost Hawks, Hummingbirds, and Pawnees from `"SB"` to an Array:
+      - `["SB", "DESTROYER"]`
+    - *UI Logic in `qm_vehicleTabs.sqf`:* Lines 156–161 already support Array restrictions (`_restrictionType isEqualType []`). Adding a check:
+      ```sqf
+      if ("DESTROYER" in _restList && ("DESTROYER" in _bkUpper)) then { _validBaseRestriction = true; };
+      ```
+    - *Pros:*
+      - 100% clean and transparent. No hardcoded classnames in functional scripts.
+      - Hurons, Blackfoots, and heavy lift remain `"SB"`, completely blocking them from Destroyers.
+      - Regular land FOBs (`FOB_1`, `FOB_Alpha`) remain restricted to ground vehicles.
+      - Preserves Destroyers as FOBs across all economy, ledger, and respawn systems.
+
+  - **Approach 2: Physical Pad Sizing Matrix (`_size` column & pad naming)**
+    - *How it works:* Categorize all helicopters in `tp_spawnableVehicles.sqf` by physical footprint:
+      - Small (`"S"` / index 2): `Hummingbird`, `Pawnee`
+      - Medium (`"M"` / index 3): `Ghost Hawk`, `Blackfoot`
+      - Large (`"L"` / index 4): `Huron`, `Super Stallion`
+    - Set their base restriction to `"ALL"` (or `["SB", "FOB"]`), but enforce physical sizing against pad naming in Eden Editor:
+      - Destroyer flight deck pads named `<Base>_Garage_Heli_M_1` (or `_AIR_M_1`).
+      - Only `"S"` and `"M"` helicopters can spawn; `"L"` Hurons are rejected by the pad size checker.
+    - *Pros:* Physically realistic; pad dimensions govern what fits.
+    - *Cons:* If any land FOB accidentally places an un-suffixed pad (which defaults to `"OPEN"`), it would allow all helicopters.
+
+  - **Approach 3: Base Capability / Subtype Profile System**
+    - *How it works:* Introduce a capability metadata layer for bases (e.g., `missionNamespace setVariable ["QM_BaseCapabilities_FOB_Destroyer_086", ["NAVAL_AVIATION_LIGHT", "BOAT"]]`).
+    - In `qm_vehicleTabs.sqf`, if a base has `"NAVAL_AVIATION_LIGHT"`, it grants an exception for rotary-wing aircraft categorized as light/medium transport.
+    - *Pros:* Highly extensible for future special bases (e.g. `FOB_Airfield`, `FOB_Seaport`, `FOB_LHA`).
+    - *Cons:* Requires defining capability lists for each base type.
+
+  - **Approach 4: Hybrid Solution (Template Tagging + Physical Sizing Validation - Recommended)**
+    - Combines Approach 1 and Approach 2:
+      1. Tag authorized naval helicopters with `["SB", "DESTROYER"]` in `tp_spawnableVehicles.sqf`.
+      2. Set their physical sizes accurately (`"S"` for Hummingbird/Pawnee, `"M"` for Ghost Hawk, `"L"` for Huron).
+      3. Update `qm_vehicleTabs.sqf` to recognize `"DESTROYER"` in `_restList` whenever `"DESTROYER"` is in `_baseKey`.
+    - Guarantees complete safety: a Destroyer will only show Ghost Hawks/Pawnees/Hummingbirds, will reject Hurons, and land FOBs will remain unaffected.
+
+- **4. Status:** **Proposed / Documented for Alignment** (Ready for implementation upon user approval of preferred approach).
+
+---
+
 **Ongoing Development Tracking**
 
 Maintain this checklist as part of the V8 development process. These goals are not necessarily sequential and may be addressed independently as opportunities arise during debugging, refactoring, and feature development.
