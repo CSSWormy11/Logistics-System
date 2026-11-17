@@ -81,6 +81,16 @@ QM_fnc_clientRegisterBarracksActions = {
             [missionNamespace, ["%ALL"], false, false] call BIS_fnc_removeVirtualBackpackCargo;
 
             // ------------------------------------------------------------------------
+            // 1B. SUPPLY DEPLETION GATING
+            // If base Cargo and Ammo pools are completely drained (0), lock the armory.
+            // ------------------------------------------------------------------------
+            private _cargoPts = missionNamespace getVariable [format ["LogiScore_%1_Cargo", _bKey], 0];
+            private _ammoPts  = missionNamespace getVariable [format ["LogiScore_%1_Ammo", _bKey], 0];
+            if (_cargoPts != -1 && _ammoPts != -1 && { _cargoPts <= 0 && _ammoPts <= 0 }) exitWith {
+                systemChat format ["LOGISTICS ALERT: %1 armory depleted (0 Cargo / 0 Ammo). Deliver supply crates to restore weapons and gear.", _bKey];
+            };
+
+            // ------------------------------------------------------------------------
             // 2. ESTABLISH DYNAMIC FILTERS
             // ------------------------------------------------------------------------
             // Fetch the caller's specific side and terrain to evaluate the gear template

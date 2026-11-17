@@ -461,6 +461,25 @@ QM_fnc_processGarageSpawn = {
     _sortedLocations sort true;
     _locations = _sortedLocations apply { _x select 1 }; 
 
+    // --- SUPPLY DEPLETION PRE-VALIDATION GATING ---
+    private _canAfford = true;
+    private _missingPool = "";
+    {
+        _x params ["_poolName", "_poolCost"];
+        if (_poolCost > 0 && _poolCost < 1000000) then {
+            private _poolVar = format ["LogiScore_%1_%2", _baseKey, _poolName];
+            private _currentPool = missionNamespace getVariable [_poolVar, 0];
+            if (_currentPool != -1 && { _currentPool < _poolCost }) exitWith {
+                _canAfford = false;
+                _missingPool = format ["%1 (Required: %2, Available: %3)", _poolName, _poolCost, _currentPool];
+            };
+        };
+    } forEach _effectiveCostArray;
+
+    if (!_canAfford) exitWith {
+        [format ["MECHANIC: Deployment rejected. Insufficient base resources: %1.", _missingPool]] remoteExec ["systemChat", _clientPlayer];
+    };
+
     {
         _x params ["_poolName", "_poolCost"];
         if (_poolCost > 0 && _poolCost < 1000000) then {

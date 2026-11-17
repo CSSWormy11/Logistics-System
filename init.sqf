@@ -67,6 +67,33 @@ fn_G_getTerrain = {
     _biome
 };
 
+// LOGISTICS BASE TYPE & ROLE RESOLVERS
+// Purpose: Dynamically resolves base types (e.g. "SB", "CVN", "DDG", "FOB", "CON")
+//          and their operational logistics role ("STRATEGIC", "TACTICAL", "MSR")
+//          from logisticsBaseDefaults without hardcoding.
+logi_fnc_getBaseType = {
+    params ["_baseKey"];
+    private _parts = (toUpper _baseKey) splitString "_";
+    if (count _parts == 0) exitWith { "FOB" };
+    private _prefix = _parts select 0;
+    if (_prefix == "CONTESTED") exitWith { "CON" };
+    _prefix
+};
+
+logi_fnc_getBaseRole = {
+    params ["_baseKey"];
+    private _bType = [_baseKey] call logi_fnc_getBaseType;
+    private _typeIdx = logisticsBaseDefaults findIf { toUpper (_x select 0) == _bType };
+    if (_typeIdx == -1) exitWith { "TACTICAL" };
+    private _props = (logisticsBaseDefaults select _typeIdx) select 1;
+    private _roleIdx = _props findIf { (_x select 0) == "Role" };
+    if (_roleIdx != -1) then { (_props select _roleIdx) select 1 } else {
+        if (_bType in ["MSR", "CS"]) exitWith { "MSR" };
+        if (_bType in ["SB", "CVN", "LHA"]) exitWith { "STRATEGIC" };
+        "TACTICAL"
+    }
+};
+
 // QM_fnc_getLocationsByPrefix
 // Purpose: Scans strictly for mission-maker placed 3D objects (by variable name)
 //          matching <BaseKey>_<typeSuffix> (un-numbered or numbered 1..100).
@@ -122,12 +149,17 @@ if (isServer) then {
 
     // -----------------------------------------------------------------------
     // DEFINE BASES FIRST
-    // Discover supply bases on the map
+    // Discover supply bases dynamically from tp_baseDefaults.sqf
     // -----------------------------------------------------------------------
+    private _knownBaseTypes = logisticsBaseDefaults apply { toUpper (_x select 0) };
+    if !("CONTESTED" in _knownBaseTypes) then { _knownBaseTypes pushBack "CONTESTED"; };
+
     logisticsBases = allMapMarkers select {
-        private _m = toLowerANSI _x;
-        ((_m find "fob" >= 0) || (_m find "sb" >= 0) || (_m find "msr" >= 0)) &&
-        { ["spawn", "garage", "terminal", "arsenal", "service", "pickup", "dropoff"] findIf { _m find _x >= 0 } == -1 }
+        private _parts = (toUpper _x) splitString "_";
+        if (count _parts == 0) exitWith { false };
+        private _prefix = _parts select 0;
+        (_prefix in _knownBaseTypes) &&
+        { ["SPAWN", "GARAGE", "TERMINAL", "ARSENAL", "SERVICE", "PICKUP", "DROPOFF", "MEDICAL"] findIf { (toUpper _x) find _x >= 0 } == -1 }
     };
     
     // Ensure "MSR" base key is always present in logisticsBases for infinite supply pool accounting
@@ -137,30 +169,31 @@ if (isServer) then {
     publicVariable "logisticsBases"; 
 
     // --- Initialize Base Ledger Economy ---
-    private _sbCount = { (["SB", _x] call BIS_fnc_inString) } count logisticsBases;
+    private _sbCount = { ([_x] call logi_fnc_getBaseRole) == "STRATEGIC" } count logisticsBases;
     private _sbMultiplier = if (_sbCount <= 1) then { 2 } else { 1 };
 
     {
         private _baseName = _x; 
         if (getMarkerColor _baseName != "") then {
+            _baseName setMarkerDir 0;   // Section 6.3: Normalize master base marker orientation to True North
             _baseName setMarkerAlpha 1; // Master base marker remains visible on map
         };
         
-        private _baseType = "FOB";
-        if (["MSR", _baseName] call BIS_fnc_inString || { "MSR" in (toUpper _baseName) }) then { _baseType = "MSR"; };
-        if (["SB", _baseName] call BIS_fnc_inString || { "SB" in (toUpper _baseName) }) then { _baseType = "SB"; };
+        private _baseType = [_baseName] call logi_fnc_getBaseType;
 
-        // Read directly from logisticsBaseDefaults.sqf
-        private _typeIndex = logisticsBaseDefaults findIf {_x # 0 == _baseType};
+        // Read directly from tp_baseDefaults.sqf
+        private _typeIndex = logisticsBaseDefaults findIf { toUpper (_x select 0) == _baseType };
         if (_typeIndex != -1) then {
             { 
-                private _cat = _x # 0;
-                private _val = _x # 1;
-                if (_val != -1 && _baseType == "SB") then {
-                    _val = _val * _sbMultiplier;
+                private _cat = _x select 0;
+                private _val = _x select 1;
+                if (_cat != "Role") then {
+                    if (_val != -1 && (_baseType in ["SB", "CVN", "LHA"])) then {
+                        _val = _val * _sbMultiplier;
+                    };
+                    missionNamespace setVariable [format ["LogiScore_%1_%2", _baseName, _cat], _val, true]; 
                 };
-                missionNamespace setVariable [format ["LogiScore_%1_%2", _baseName, _cat], _val, true]; 
-            } forEach ((logisticsBaseDefaults # _typeIndex) # 1);
+            } forEach ((logisticsBaseDefaults select _typeIndex) select 1);
         };
     } forEach logisticsBases;
 

@@ -38,6 +38,7 @@ private _infrastructureBlueprints = createHashMap;
                 if ("_fuel" in _objLower) then { _supplyLane = "Fuel"; };
                 if ("_ammo" in _objLower) then { _supplyLane = "Ammo"; };
                 if ("_repair" in _objLower) then { _supplyLane = "Repair"; };
+                if ("_medical" in _objLower) then { _supplyLane = "Medical"; };
                 
                 if (_supplyLane != "") then {
                     _infrastructureBlueprints set [_objName, [_x, _supplyLane, _base]];
@@ -54,6 +55,7 @@ private _infrastructureBlueprints = createHashMap;
                         case "Fuel": { _x setFuelCargo _startState; };
                         case "Ammo": { _x setAmmoCargo _startState; };
                         case "Repair": { _x setRepairCargo _startState; };
+                        case "Medical": { /* Medical facility mapped */ };
                     };
                     
                     diag_log format ["[PART 3B REGISTRY INITIAL SCAN]: Mapped Hybrid Object '%1' -> Lane: %2", _objName, _supplyLane];
@@ -87,6 +89,25 @@ while {true} do {
                 switch (_lane) do { case "Fuel": { _obj setFuelCargo 0; }; case "Ammo": { _obj setAmmoCargo 0; }; case "Repair": { _obj setRepairCargo 0; }; };
             } else {
                 switch (_lane) do { case "Fuel": { _obj setFuelCargo 1; }; case "Ammo": { _obj setAmmoCargo 1; }; case "Repair": { _obj setRepairCargo 1; }; };
+                
+                // Track infantry within 15m of active medical facility
+                if (_lane == "Medical") then {
+                    private _nearInfantry = _obj nearEntities [["Man"], 15];
+                    {
+                        if (alive _x && damage _x > 0.01) then {
+                            private _dmg = damage _x;
+                            private _healCost = ceil (_dmg * 20); // 20 Medical points for 100% heal
+                            if (_currentMasterPool == -1 || _currentMasterPool >= _healCost) then {
+                                _x setDamage 0;
+                                if (_currentMasterPool != -1) then {
+                                    _currentMasterPool = (_currentMasterPool - _healCost) max 0;
+                                    missionNamespace setVariable [_poolVar, _currentMasterPool, true];
+                                };
+                                [format ["MEDICAL FACILITY: Treated injuries (-%1 Medical points).", _healCost]] remoteExec ["systemChat", _x];
+                            };
+                        };
+                    } forEach _nearInfantry;
+                };
                 
                 // Track vehicles within 20m of the active container
                 private _nearVehs = _obj nearEntities [["LandVehicle", "Air", "Ship"], 20];

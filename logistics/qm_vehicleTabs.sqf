@@ -22,9 +22,12 @@ _display setVariable ["QM_Vehicle_Active_Tab", _tabIndex];
 private _baseKey = player getVariable ["QM_Current_Terminal_Base", ""];
 private _bkUpper = toUpper _baseKey;
 
-// Base Type Booleans (Strict string matching via native find)
-private _isSB = (_bkUpper find "SB" >= 0);
-private _isFOB = (_bkUpper find "FOB" >= 0);
+// Base Type & Operational Role Evaluation
+private _baseType = if (!isNil "logi_fnc_getBaseType") then { [_baseKey] call logi_fnc_getBaseType } else { "FOB" };
+private _baseRole = if (!isNil "logi_fnc_getBaseRole") then { [_baseKey] call logi_fnc_getBaseRole } else { "TACTICAL" };
+
+private _isSB = (_baseRole == "STRATEGIC");
+private _isFOB = (_baseRole == "TACTICAL");
 
 private _playerFaction = toUpper (str playerSide);
 private _currentTerrain = toUpper (call fn_G_getTerrain);
@@ -151,20 +154,20 @@ private _allGarages = [];
         private _terrainUpper = _terrainArray apply { toUpper _x };
         private _validTerrain = ("ALL" in _terrainUpper || _currentTerrain in _terrainUpper);
         
-        // Base Restriction ("ALL"/"BOTH" = SB or FOB, "SB" = SB only, "FOB" = FOB only, or Array of allowed tiers/base names)
+        // Base Restriction ("ALL"/"BOTH" = Strategic or Tactical, "SB" = Strategic, "FOB" = Tactical, or Specific Base Type / Base Name)
         private _validBaseRestriction = false;
         if (_restrictionType isEqualType []) then {
             private _restList = _restrictionType apply { toUpper _x };
             if ("ALL" in _restList || "BOTH" in _restList) then { _validBaseRestriction = (_isSB || _isFOB); };
             if ("SB" in _restList && _isSB) then { _validBaseRestriction = true; };
             if ("FOB" in _restList && _isFOB) then { _validBaseRestriction = true; };
-            if (_bkUpper in _restList) then { _validBaseRestriction = true; };
+            if (_baseType in _restList || _bkUpper in _restList) then { _validBaseRestriction = true; };
         } else {
             private _restUpper = toUpper _restrictionType;
             if (_restUpper in ["ALL", "BOTH"]) then { _validBaseRestriction = (_isSB || _isFOB); };
             if (_restUpper == "SB" && _isSB) then { _validBaseRestriction = true; };
             if (_restUpper == "FOB" && _isFOB) then { _validBaseRestriction = true; };
-            if (_restUpper == _bkUpper) then { _validBaseRestriction = true; };
+            if (_restUpper == _baseType || _restUpper == _bkUpper) then { _validBaseRestriction = true; };
         };
         
         // --- Infrastructure Fit Check ---
