@@ -753,6 +753,39 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
+### [x] 5.8 Dropoff Zone Delivered Vehicle Auto-Despawn & Selective Disembark Salvage
+- **1. Initial Issue Summary:**
+  - When vehicles were delivered to a base Dropoff Zone via helicopter slingload or transport vehicle cargo bay (Vehicle-in-Vehicle / ViV), the dropoff zone engine ignored them because drivable vehicles (`LandVehicle`, `Air`, `Ship`) were globally excluded from the cargo offload scanner (`!_isDrivableVehicle`).
+  - As a result, delivered vehicles sat permanently on the tarmac without despawning or crediting points, forcing solo pilots and drivers to land, exit their vehicles, walk across the tarmac, manually salvage each delivered vehicle (risking accidentally recycling their own transport), and embark again every run.
+  - Furthermore, disembark salvage prompts could trigger on any disembark rather than being strictly reserved for vehicles driven by players.
+- **2. Root Cause Analysis:**
+  - In `logistics\logi_cargoDelivery.sqf`, line 94 checked `if (!_isDrivableVehicle && ...)` before running point evaluation and `deleteVehicle`. All drivable vehicles were skipped to prevent deleting active player transport trucks/helis.
+  - In `logistics\qm_serverFunctions.sqf`, `QM_fnc_serverVehicleSale` required `!isNull _playerUnit` (`if (_baseKey == "" || isNull _vehicle || isNull _playerUnit) exitWith {}`), causing automated/remote salvage calls without an on-foot player to fail silently.
+  - In `logistics\qm_clientFunctions.sqf`, `GetOutMan` fired without checking if the vehicle was delivered via slingload/ViV, and didn't re-initialize on player respawn.
+- **3. Applied Fixes & Architectural Improvements:**
+  - **Automated Delivered Vehicle Processing (`logi_cargoDelivery.sqf`):**
+    - Scans for delivered vehicles (`_isDeliveredVehicle`) satisfying: inside dropoff zone, not base infrastructure, no human crew, not currently attached as ViV or slingload (`isNull (ropeAttachedTo _object)`), resting on ground (`abs (speed _object) < 3`, `getPosATL # 2 < 2.5`), not declined by player, and tagged via slingload (`QM_WasSlingLoaded`), ViV cargo (`QM_UnloadedFromViV`), logistics cargo (`isLogisticsCargo`), or un-driven.
+    - Proactively tags active helicopter slingloads hovering in or above the dropoff zone.
+    - Calls `QM_fnc_serverVehicleSale` to credit the base ledger, unregister vehicle asset caps, delete the vehicle, and broadcast delivery receipts (`[LOGISTICS RECEIPT]: %1 recycled...`) to the delivery pilot and server chat.
+  - **Slingload & ViV Lifecycle Tracking (`logi_standaloneLoading.sqf` & `qm_manifestUnloadExecute.sqf`):**
+    - Added `RopeAttach` and `RopeBreak` event handlers to track slingloaded assets (`QM_WasSlingLoaded`, `QM_DroppedFromSling`, `QM_SlingCarrier`).
+    - Added ViV unload tracking in `CargoUnloaded` and `qm_manifestUnloadExecute.sqf` (`QM_UnloadedFromViV`, `QM_CarrierVehicle`).
+    - Added pre-tagging in `logi_spawnLoadSupply.sqf` for all logistics-spawned vehicles and pods.
+  - **Strictly Scoped Disembark Salvage Prompt (`qm_clientFunctions.sqf`):**
+    - Added `GetInMan` to record `QM_DrivenByPlayer = true` when entering as driver.
+    - In `GetOutMan`, explicitly exits immediately if the vehicle was delivered via slingload, ViV, or logistics cargo, or was not driven by players.
+    - Prompts only the last player disembarking a vehicle they were actively driving into the dropoff zone. If declined, sets `QM_PlayerDeclinedSalvage = true` so the vehicle remains safely parked.
+    - Preserves the direct look-at `[SALVAGE CONTROL] Recycle Vehicle to Base` context action on `cursorObject` for all players.
+    - Attached a `Respawn` event handler hook so salvage listeners persist across all player respawns.
+  - **Universal Server Vehicle Sale (`qm_serverFunctions.sqf`):**
+    - Allowed `_playerUnit` to be `objNull` for automated deliveries, falling back to global chat receipts.
+    - Added `supplyScores` lookup fallback so all logistics and template vehicles receive accurate point credits.
+- **4. Verification:**
+  - Bracket balance verified across all 40 `.sqf` and `.hpp` files (`Curly: 0, Round: 0, Square: 0`).
+  - `mission.sqm` remained completely untouched.
+
+---
+
 **Ongoing Development Tracking**
 
 Maintain this checklist as part of the V8 development process. These goals are not necessarily sequential and may be addressed independently as opportunities arise during debugging, refactoring, and feature development.

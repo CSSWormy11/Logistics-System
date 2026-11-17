@@ -411,15 +411,27 @@ QM_fnc_getVehicleDropoffBase = {
 
 // =========================================================================
 // DROPOFF ZONE VEHICLE SALVAGE CONTROLLER
-// Automatically prompts players upon disembarking an unoccupied vehicle
+// Automatically prompts players upon disembarking a vehicle they were driving
 // in a base dropoff zone to confirm recycling/salvage for resources.
-// Also registers a context action on the player to salvage unoccupied
+// Delivered vehicles (sling-loaded, ViV unloaded, or logistics cargo) bypass
+// prompts and auto-despawn directly to eliminate pilot interruption.
+// Also registers a context look-at action on the player to salvage unoccupied
 // vehicles parked inside any base dropoff zone.
 // =========================================================================
 QM_fnc_initDropoffSalvageListener = {
     if (!hasInterface) exitWith {};
 
-    // 1. Disembark Watchdog: Prompts the last player to exit an unoccupied vehicle in a dropoff pad
+    // 1. Driver Detection: Track when a player enters a vehicle as driver
+    player addEventHandler ["GetInMan", {
+        params ["_unit", "_role", "_vehicle", "_turret"];
+        if (isNull _vehicle || !alive _vehicle) exitWith {};
+        if (_role == "driver") then {
+            _vehicle setVariable ["QM_DrivenByPlayer", true, true];
+            _vehicle setVariable ["QM_LastDriver", _unit, true];
+        };
+    }];
+
+    // 2. Disembark Watchdog: Prompts the last player exiting a vehicle they were DRIVING in a dropoff pad
     player addEventHandler ["GetOutMan", {
         params ["_unit", "_role", "_vehicle", "_turret"];
         if (isNull _vehicle || !alive _vehicle) exitWith {};
@@ -427,6 +439,18 @@ QM_fnc_initDropoffSalvageListener = {
 
         private _baseKey = [_vehicle] call QM_fnc_getVehicleDropoffBase;
         if (_baseKey == "") exitWith {};
+
+        // Delivered vehicles (slingload, ViV cargo, logistics spawns) never show disembark prompts
+        if (
+            _vehicle getVariable ["QM_WasSlingLoaded", false] ||
+            _vehicle getVariable ["QM_DroppedFromSling", false] ||
+            _vehicle getVariable ["QM_UnloadedFromViV", false] ||
+            _vehicle getVariable ["isLogisticsCargo", false] ||
+            _vehicle getVariable ["QM_SystemLoaded", false]
+        ) exitWith {};
+
+        // The ONLY time the salvage option pops up is when it was a vehicle driven by players
+        if !(_vehicle getVariable ["QM_DrivenByPlayer", false]) exitWith {};
 
         [_vehicle, _baseKey, _unit] spawn {
             params ["_veh", "_bKey", "_playerUnit"];
@@ -455,13 +479,14 @@ QM_fnc_initDropoffSalvageListener = {
                 [_bKey, _veh, _playerUnit] remoteExec ["QM_fnc_serverVehicleSale", 2];
             } else {
                 systemChat format ["[SALVAGE CONTROL]: %1 kept active. Parked in %2.", _displayName, _cleanBase];
+                _veh setVariable ["QM_PlayerDeclinedSalvage", true, true];
                 sleep 8;
                 _veh setVariable ["QM_SalvagePromptActive", false];
             };
         };
     }];
 
-    // 2. Direct Look-At Action on Player: For ad-hoc salvage of unoccupied vehicles in any dropoff zone
+    // 3. Direct Look-At Action on Player: For ad-hoc salvage of unoccupied vehicles in any dropoff zone
     player addAction [
         "<t color='#00FF88' font='RobotoCondensedBold'>[SALVAGE CONTROL] Recycle Vehicle to Base</t>",
         {
@@ -498,9 +523,12 @@ QM_fnc_initDropoffSalvageListener = {
     ];
 };
 
-// Auto-initialize salvage listener
+// Auto-initialize salvage listener with persistent respawn support
 [] spawn {
     waitUntil { !isNull player && player == player };
     waitUntil { !isNil "logisticsBases" };
     call QM_fnc_initDropoffSalvageListener;
+    player addEventHandler ["Respawn", {
+        call QM_fnc_initDropoffSalvageListener;
+    }];
 };

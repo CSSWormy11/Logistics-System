@@ -48,28 +48,37 @@ QM_fnc_normalizePoolName = {
 
 QM_fnc_serverVehicleSale = {
     params [["_baseKey", "", [""]], ["_vehicle", objNull, [objNull]], ["_playerUnit", objNull, [objNull]]];
-    if (_baseKey == "" || isNull _vehicle || isNull _playerUnit) exitWith {};
+    if (_baseKey == "" || isNull _vehicle) exitWith {};
 
     private _class = typeOf _vehicle;
+    private _displayName = getText (configFile >> "CfgVehicles" >> _class >> "displayName");
+    if (_displayName == "") then { _displayName = _class; };
+    private _cleanBase = _baseKey splitString "_" joinString " ";
     private _costArray = _vehicle getVariable ["QM_Spawn_CostArray", []];
 
-    // If vehicle lacks runtime spawn cost tracking, fall back to template costs (excluding Troops/Cargo for empty drivable vehicles)
+    // If vehicle lacks runtime spawn cost tracking, fall back to supplyScores or template costs (excluding Troops/Cargo for empty drivable vehicles)
     if (count _costArray == 0) then {
-        private _blueprintIdx = G_Procureable_Vehicles findIf { ((_x select 1) select 0) == _class };
-        if (_blueprintIdx != -1) then {
-            private _rawCost = (G_Procureable_Vehicles select _blueprintIdx) select 2;
-            private _isSupply = !(_class isKindOf "Ship" || _class isKindOf "Plane" || _class isKindOf "Helicopter" || _class isKindOf "LandVehicle" || _class isKindOf "Air");
-            private _isDrone = getNumber(configFile >> "CfgVehicles" >> _class >> "isUav") == 1;
+        private _lowerClass = toLowerANSI _class;
+        private _scoreIndex = supplyScores findIf { toLowerANSI (_x # 0) == _lowerClass };
+        if (_scoreIndex != -1) then {
+            _costArray = (supplyScores # _scoreIndex) # 1;
+        } else {
+            private _blueprintIdx = G_Procureable_Vehicles findIf { ((_x select 1) select 0) == _class };
+            if (_blueprintIdx != -1) then {
+                private _rawCost = (G_Procureable_Vehicles select _blueprintIdx) select 2;
+                private _isSupply = !(_class isKindOf "Ship" || _class isKindOf "Plane" || _class isKindOf "Helicopter" || _class isKindOf "LandVehicle" || _class isKindOf "Air");
+                private _isDrone = getNumber(configFile >> "CfgVehicles" >> _class >> "isUav") == 1;
 
-            {
-                _x params ["_rawPoolName", "_poolCost"];
-                private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
-                private _eff = _poolCost;
-                if (!_isSupply && !_isDrone) then {
-                    if (_poolName in ["Troops", "Cargo"]) then { _eff = 0; };
-                };
-                if (_eff > 0 && _eff < 1000000) then { _costArray pushBack [_poolName, _eff]; };
-            } forEach _rawCost;
+                {
+                    _x params ["_rawPoolName", "_poolCost"];
+                    private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
+                    private _eff = _poolCost;
+                    if (!_isSupply && !_isDrone) then {
+                        if (_poolName in ["Troops", "Cargo"]) then { _eff = 0; };
+                    };
+                    if (_eff > 0 && _eff < 1000000) then { _costArray pushBack [_poolName, _eff]; };
+                } forEach _rawCost;
+            };
         };
     };
 
@@ -85,12 +94,23 @@ QM_fnc_serverVehicleSale = {
                 };
             };
         } forEach _costArray;
-        [format ["SALVAGEMAN: Asset recycled. 100%% of resources returned to %1 ledger.", _baseKey]] remoteExec ["systemChat", _playerUnit];
+        
+        private _receiptMsg = format ["LOGISTICS RECEIPT: %1 recycled. 100%% of resources returned to %2 ledger.", _displayName, _cleanBase];
+        if (!isNull _playerUnit) then {
+            [_receiptMsg] remoteExec ["systemChat", _playerUnit];
+        } else {
+            [_receiptMsg] remoteExec ["systemChat", 0];
+        };
     } else {
         private _vehVar = format ["LogiScore_%1_Vehicle", _baseKey];
         private _currentPool = missionNamespace getVariable [_vehVar, 0];
         if (_currentPool != -1) then { missionNamespace setVariable [_vehVar, _currentPool + 2000, true]; };
-        ["SALVAGEMAN: Unregistered vehicle recycled. 2000 Vehicle Material credited."] remoteExec ["systemChat", _playerUnit];
+        private _receiptMsg = format ["LOGISTICS RECEIPT: %1 recycled into %2 stores (2000 Vehicle Material credited).", _displayName, _cleanBase];
+        if (!isNull _playerUnit) then {
+            [_receiptMsg] remoteExec ["systemChat", _playerUnit];
+        } else {
+            [_receiptMsg] remoteExec ["systemChat", 0];
+        };
     };
 
     if (!isNil "QM_CAP_fnc_unregisterVehicleAsset") then { [_vehicle] call QM_CAP_fnc_unregisterVehicleAsset; };

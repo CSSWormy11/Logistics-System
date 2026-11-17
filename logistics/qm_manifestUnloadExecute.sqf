@@ -53,6 +53,11 @@ if (!_unloaded) then {
 };
 
 if (_unloaded) then {
+    _cargoObj setVariable ["QM_UnloadedFromViV", true, true];
+    _cargoObj setVariable ["QM_CarrierVehicle", _veh, true];
+    _cargoObj setVariable ["QM_DrivenByPlayer", false, true];
+    _cargoObj setVariable ["QM_ViVUnloadTime", diag_tickTime, true];
+
     // Update vehicle loading status
     private _remainingCargo = getVehicleCargo _veh;
     if (count _remainingCargo == 0) then {

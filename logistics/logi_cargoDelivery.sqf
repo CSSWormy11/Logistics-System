@@ -9,6 +9,7 @@
 // ============================================================================
 
 params ["_triggerArea", "_baseKey"];
+if (!isServer) exitWith {};
 
 // Strip any trailing "_dropoff" (and optional index) if passed a raw trigger name like "FOB1_dropoff" or "SB_Carrier_dropoff_1"
 private _dropoffIdx = (toLowerANSI _baseKey) find "_dropoff";
@@ -62,13 +63,23 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
         };
     };
 
-    // --- IMMEDIATE CRATE DETECTION, CREDITING & ANTI-COLLISION DELETION ---
-    // Scans the tarmac every tick and instantly deletes/credits each unloaded crate,
-    // completely eliminating Arma physics crate-on-crate collisions.
+    // --- IMMEDIATE CRATE & DELIVERED VEHICLE DETECTION, CREDITING & ANTI-COLLISION DELETION ---
+    // Scans the tarmac every tick and instantly deletes/credits each unloaded crate or delivered vehicle,
+    // completely eliminating Arma physics crate-on-crate collisions and vehicle pile-ups at dropoff pads.
     private _triggerPos = getPos _triggerArea;
     private _tArea = triggerArea _triggerArea;
     private _triggerScale = (((_tArea # 0) max (_tArea # 1)) max 15) + 5; 
     private _nearbyObjects = nearestObjects [_triggerPos, ["Strategic", "ReammoBox_F", "Cargo_base_F", "AllVehicles", "ThingX", "Air"], _triggerScale];
+
+    // Proactively tag any active slingload on an aircraft/carrier in or above the dropoff zone
+    {
+        private _sling = getSlingLoad _x;
+        if (!isNull _sling) then {
+            _sling setVariable ["QM_WasSlingLoaded", true, true];
+            _sling setVariable ["QM_SlingCarrier", _x, true];
+            _sling setVariable ["QM_DrivenByPlayer", false, true];
+        };
+    } forEach (vehicles select { _x inArea _triggerArea && (_x isKindOf "Air" || _x isKindOf "LandVehicle") });
 
     private _activeCratesFound = 0;
 
@@ -77,7 +88,7 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
         private _type = typeOf _object;
         private _isWithinUnloadZone = (_object inArea _triggerArea) || { (_object distance2D _triggerPos) <= 15 };
         
-        // STRICT SAFETY CHECK 1: Drivable vehicles (LandVehicle, Air, Ship) are NEVER deleted by the cargo offload scanner!
+        // STRICT SAFETY CHECK 1: Drivable vehicles vs freight crates
         private _isDrivableVehicle = (_object isKindOf "LandVehicle" || _object isKindOf "Air" || _object isKindOf "Ship");
 
         // STRICT SAFETY CHECK 2: Never delete base infrastructure, Arsenals, Terminals, or player assets
@@ -117,6 +128,48 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
                     _anyDeliveryRecorded = true;
                     deleteVehicle _object;
                 };
+            };
+        };
+
+        // --- AUTOMATIC DELIVERED VEHICLE PROCESSING (SLINGLOAD, VIV, OR LOGISTICS DELIVERY) ---
+        // Despawns delivered vehicles and credits base points automatically without requiring pilot disembark
+        if (_isDrivableVehicle && _isWithinUnloadZone && !_isBaseInfrastructure) then {
+            private _hasPlayerCrew = ({ isPlayer _x } count (crew _object)) > 0;
+            private _isSlingAttached = !isNull (ropeAttachedTo _object) || { ({ getSlingLoad _x == _object } count vehicles) > 0 };
+            private _isAttachedCargo = !isNull (attachedTo _object);
+            private _isPlayerOperating = (vehicle player == _object);
+            private _declinedSalvage = _object getVariable ["QM_PlayerDeclinedSalvage", false];
+            private _recentlySpawned = (diag_tickTime - (_object getVariable ["QM_Spawn_Time", 0])) < 10;
+            private _speedSafe = abs (speed _object) < 3;
+            private _heightSafe = (getPosATL _object # 2) < 2.5;
+
+            private _isDeliveredVehicle = (
+                !_hasPlayerCrew &&
+                !_isSlingAttached &&
+                !_isAttachedCargo &&
+                !_isPlayerOperating &&
+                !_declinedSalvage &&
+                !_recentlySpawned &&
+                _speedSafe &&
+                _heightSafe &&
+                (
+                    (_object getVariable ["QM_WasSlingLoaded", false]) ||
+                    (_object getVariable ["QM_DroppedFromSling", false]) ||
+                    (_object getVariable ["QM_UnloadedFromViV", false]) ||
+                    (_object getVariable ["isLogisticsCargo", false]) ||
+                    (_object getVariable ["QM_SystemLoaded", false]) ||
+                    (!(_object getVariable ["QM_DrivenByPlayer", false]))
+                )
+            );
+
+            if (_isDeliveredVehicle) then {
+                _activeCratesFound = _activeCratesFound + 1;
+                _anyDeliveryRecorded = true;
+
+                private _carrier = _object getVariable ["QM_SlingCarrier", _object getVariable ["QM_CarrierVehicle", objNull]];
+                private _pilotUnit = if (!isNull _carrier) then { driver _carrier } else { objNull };
+
+                [_baseKey, _object, _pilotUnit] call QM_fnc_serverVehicleSale;
             };
         };
     } forEach _nearbyObjects;

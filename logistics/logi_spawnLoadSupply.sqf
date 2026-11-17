@@ -169,6 +169,8 @@ if (_isPlane && !_isHelicopter && _heightAboveSurface > 30) exitWith {
         private _cargoObj = _x createVehicle [0,0,0]; 
         _cargoObj setVariable ["isLogisticsCargo", true, true];
         _cargoObj setVariable ["QM_SystemLoaded", true, true];
+        _cargoObj setVariable ["QM_CarrierVehicle", _vehicle, true];
+        _cargoObj setVariable ["QM_DrivenByPlayer", false, true];
         _vehicle setVariable ["QM_SystemLoading", true];
         _vehicle setVehicleCargo _cargoObj; 
         _vehicle setVariable ["QM_SystemLoading", false];
@@ -197,6 +199,9 @@ if (_isHelicopter) exitWith {
         private _pod = createVehicle [_x, [0, 0, 500], [], 0, "CAN_COLLIDE"];
         _pod setVariable ["isLogisticsCargo", true, true];
         _pod setVariable ["QM_SystemLoaded", true, true];
+        _pod setVariable ["QM_WasSlingLoaded", true, true];
+        _pod setVariable ["QM_SlingCarrier", _vehicle, true];
+        _pod setVariable ["QM_DrivenByPlayer", false, true];
         private _rayStart = [_basePadPos2D # 0, _basePadPos2D # 1, (_vehPosASL # 2) + 50];
         private _rayEnd   = [_basePadPos2D # 0, _basePadPos2D # 1, -20];
         private _podHits  = lineIntersectsSurfaces [_rayStart, _rayEnd, _pod, _vehicle, true, 1, "GEOM", "NONE"];
@@ -218,6 +223,8 @@ systemChat format ["LOGISTICS COMMAND: Surface cargo grid storage locked down: [
     private _cargoObj = _x createVehicle [0,0,0];
     _cargoObj setVariable ["isLogisticsCargo", true, true];
     _cargoObj setVariable ["QM_SystemLoaded", true, true];
+    _cargoObj setVariable ["QM_CarrierVehicle", _vehicle, true];
+    _cargoObj setVariable ["QM_DrivenByPlayer", false, true];
     _vehicle setVariable ["QM_SystemLoading", true];
     private _loadedViV = _vehicle setVehicleCargo _cargoObj;
     _vehicle setVariable ["QM_SystemLoading", false];

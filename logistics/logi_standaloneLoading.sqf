@@ -217,10 +217,21 @@ QM_fnc_initVehicleCargoRules = {
             _parentVehicle setVariable ["logistics_is_loaded", true, true];
             private _cargoType = [_cargoVehicle] call QM_fnc_getCargoCategory;
             _parentVehicle setVariable ["logistics_loaded_type", _cargoType, true];
+            if (!isNull _cargoVehicle) then {
+                _cargoVehicle setVariable ["QM_WasViVLoaded", true, true];
+                _cargoVehicle setVariable ["QM_CarrierVehicle", _parentVehicle, true];
+                _cargoVehicle setVariable ["QM_DrivenByPlayer", false, true];
+            };
         }];
 
         _veh addEventHandler ["CargoUnloaded", {
             params ["_parentVehicle", "_cargoVehicle"];
+            if (!isNull _cargoVehicle) then {
+                _cargoVehicle setVariable ["QM_UnloadedFromViV", true, true];
+                _cargoVehicle setVariable ["QM_CarrierVehicle", _parentVehicle, true];
+                _cargoVehicle setVariable ["QM_DrivenByPlayer", false, true];
+                _cargoVehicle setVariable ["QM_ViVUnloadTime", diag_tickTime, true];
+            };
             private _remainingCargo = getVehicleCargo _parentVehicle;
             if (count _remainingCargo == 0) then {
                 _parentVehicle setVariable ["logistics_is_loaded", false, true];
@@ -228,6 +239,30 @@ QM_fnc_initVehicleCargoRules = {
             } else {
                 private _topType = [_remainingCargo # 0] call QM_fnc_getCargoCategory;
                 _parentVehicle setVariable ["logistics_loaded_type", _topType, true];
+            };
+        }];
+
+        _veh addEventHandler ["RopeAttach", {
+            params ["_obj1", "_rope", "_obj2"];
+            private _carrier = if (_obj1 isKindOf "Air" || _obj1 isKindOf "LandVehicle") then { _obj1 } else { _obj2 };
+            private _cargo = if (_carrier == _obj1) then { _obj2 } else { _obj1 };
+            if (!isNull _cargo && {_cargo != _carrier}) then {
+                _cargo setVariable ["QM_WasSlingLoaded", true, true];
+                _cargo setVariable ["QM_SlingCarrier", _carrier, true];
+                _cargo setVariable ["QM_DrivenByPlayer", false, true];
+                _cargo setVariable ["QM_SlingAttachTime", diag_tickTime, true];
+            };
+        }];
+
+        _veh addEventHandler ["RopeBreak", {
+            params ["_obj1", "_rope", "_obj2"];
+            private _carrier = if (_obj1 isKindOf "Air" || _obj1 isKindOf "LandVehicle") then { _obj1 } else { _obj2 };
+            private _cargo = if (_carrier == _obj1) then { _obj2 } else { _obj1 };
+            if (!isNull _cargo && {_cargo != _carrier}) then {
+                _cargo setVariable ["QM_DroppedFromSling", true, true];
+                _cargo setVariable ["QM_SlingCarrier", _carrier, true];
+                _cargo setVariable ["QM_DrivenByPlayer", false, true];
+                _cargo setVariable ["QM_SlingReleaseTime", diag_tickTime, true];
             };
         }];
     };
