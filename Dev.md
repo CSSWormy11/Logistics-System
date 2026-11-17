@@ -1016,6 +1016,37 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
+### [ ] 6.7 Unified Dual-Purpose (Pickup & Dropoff) Pads & Naval Lateral Transfers
+- **1. Context & The Physical Footprint Dilemma:**
+  - On large mainland supply depots or land bases, mission makers have ample geographic space to place separate pickup (`<BaseKey>_pickup`) and dropoff (`<BaseKey>_dropoff`) triggers across distinct logistics yards.
+  - On naval surface combatants (such as Destroyers `FOB_DDG_086` / `DDG_Liberty`), physical deck space is strictly constrained: there is only **one** aft helicopter flight deck.
+  - Mission makers currently must either squeeze two overlapping triggers onto the same physical pad or choose one over the other. Placing a single, dual-purpose pad that dynamically senses whether an inbound aircraft is arriving to *deliver* supplies or arriving to *load* supplies solves this physical space limitation.
+
+- **2. Dual-Purpose Pad Engine Concept (Context-Sensitive Detection):**
+  - **Single Physical Pad Identifier:** e.g., `<BaseKey>_pad` or `<BaseKey>_logi_pad` (or overlapping pickup/dropoff on the same footprint).
+  - **Dynamic Inbound State Evaluation:**
+    - **Inbound with Cargo (Dropoff Mode):** If an aircraft enters the pad carrying cargo (ViV cargo loaded, slingload attached via ropes, or cargo objects dropped onto the deck), the pad behaves as a **Dropoff Pad**: automatically receiving, inventorying, and despawning the delivered cargo, and crediting the base's ledger (`QM_fnc_serverVehicleSale` / `logi_cargoDelivery.sqf`).
+    - **Inbound Empty (Pickup Mode):** If an empty aircraft lands on the pad, the pad behaves as a **Pickup Pad**: presenting the pilot with the cargo loading/spawning menu to load supplies from that base's ledger into the vehicle.
+  - **Conflict Prevention:** By evaluating `count (getVehicleCargo _veh) > 0` or `!isNull (ropeAttachedTo _veh)` vs an empty cargo hold, a single physical pad seamlessly alternates roles without script conflicts or double-processing.
+
+- **3. Operational Flow: Multi-Tier Lateral Transfers vs. Simple Core Pipelines:**
+  - **The Three-Tier Core Structure Remains Clean & Simple:**
+    - **Level 1 (Pipeline Hubs):** `MSR` & `CS` (Infinite reserves).
+    - **Level 2 (Strategic Staging Bases):** `SB`, `CVN`, `LHA` (Massive rear-line stockpiles).
+    - **Level 3 (Tactical Outposts & Contested Fronts):** `FOB`, `DDG`, `DD`, `CON` (Frontline operational ledgers).
+    - **Core Automated Mission Types:** Kept deliberately clean, robust, and two-tiered:
+      1. *Strategic Runs:* `MSR` $\rightarrow$ `SB` (Heavy bulk containers & flatbeds).
+      2. *Tactical Runs:* `SB` $\rightarrow$ `FOB` / `CON` (Medium/light logistics, nets, boxes).
+  - **Lateral & Forward-Staging Deliveries (Player-Directed):**
+    - Complex multi-hop supply lines (e.g., Heavy `CH-67 Huron` ferries supplies from `CVN_Freedom` to `DDG_Liberty`, and then a Medium `UH-80 Ghost Hawk` or boat based on the Destroyer moves smaller tactical batches to a contested beachhead `CON_Stadium`):
+    - Rather than over-complicating the automated task generator with dynamic three-way routing algorithms, **lateral transfers are player-directed**:
+      - A player simply ignores automated task waypoints, flies to the Destroyer, drops supplies to credit the Destroyer's ledger, and another pilot spawns supplies from the Destroyer to ferry forward.
+      - The framework's dropoff triggers, salvage systems, and physical ledgers already naturally support this sandbox freedom!
+
+- **4. Status:** **Logged as Section 6 Optional Alternative** (Architecture fully evaluated; core routing kept simple and robust while dual-purpose pad logic is preserved for future naval flight deck optimization).
+
+---
+
 **Ongoing Development Tracking**
 
 Maintain this checklist as part of the V8 development process. These goals are not necessarily sequential and may be addressed independently as opportunities arise during debugging, refactoring, and feature development.
