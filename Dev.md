@@ -878,6 +878,41 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
+### [ ] 6.3 Map Marker True-North Normalization & Scope Boundaries
+- **1. Context & Eden Editor Observations:**
+  - When mission makers place or duplicate markers in the Eden Editor, slight inadvertent rotations often leave markers with non-zero angles (e.g., $14.7^\circ$, $282.4^\circ$, $0.25^\circ$). This causes base installation icons (NATO symbols, flags, HQ icons) to appear tilted or crooked on the player map and GPS.
+  - The mission maker recently audited `mission.sqm` and manually zeroed all base marker angles (`SB_Main`, `FOB_AgiaMarinaBase`, `FOB_CampMaxwell`, `FOB_CampRogain`, `FOB_Kamino`, `FOB_Mike26`, `FOB_CampTempest`, `Contested_Stadium`). In Eden Editor SQM format, $0^\circ$ (True North) is represented by omitting the `angle` property entirely.
+  - Additionally, a new virtual arsenal cache (`SB_Main_Arsenal_6`, `VirtualReammoBox_camonet_F`) was placed at Main Supply Base.
+
+- **2. Framework Codebase Audit (Marker Directionality):**
+  - **Comprehensive Verification:** A deep audit of all framework modules (`logistics\*.sqf`, `templates\*.sqf`, `init.sqf`) confirmed that **not a single script relies on marker direction (`markerDir`) for vehicle, infantry, or asset orientation**.
+  - All directional spawning is 100% handled by 3D world entities:
+    - Garages, Helipads, Boat Racks, and Ammo Caches: `_spawnDir = getDir _padObj;`
+    - Infantry/Barracks recruitment: `_spawnDir = getDir _padObj;`
+  - The only script call to `setMarkerDir` in the entire project is in `logi_initTasks.sqf` (Line 244), where the dynamically generated visual bounding box (`Area_%1`) for rectangular triggers is rotated to match the physical trigger footprint (`(triggerArea _trigger) params [..., "_angle", ...];`).
+
+- **3. Normalization Scope: Targeted vs. Global:**
+  - **Why Global Normalization (`allMapMarkers`) is Dangerous:**
+    - Mission makers routinely place intentional directional markers on the map for tactical operations (e.g., `mil_arrow` attack vectors, flight ingress paths, LZ approaches, defensive sectors, or rotated rectangular minefields).
+    - Executing `{ _x setMarkerDir 0; } forEach allMapMarkers;` would wipe out every tactical arrow and rotated planning zone across the entire mission map.
+  - **The Recommended Architectural Solution (Targeted Scope):**
+    - Scope automatic North-alignment strictly to **logistics base markers** and framework-generated point icons.
+    - In `init.sqf` during base discovery:
+      ```sqf
+      {
+          private _baseName = _x;
+          if (getMarkerColor _baseName != "") then {
+              _baseName setMarkerDir 0; // Enforce true North orientation (upright NATO symbol)
+              ...
+          };
+      } forEach logisticsBases;
+      ```
+    - This guarantees all base HQ icons display upright and professional on all client map displays, regardless of whether a mission maker accidentally rotated a marker in Eden Editor, while preserving 100% of custom tactical mission graphics.
+
+- **4. Status:** **Logged in Section 6 / Ready for Implementation** (Implementation requires 1 line of non-breaking code in `init.sqf`).
+
+---
+
 **Ongoing Development Tracking**
 
 Maintain this checklist as part of the V8 development process. These goals are not necessarily sequential and may be addressed independently as opportunities arise during debugging, refactoring, and feature development.
