@@ -28,13 +28,13 @@ private _val = _listBoxBay lbValue _selIdx;
 
 if (_val < 0 || _val >= count _bayObjects) exitWith {
     hint "Selection index invalid. Please refresh the manifest.";
-    [] execVM "fn_manifestMenuPopulate.sqf";
+    [] execVM "logistics\qm_manifestMenuPopulate.sqf";
 };
 
 private _cargoObj = _bayObjects select _val;
 if (isNull _cargoObj) exitWith {
     hint "The selected cargo is no longer in the vehicle bay.";
-    [] execVM "fn_manifestMenuPopulate.sqf";
+    [] execVM "logistics\qm_manifestMenuPopulate.sqf";
 };
 
 private _cargoName = getText (configFile >> "CfgVehicles" >> typeOf _cargoObj >> "displayName");
@@ -67,7 +67,7 @@ if (_unloaded) then {
     systemChat format ["[MANIFEST UNLOADED]: %1 offloaded to ground.", _cargoName];
 
     // Refresh UI to reflect newly available space and ground availability
-    [] execVM "fn_manifestMenuPopulate.sqf";
+    [] execVM "logistics\qm_manifestMenuPopulate.sqf";
 } else {
     hint "UNLOAD FAILED: Could not deploy item behind vehicle. Check for physical obstruction behind the vehicle.";
 };

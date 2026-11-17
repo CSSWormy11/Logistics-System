@@ -675,7 +675,7 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
     - **`qm_*` (Quartermaster Base Services & UI):** Motorpool dealership, recruiter, equipment trader, R4-C vehicle servicing, and pylon management housed in `logistics/`.
     - **`tsk_*` (Tactical Command & Intel):** Preserved as-is for future modularization.
 
-- [ ] **Technical Guide: How Bohemia Engine Pathing & Subfolder Referencing Works:**
+- [x] **Technical Guide: How Bohemia Engine Pathing & Subfolder Referencing Works:**
   - **1. Relative SQF Script Paths:**
     - In Arma 3, script commands (`execVM`, `preprocessFileLineNumbers`, `compileScript`, `fileExists`) resolve paths **relative to the root of the active mission folder**.
     - When a file moves to a subfolder, prefixing the subfolder name with a backslash or forward slash directs the engine into that directory:
@@ -690,23 +690,23 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
   - **3. Dialog Action Strings inside `.hpp` Files:**
     - Button `action` and `onLoad` strings inside UI dialog definitions must reference the new subfolder path:
       - `action = "[] execVM 'logistics\qm_newCarDealership.sqf';";`
-      - `action = "[] execVM 'logistics\logi_manifestLoadExecute.sqf';";`
+      - `action = "[] execVM 'logistics\qm_manifestLoadExecute.sqf';";`
   - **4. Eden Editor Triggers & Runtime Hot-Patching Protection:**
     - Because `fn_initLogisticsTasks.sqf` (becoming `logi_initTasks.sqf`) dynamically scans all Eden triggers and rewrites trigger statements (`setTriggerStatements`) in memory at mission start, **mission makers do NOT need to manually edit `mission.sqm` in Eden Editor**.
     - Updating the runtime string generator inside `logi_initTasks.sqf` automatically routes all physical trigger pads on Stratis to the new `logistics/` directory with zero manual Eden Editor intervention.
 
-- [ ] **Exhaustive File-by-File Migration Mapping:**
+- [x] **Exhaustive File-by-File Migration Mapping:**
 
 | Current Root Filename | Target Subdirectory & Proposed Name | System Classification | Primary Referencing Scripts |
 | :--- | :--- | :--- | :--- |
 | **`logisticsBaseDefaults.sqf`** | `templates\tp_baseDefaults.sqf` | Template (Base Stockpiles) | `init.sqf` |
 | **`logisticsCargoTemplates.sqf`** | `templates\tp_cargoTemplates.sqf` | Template (Vehicle Cargo Lists) | `init.sqf`, `logi_manageMissions.sqf`, `logi_spawnLoadSupply.sqf`, `logi_cargoDelivery.sqf` |
-| **`logisticsFieldLoadingTemplate.sqf`** | `templates\tp_fieldLoadingTemplate.sqf` | Template (Field Capability Rules) | `init.sqf`, `logi_standaloneLoading.sqf`, `logi_manifestLoadExecute.sqf` |
+| **`logisticsFieldLoadingTemplate.sqf`** | `templates\tp_fieldLoadingTemplate.sqf` | Template (Field Capability Rules) | `init.sqf`, `logi_standaloneLoading.sqf`, `qm_manifestLoadExecute.sqf` |
 | **`logisticsVehicleRoles.sqf`** | `templates\tp_vehicleRoles.sqf` | Template (Strategic/Tactical/CLT) | `init.sqf`, `logi_manageMissions.sqf` |
 | **`qm_vehicleCapsTemplate.sqf`** | `templates\tp_vehicleCaps.sqf` | Template (Active Vehicle Limits) | `init.sqf`, `qm_serverFunctions.sqf` |
 | **`spawnableInfantryTemplate.sqf`** | `templates\tp_spawnableInfantry.sqf` | Template (Recruiter Blueprints) | `init.sqf`, `qm_recruiterList.sqf` |
 | **`spawnableVehicleTemplate.sqf`** | `templates\tp_spawnableVehicles.sqf` | Template (Motorpool Blueprints) | `init.sqf`, `qm_vehicleTabs.sqf`, `qm_newCarDealership.sqf`, `qm_serverFunctions.sqf` |
-| **`SupplyScores.sqf`** | `templates\tp_supplyScores.sqf` | Template (Asset Point Weights) | `init.sqf`, `logi_manageMissions.sqf`, `logi_spawnLoadSupply.sqf`, `logi_cargoDelivery.sqf`, `logi_manifestMenuPopulate.sqf` |
+| **`SupplyScores.sqf`** | `templates\tp_supplyScores.sqf` | Template (Asset Point Weights) | `init.sqf`, `logi_manageMissions.sqf`, `logi_spawnLoadSupply.sqf`, `logi_cargoDelivery.sqf`, `qm_manifestMenuPopulate.sqf` |
 | **`virtualArsenalTemplate.sqf`** | `templates\tp_virtualArsenal.sqf` | Template (Whitelisted Armaments) | `init.sqf`, `qm_serverFunctions.sqf` |
 | **`fn_initLogisticsTasks.sqf`** | `logistics\logi_initTasks.sqf` | Logistics Core (Triggers & Alpha) | `init.sqf` |
 | **`fn_manageLogisticsMissions.sqf`** | `logistics\logi_manageMissions.sqf` | Logistics Core (Dynamic Tasking) | `init.sqf` |
@@ -737,7 +737,7 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 | **`qm_serverRespawnManager.sqf`** | `logistics\qm_serverRespawnManager.sqf` | Server Respawn Manager | `init.sqf` |
 | **`qm_clientRespawnManager.sqf`** | `logistics\qm_clientRespawnManager.sqf` | Client Respawn UI Manager | `init.sqf` |
 
-- [ ] **Execution & Phased Implementation Strategy:**
+- [x] **Execution & Phased Implementation Strategy:**
   - **Phase 1: Directory Setup & Git-Tracking Relocation:**
     - Execute `git mv` operations to move files into `templates/` and `logistics/` with new standardized prefixes, retaining 100% of Git commit history and blame data.
   - **Phase 2: Master Entrypoint Path Remapping:**

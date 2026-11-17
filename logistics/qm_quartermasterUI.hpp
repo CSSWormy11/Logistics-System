@@ -11,7 +11,7 @@ class CfgControlHubMenu {
     idd = 9999;
     movingEnable = 0;
     enableSimulation = 1;
-    onLoad = "uiNamespace setVariable ['QM_Menu_Display', _this select 0]; [] execVM 'fn_recruiter_list.sqf';";
+    onLoad = "uiNamespace setVariable ['QM_Menu_Display', _this select 0]; [] execVM 'logistics\qm_recruiterList.sqf';";
     
     class controls {
         class MainBackground: RscText {
@@ -33,7 +33,7 @@ class CfgControlHubMenu {
             w = 0.32 * safezoneW; h = 0.44 * safezoneH;
         };
         class ConfirmCol1Btn: RscButton {
-            idc = 2010; text = "DRAFT RECRUIT TO YOUR SQUAD"; action = "[0] execVM 'fn_recruiter.sqf';";
+            idc = 2010; text = "DRAFT RECRUIT TO YOUR SQUAD"; action = "[0] execVM 'logistics\qm_recruiter.sqf';";
             x = 0.17 * safezoneW + safezoneX; y = 0.72 * safezoneH + safezoneY; w = 0.32 * safezoneW; h = 0.04 * safezoneH;
         };
         class Col2Header: RscText {
@@ -46,7 +46,7 @@ class CfgControlHubMenu {
             w = 0.32 * safezoneW; h = 0.44 * safezoneH;
         };
         class ConfirmCol2Btn: RscButton {
-            idc = 2020; text = "DRAFT SQUAD TEMPLATE TO YOUR SQUAD"; action = "[1] execVM 'fn_recruiter.sqf';";
+            idc = 2020; text = "DRAFT SQUAD TEMPLATE TO YOUR SQUAD"; action = "[1] execVM 'logistics\qm_recruiter.sqf';";
             x = 0.51 * safezoneW + safezoneX; y = 0.72 * safezoneH + safezoneY; w = 0.32 * safezoneW; h = 0.04 * safezoneH;
         };
         class CloseButton: RscButton {
@@ -62,7 +62,7 @@ class CfgVehicleProcureMenu {
     idd = 8888;
     movingEnable = 0;
     enableSimulation = 1;
-    onLoad = "uiNamespace setVariable ['QM_Vehicle_Display', _this select 0]; [0] execVM 'c_vehicleTabs.sqf';";
+    onLoad = "uiNamespace setVariable ['QM_Vehicle_Display', _this select 0]; [0] execVM 'logistics\qm_vehicleTabs.sqf';";
     
     class controls {
         class MainBackground: RscText {
@@ -77,37 +77,37 @@ class CfgVehicleProcureMenu {
         
         // --- EXPANDED 7-TAB LAYOUT ---
         class TabWheeled: RscButton {
-            idc = 3001; text = "WHEELED"; action = "[0] execVM 'c_vehicleTabs.sqf';";
+            idc = 3001; text = "WHEELED"; action = "[0] execVM 'logistics\qm_vehicleTabs.sqf';";
             x = 0.260 * safezoneW + safezoneX; y = 0.26 * safezoneH + safezoneY; w = 0.068 * safezoneW; h = 0.04 * safezoneH;
             sizeEx = 0.032;
         };
         class TabTracked: RscButton {
-            idc = 3002; text = "TRACKED"; action = "[1] execVM 'c_vehicleTabs.sqf';";
+            idc = 3002; text = "TRACKED"; action = "[1] execVM 'logistics\qm_vehicleTabs.sqf';";
             x = 0.329 * safezoneW + safezoneX; y = 0.26 * safezoneH + safezoneY; w = 0.068 * safezoneW; h = 0.04 * safezoneH;
             sizeEx = 0.032;
         };
         class TabHeli: RscButton {
-            idc = 3003; text = "HELI"; action = "[2] execVM 'c_vehicleTabs.sqf';";
+            idc = 3003; text = "HELI"; action = "[2] execVM 'logistics\qm_vehicleTabs.sqf';";
             x = 0.398 * safezoneW + safezoneX; y = 0.26 * safezoneH + safezoneY; w = 0.068 * safezoneW; h = 0.04 * safezoneH;
             sizeEx = 0.032;
         };
         class TabPlane: RscButton {
-            idc = 3004; text = "PLANE"; action = "[3] execVM 'c_vehicleTabs.sqf';";
+            idc = 3004; text = "PLANE"; action = "[3] execVM 'logistics\qm_vehicleTabs.sqf';";
             x = 0.467 * safezoneW + safezoneX; y = 0.26 * safezoneH + safezoneY; w = 0.068 * safezoneW; h = 0.04 * safezoneH;
             sizeEx = 0.032;
         };
         class TabBoat: RscButton {
-            idc = 3005; text = "BOAT"; action = "[4] execVM 'c_vehicleTabs.sqf';";
+            idc = 3005; text = "BOAT"; action = "[4] execVM 'logistics\qm_vehicleTabs.sqf';";
             x = 0.536 * safezoneW + safezoneX; y = 0.26 * safezoneH + safezoneY; w = 0.068 * safezoneW; h = 0.04 * safezoneH;
             sizeEx = 0.032;
         };
         class TabDrone: RscButton {
-            idc = 3006; text = "DRONE"; action = "[5] execVM 'c_vehicleTabs.sqf';";
+            idc = 3006; text = "DRONE"; action = "[5] execVM 'logistics\qm_vehicleTabs.sqf';";
             x = 0.605 * safezoneW + safezoneX; y = 0.26 * safezoneH + safezoneY; w = 0.068 * safezoneW; h = 0.04 * safezoneH;
             sizeEx = 0.032;
         };
         class TabSupply: RscButton {
-            idc = 3007; text = "SUPPLY"; action = "[6] execVM 'c_vehicleTabs.sqf';";
+            idc = 3007; text = "SUPPLY"; action = "[6] execVM 'logistics\qm_vehicleTabs.sqf';";
             x = 0.674 * safezoneW + safezoneX; y = 0.26 * safezoneH + safezoneY; w = 0.068 * safezoneW; h = 0.04 * safezoneH;
             sizeEx = 0.032;
         };
@@ -117,7 +117,7 @@ class CfgVehicleProcureMenu {
             w = 0.482 * safezoneW; h = 0.37 * safezoneH;
         };
         class ConfirmBtn: RscButton {
-            idc = 3010; text = "CONFIRM FACTORY ORDER"; action = "[] execVM 'fn_newCarDealership.sqf';";
+            idc = 3010; text = "CONFIRM FACTORY ORDER"; action = "[] execVM 'logistics\qm_newCarDealership.sqf';";
             x = 0.26 * safezoneW + safezoneX; y = 0.70 * safezoneH + safezoneY; w = 0.23 * safezoneW; h = 0.04 * safezoneH;
         };
         class CloseBtn: RscButton {

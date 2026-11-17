@@ -1,11 +1,11 @@
 // ============================================================================
 // LOGISTICS SYSTEM: CARGO OFFLOAD & DELIVERY ENGINE (PART 1)
-// File: fn_cargoDelivery.sqf
+// File: logi_cargoDelivery.sqf
 // Description: Scans the delivery pad for dropped logistics containers, 
 //              calculates their point value, deletes the container, and 
 //              credits the target base's global economy pool.
 // Called By: Eden Editor "EmptyDetector" Trigger (On Activation) at Dropoff Pads
-//            e.g., [thisTrigger, "SB"] execVM "fn_cargoDelivery.sqf";
+//            e.g., [thisTrigger, "SB"] execVM "logistics\logi_cargoDelivery.sqf";
 // ============================================================================
 
 params ["_triggerArea", "_baseKey"];

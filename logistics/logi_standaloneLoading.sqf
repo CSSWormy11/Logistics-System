@@ -252,7 +252,7 @@ QM_fnc_initVehicleCargoRules = {
                 "<t color='#00E5FF' font='RobotoCondensedBold'>[CARGO MANIFEST] Selective Supply Loading</t>",
                 {
                     params ["_target", "_caller", "_actionId", "_arguments"];
-                    [_target] execVM "fn_manifestMenuOpen.sqf";
+                    [_target] execVM "logistics\qm_manifestMenuOpen.sqf";
                 },
                 [],
                 3,

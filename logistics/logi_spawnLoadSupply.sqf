@@ -1,11 +1,11 @@
 // ============================================================================
 // LOGISTICS SYSTEM: PHYSICAL DEPLOYMENT ENGINE (PART 1)
-// File: fn_spawnLoadSupply.sqf
+// File: logi_spawnLoadSupply.sqf
 // Description: Spawns the requested cargo, calculates its mass via SupplyScores,
 //              deducts points from the source base, and loads it into the transport.
 //              Also handles specific spawn routing for troops, planes, and helis.
 // Called By: Eden Editor Trigger (On Activation) at Loading Pads
-//            e.g., [vehicle player, "MSR"] execVM "fn_spawnLoadSupply.sqf";
+//            e.g., [vehicle player, "MSR"] execVM "logistics\logi_spawnLoadSupply.sqf";
 // ============================================================================
 
 params [

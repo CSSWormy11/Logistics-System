@@ -12,7 +12,7 @@ class CfgCargoManifestMenu {
     idd = 5500;
     movingEnable = 0;
     enableSimulation = 1;
-    onLoad = "uiNamespace setVariable ['QM_Manifest_Display', _this select 0]; [] execVM 'fn_manifestMenuPopulate.sqf';";
+    onLoad = "uiNamespace setVariable ['QM_Manifest_Display', _this select 0]; [] execVM 'logistics\qm_manifestMenuPopulate.sqf';";
     
     class controls {
         class MainBackground: RscText {
@@ -68,7 +68,7 @@ class CfgCargoManifestMenu {
         class LoadBtn: RscButton {
             idc = 2010;
             text = "LOAD SELECTED INTO VEHICLE";
-            action = "[] execVM 'fn_manifestLoadExecute.sqf';";
+            action = "[] execVM 'logistics\qm_manifestLoadExecute.sqf';";
             x = 0.17 * safezoneW + safezoneX;
             y = 0.73 * safezoneH + safezoneY;
             w = 0.32 * safezoneW;
@@ -99,7 +99,7 @@ class CfgCargoManifestMenu {
         class UnloadBtn: RscButton {
             idc = 2020;
             text = "UNLOAD SELECTED TO GROUND";
-            action = "[] execVM 'fn_manifestUnloadExecute.sqf';";
+            action = "[] execVM 'logistics\qm_manifestUnloadExecute.sqf';";
             x = 0.51 * safezoneW + safezoneX;
             y = 0.73 * safezoneH + safezoneY;
             w = 0.32 * safezoneW;
@@ -112,7 +112,7 @@ class CfgCargoManifestMenu {
         class RefreshBtn: RscButton {
             idc = 2030;
             text = "REFRESH MANIFEST";
-            action = "[] execVM 'fn_manifestMenuPopulate.sqf';";
+            action = "[] execVM 'logistics\qm_manifestMenuPopulate.sqf';";
             x = 0.17 * safezoneW + safezoneX;
             y = 0.78 * safezoneH + safezoneY;
             w = 0.32 * safezoneW;

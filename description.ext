@@ -57,10 +57,10 @@ wreckRemovalMaxTime = 600;  // Maximum time a wreck stays (10 mins)
 // 2. MODULAR GUI DEFINITIONS (PLUG & PLAY)
 // ============================================================================
 // Part 2: Quartermaster Menus (Barracks, Factory, Admin Tablet)
-#include "qm_quartermasterUI.hpp"
+#include "logistics\qm_quartermasterUI.hpp"
 
 // Part 3C: Dynamic Pylon Aircraft Menus
-#include "qm_pylonMenu.hpp"
+#include "logistics\qm_pylonMenu.hpp"
 
 // Part 5.3: Selective Supply Loading & Cargo Manifest Dialog
-#include "qm_manifestMenu.hpp"
+#include "logistics\qm_manifestMenu.hpp"

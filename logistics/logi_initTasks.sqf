@@ -48,7 +48,7 @@ LOGI_fnc_handlePickupTrigger = {
 
     // Instant pickup if this trigger has no countdown configured
     if (_duration <= 0) exitWith {
-        [_vehicle, _parentBase] execVM "fn_spawnLoadSupply.sqf";
+        [_vehicle, _parentBase] execVM "logistics\logi_spawnLoadSupply.sqf";
     };
 
     private _baseTriggers = missionNamespace getVariable [format ["LogiPickupTriggers_%1", _parentBase], []];
@@ -124,7 +124,7 @@ LOGI_fnc_handlePickupTrigger = {
             if (!isNull _drv && isPlayer _drv) then {
                 [format ["[%1 LOADING ZONE]\nSupply loading complete!", _displayName]] remoteExec ["hintSilent", _drv];
             };
-            [_veh, _baseKey] execVM "fn_spawnLoadSupply.sqf";
+            [_veh, _baseKey] execVM "logistics\logi_spawnLoadSupply.sqf";
         };
     };
 };
@@ -174,7 +174,7 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
                     _trigger setTriggerTimeout [0, 0, 0, false];
                 };
 
-                if (_act == "" || { "SpawnLoadSupply" in _act } || { "fn_spawnLoadSupply" in _act } || { "LOGI_fnc_handlePickupTrigger" in _act }) then {
+                if (_act == "" || { "SpawnLoadSupply" in _act } || { "fn_spawnLoadSupply" in _act } || { "logi_spawnLoadSupply" in _act } || { "LOGI_fnc_handlePickupTrigger" in _act }) then {
                     _act = format [
                         "private _veh = (thisList select {typeOf _x in allowedLogisticsVehicles}) param [0, objNull]; if (!isNull _veh) then { [_veh, %1, thisTrigger] call LOGI_fnc_handlePickupTrigger; };",
                         str _parentBase
@@ -193,7 +193,7 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
 
                 // Universal Dropoff: Allow any vehicle, aircraft, boat, or player on foot to trigger dropoff processing
                 _cond = "this";
-                _act = format ["[thisTrigger, %1] execVM 'fn_cargoDelivery.sqf';", str _parentBase];
+                _act = format ["[thisTrigger, %1] execVM 'logistics\logi_cargoDelivery.sqf';", str _parentBase];
                 if (_deact == "") then { _deact = "thisTrigger setVariable ['isProcessingLogistics', false];"; };
                 _trigger setTriggerStatements [_cond, _act, _deact];
             };
@@ -201,7 +201,7 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
             if (_isService) then {
                 // Allow LandVehicle, Air, and Ship driven by the local player to trigger R4-C Service Pads and pass vehicle player reliably
                 _cond = "(local player) && { private _v = vehicle player; (_v in thisList) && (_v isKindOf 'LandVehicle' || _v isKindOf 'Air' || _v isKindOf 'Ship') && (abs (speed _v) < 1) && (player == driver _v) }";
-                _act  = "[thisTrigger, vehicle player, 3] execVM 'fn_executeR4CService.sqf';";
+                _act  = "[thisTrigger, vehicle player, 3] execVM 'logistics\qm_executeR4CService.sqf';";
                 _trigger setTriggerStatements [_cond, _act, _deact];
             };
 

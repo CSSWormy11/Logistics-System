@@ -14,26 +14,26 @@
 // ---------------------------------------------------------------------------
 // These files define mission-specific templates and lookup tables.
 // Each include is guarded so the mission can run without optional modules.
-// - logisticsCargoTemplates.sqf : vehicle cargo templates and spawn lists
-// - SupplyScores.sqf            : per-item scoring used to compute default pool values
-// - logisticsBaseDefaults.sqf  : default ledger values for non-SB base types
-// - logisticsVehicleRoles.sqf  : role-to-class mappings used by spawn/garage logic
-// - qm_vehicleCapsTemplate.sqf : vehicle cap family matrix (QM_CAP_ConfigMatrix)
+// - templates\tp_cargoTemplates.sqf       : vehicle cargo templates and spawn lists
+// - templates\tp_supplyScores.sqf         : per-item scoring used to compute default pool values
+// - templates\tp_baseDefaults.sqf         : default ledger values for non-SB base types
+// - templates\tp_vehicleRoles.sqf         : role-to-class mappings used by spawn/garage logic
+// - templates\tp_vehicleCaps.sqf          : vehicle cap family matrix (QM_CAP_ConfigMatrix)
 // ---------------------------------------------------------------------------
-if (fileExists "logisticsCargoTemplates.sqf") then { call compile preprocessFileLineNumbers "logisticsCargoTemplates.sqf";
+if (fileExists "templates\tp_cargoTemplates.sqf") then { call compile preprocessFileLineNumbers "templates\tp_cargoTemplates.sqf";
 } else {
     //Fallback minimal template so code using allowedLogisticsVehicles still works.
     logisticsCargoTemplates = [["B_Truck_01_cargo_F", [["Cargo",[]],["Ammo",[]],["Fuel",[]],["Medical",[]],["Repair",[]],["Vehicle",[]],["Troops",[]]]]];
 };
 
-if (fileExists "SupplyScores.sqf") then { call compile preprocessFileLineNumbers "SupplyScores.sqf"; };
-if (fileExists "logisticsBaseDefaults.sqf") then { call compile preprocessFileLineNumbers "logisticsBaseDefaults.sqf"; };
-if (fileExists "virtualArsenalTemplate.sqf") then { call compile preprocessFileLineNumbers "virtualArsenalTemplate.sqf"; };
-if (fileExists "spawnableInfantryTemplate.sqf") then { call compile preprocessFileLineNumbers "spawnableInfantryTemplate.sqf"; };
-if (fileExists "spawnableVehicleTemplate.sqf") then { call compile preprocessFileLineNumbers "spawnableVehicleTemplate.sqf"; };
-if (fileExists "qm_vehicleCapsTemplate.sqf") then { call compile preprocessFileLineNumbers "qm_vehicleCapsTemplate.sqf"; } else { QM_CAP_ConfigMatrix = []; };
-if (fileExists "logisticsVehicleRoles.sqf") then { call compile preprocessFileLineNumbers "logisticsVehicleRoles.sqf"; }; // LOAD THE Vehicle Role TEMPLATE
-if (fileExists "logisticsFieldLoadingTemplate.sqf") then { call compile preprocessFileLineNumbers "logisticsFieldLoadingTemplate.sqf"; } else { logisticsFieldLoadingTemplate = []; };
+if (fileExists "templates\tp_supplyScores.sqf") then { call compile preprocessFileLineNumbers "templates\tp_supplyScores.sqf"; };
+if (fileExists "templates\tp_baseDefaults.sqf") then { call compile preprocessFileLineNumbers "templates\tp_baseDefaults.sqf"; };
+if (fileExists "templates\tp_virtualArsenal.sqf") then { call compile preprocessFileLineNumbers "templates\tp_virtualArsenal.sqf"; };
+if (fileExists "templates\tp_spawnableInfantry.sqf") then { call compile preprocessFileLineNumbers "templates\tp_spawnableInfantry.sqf"; };
+if (fileExists "templates\tp_spawnableVehicles.sqf") then { call compile preprocessFileLineNumbers "templates\tp_spawnableVehicles.sqf"; };
+if (fileExists "templates\tp_vehicleCaps.sqf") then { call compile preprocessFileLineNumbers "templates\tp_vehicleCaps.sqf"; } else { QM_CAP_ConfigMatrix = []; };
+if (fileExists "templates\tp_vehicleRoles.sqf") then { call compile preprocessFileLineNumbers "templates\tp_vehicleRoles.sqf"; }; // LOAD THE Vehicle Role TEMPLATE
+if (fileExists "templates\tp_fieldLoadingTemplate.sqf") then { call compile preprocessFileLineNumbers "templates\tp_fieldLoadingTemplate.sqf"; } else { logisticsFieldLoadingTemplate = []; };
 
 // ---------------------------------------------------------------------------
 // Global derived lists
@@ -101,10 +101,10 @@ QM_fnc_getLocationsByPrefix = {
 // ---------------------------------------------------------------------------
 // 3. OPTIONAL MODULES (Executed safely after functions load)
 // ---------------------------------------------------------------------------
-if (fileExists "fn_initLogisticsTasks.sqf") then { [] execVM "fn_initLogisticsTasks.sqf"; };
-if (fileExists "fn_manageLogisticsMissions.sqf") then { [] execVM "fn_manageLogisticsMissions.sqf"; };
-if (fileExists "fn_standaloneLoadingMechanic.sqf") then { [] execVM "fn_standaloneLoadingMechanic.sqf"; };
-if (fileExists "fn_startupMarkerDiagnostics.sqf") then { [] execVM "fn_startupMarkerDiagnostics.sqf"; };
+if (fileExists "logistics\logi_initTasks.sqf") then { [] execVM "logistics\logi_initTasks.sqf"; };
+if (fileExists "logistics\logi_manageMissions.sqf") then { [] execVM "logistics\logi_manageMissions.sqf"; };
+if (fileExists "logistics\logi_standaloneLoading.sqf") then { [] execVM "logistics\logi_standaloneLoading.sqf"; };
+if (fileExists "logistics\logi_markerDiagnostics.sqf") then { [] execVM "logistics\logi_markerDiagnostics.sqf"; };
 
 
 // ---------------------------------------------------------------------------
@@ -113,7 +113,7 @@ if (fileExists "fn_startupMarkerDiagnostics.sqf") then { [] execVM "fn_startupMa
 if (isServer) then {
 
     // --- COMPILE SERVER FUNCTIONS LIBRARY ---
-    if (fileExists "qm_serverFunctions.sqf") then { call compile preprocessFileLineNumbers "qm_serverFunctions.sqf"; };
+    if (fileExists "logistics\qm_serverFunctions.sqf") then { call compile preprocessFileLineNumbers "logistics\qm_serverFunctions.sqf"; };
 
     // Auto-hide Garage map markers so mission makers don't have to do it manually
     {
@@ -165,9 +165,9 @@ if (isServer) then {
     } forEach logisticsBases;
 
     // Start server-side daemons if present
-    if (fileExists "qm_supplyPhysicalController.sqf") then { [] execVM "qm_supplyPhysicalController.sqf"; };
-    if (fileExists "qm_serverGarrisonManager.sqf") then { [] execVM "qm_serverGarrisonManager.sqf"; };
-    if (fileExists "qm_serverRespawnManager.sqf") then { [] execVM "qm_serverRespawnManager.sqf"; };
+    if (fileExists "logistics\qm_supplyPhysicalController.sqf") then { [] execVM "logistics\qm_supplyPhysicalController.sqf"; };
+    if (fileExists "logistics\qm_serverGarrisonManager.sqf") then { [] execVM "logistics\qm_serverGarrisonManager.sqf"; };
+    if (fileExists "logistics\qm_serverRespawnManager.sqf") then { [] execVM "logistics\qm_serverRespawnManager.sqf"; };
     if (fileExists "tsk_serverGIN.sqf") then { [] execVM "tsk_serverGIN.sqf"; };
 };
 
@@ -180,13 +180,13 @@ if (hasInterface) then {
     waitUntil { !isNil "logisticsBases" };
 
     // --- COMPILE CLIENT FUNCTIONS LIBRARY & DAEMONS ---
-    if (fileExists "qm_clientFunctions.sqf") then { call compile preprocessFileLineNumbers "qm_clientFunctions.sqf"; };
+    if (fileExists "logistics\qm_clientFunctions.sqf") then { call compile preprocessFileLineNumbers "logistics\qm_clientFunctions.sqf"; };
 
     // Compile legacy client UI helpers if present
-    if (fileExists "fn_pylonManager.sqf") then { QM_fnc_pylonManager = compile preprocessFileLineNumbers "fn_pylonManager.sqf"; };
-    if (fileExists "qm_clientActionCompiler.sqf") then { call compile preprocessFileLineNumbers "qm_clientActionCompiler.sqf"; };
-    if (fileExists "fn_equipmentTrader.sqf") then { [] execVM "fn_equipmentTrader.sqf"; };
-    if (fileExists "qm_clientRespawnManager.sqf") then { [] execVM "qm_clientRespawnManager.sqf"; };
+    if (fileExists "logistics\qm_pylonManager.sqf") then { QM_fnc_pylonManager = compile preprocessFileLineNumbers "logistics\qm_pylonManager.sqf"; };
+    if (fileExists "logistics\qm_clientActionCompiler.sqf") then { call compile preprocessFileLineNumbers "logistics\qm_clientActionCompiler.sqf"; };
+    if (fileExists "logistics\qm_equipmentTrader.sqf") then { [] execVM "logistics\qm_equipmentTrader.sqf"; };
+    if (fileExists "logistics\qm_clientRespawnManager.sqf") then { [] execVM "logistics\qm_clientRespawnManager.sqf"; };
 
     // --- TACTICAL COMMAND CENTER CLIENT DAEMONS ---
     if (fileExists "tsk_clientMapIntel.sqf") then { [] execVM "tsk_clientMapIntel.sqf"; };
