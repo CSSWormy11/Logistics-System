@@ -903,18 +903,26 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
   - Rather than fuzzy equivalence matching, the framework recognizes distinct, first-class base types defined directly in `templates/tp_baseDefaults.sqf`:
     - **`MSR`**: Mainland Supply Route (Infinite pipeline, no garrison/repair)
     - **`CS`**: Cargo Ship (Offshore naval equivalent of MSR, infinite pipeline)
+    - **`AOR`**: Auxiliary Replenishment Oiler (Offshore fleet replenishment ship, infinite pipeline)
     - **`SB`**: Mainland Strategic Supply Base (Depot reserves)
     - **`CVN`**: Nuclear Aircraft Carrier (Fleet Hub reserves)
-    - **`LHA`**: Amphibious Assault Capital Ship (Expeditionary stores)
+    - **`LHA`**: Amphibious Assault Capital Ship (Peral's mod expeditionary stores)
+    - **`LPD`**: Amphibious Transport Dock (Expeditionary Force staging base)
+    - **`LST`**: Landing Ship, Tank (Peral's mod amphibious vehicle & armor staging base)
     - **`FOB`**: Forward Operating Base (Land outpost stores)
     - **`DDG`**: Guided-Missile Destroyer (Surface escort & light aviation)
     - **`DD`**: Gun Destroyer (Surface escort)
-    - **`LPD`**: Amphibious Transport Dock (Expeditionary connector & littoral staging)
+    - **`FFG`**: Guided-Missile Frigate (Surface escort, e.g. HAFM Barbaros/Hydra)
     - **`CON`**: Contested Base Sector (Frontline capture sector, $0$ starting supplies)
   - **Syntax & Display Name Parsing:**
-    - The first segment before the first underscore designates the **Base Type** (e.g. `CVN`, `DDG`, `FOB`, `CON`).
+    - The first segment before the first underscore designates the **Base Type** (e.g. `CVN`, `DDG`, `LPD`, `LST`, `FOB`, `CON`).
     - The segment after the first underscore defines the **Specific Base Name** (e.g. `11`, `86`, `Beachhead_Alpha`, `Liberty`, `Washington`, `Abdera`).
-    - **Additional underscores denote spaces** in the display name (e.g., `FOB_Camp_Maxwell` $\rightarrow$ `"Camp Maxwell"`).
+    - **Additional underscores denote spaces** in the display name (e.g., `FOB_Camp_Maxwell` $\rightarrow$ `"Camp Maxwell"`, `FOB_Beachhead_Alpha` $\rightarrow$ `"Beachhead Alpha"`).
+  - **Ship-to-Shore Expeditionary Logistics Architecture:**
+    - **Pipeline Source:** Offshore replenishment oiler (`AOR`) or container ship (`CS`) provides bulk replenishment.
+    - **Offshore Staging Bases:** Capital and amphibious vessels (`CVN`, `LHA`, `LPD`, `LST`) operate as `STRATEGIC` bases offshore.
+    - **Drivable Connectors:** Pilotable landing craft such as the **LCC-1** (Expeditionary Force) or hovercraft register in `allowedLogisticsVehicles` via `tp_cargoTemplates.sqf`.
+    - **Tactical Delivery:** The LCC-1 loads supplies or vehicles at the ship's sea pad/ramp, sails across the water, and offloads at the shoreline `FOB_Beachhead` or `CON_Beachhead` dropoff zone. Mission routing dynamically selects water routes when the player pilots a naval vessel.
   - Mission makers can define any new base type simply by adding a row to `tp_baseDefaults.sqf`—all discovery, ledger allocation, and role handling adapt automatically without touching code.
 
 ---

@@ -35,6 +35,14 @@ logisticsBaseDefaults = [
             ["Repair", -1], ["Vehicle", -1], ["Troops", -1]
         ]
     ],
+    [
+        "AOR", // Auxiliary Replenishment Oiler / Fleet Replenishment Ship (Maritime Pipeline Hub)
+        [
+            ["Role", "MSR"],
+            ["Cargo", -1], ["Ammo", -1], ["Fuel", -1], ["Medical", -1], 
+            ["Repair", -1], ["Vehicle", -1], ["Troops", -1]
+        ]
+    ],
 
     // ------------------------------------------------------------------------
     // STRATEGIC REAR BASES (Primary Distribution Depots & Fleet Capital Ships)
@@ -76,6 +84,32 @@ logisticsBaseDefaults = [
             ["Repair", 100000],
             ["Vehicle", 800000],
             ["Troops", 200]
+        ]
+    ],
+    [
+        "LPD", // Amphibious Transport Dock (Expeditionary Staging Base)
+        [
+            ["Role", "STRATEGIC"],
+            ["Cargo", 100000],
+            ["Ammo", 100000],
+            ["Fuel", 60000],
+            ["Medical", 30000],
+            ["Repair", 50000],
+            ["Vehicle", 500000],
+            ["Troops", 150]
+        ]
+    ],
+    [
+        "LST", // Landing Ship, Tank (Amphibious Armor & Vehicle Staging Base)
+        [
+            ["Role", "STRATEGIC"],
+            ["Cargo", 80000],
+            ["Ammo", 80000],
+            ["Fuel", 50000],
+            ["Medical", 25000],
+            ["Repair", 40000],
+            ["Vehicle", 400000],
+            ["Troops", 120]
         ]
     ],
 
@@ -122,16 +156,16 @@ logisticsBaseDefaults = [
         ]
     ],
     [
-        "LPD", // Amphibious Transport Dock (Expeditionary Connector / Littoral Staging)
+        "FFG", // Guided-Missile Frigate (Surface Escort & Light Aviation)
         [
             ["Role", "TACTICAL"],
-            ["Cargo", 60000],
-            ["Ammo", 50000],
-            ["Fuel", 30000],
-            ["Medical", 20000],
-            ["Repair", 30000],
-            ["Vehicle", 300000],
-            ["Troops", 100]
+            ["Cargo", 12000],
+            ["Ammo", 20000],
+            ["Fuel", 12000],
+            ["Medical", 4000],
+            ["Repair", 12000],
+            ["Vehicle", 40000],
+            ["Troops", 15]
         ]
     ],
 

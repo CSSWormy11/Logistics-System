@@ -88,8 +88,8 @@ logi_fnc_getBaseRole = {
     private _props = (logisticsBaseDefaults select _typeIdx) select 1;
     private _roleIdx = _props findIf { (_x select 0) == "Role" };
     if (_roleIdx != -1) then { (_props select _roleIdx) select 1 } else {
-        if (_bType in ["MSR", "CS"]) exitWith { "MSR" };
-        if (_bType in ["SB", "CVN", "LHA"]) exitWith { "STRATEGIC" };
+        if (_bType in ["MSR", "CS", "AOR"]) exitWith { "MSR" };
+        if (_bType in ["SB", "CVN", "LHA", "LST", "LPD"]) exitWith { "STRATEGIC" };
         "TACTICAL"
     }
 };
@@ -192,7 +192,8 @@ if (isServer) then {
                 private _cat = _x select 0;
                 private _val = _x select 1;
                 if (_cat != "Role") then {
-                    if (_val != -1 && (_baseType in ["SB", "CVN", "LHA"])) then {
+                    private _bRole = [_baseName] call logi_fnc_getBaseRole;
+                    if (_val != -1 && _bRole == "STRATEGIC") then {
                         _val = _val * _sbMultiplier;
                     };
                     missionNamespace setVariable [format ["LogiScore_%1_%2", _baseName, _cat], _val, true]; 

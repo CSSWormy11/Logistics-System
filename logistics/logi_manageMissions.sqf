@@ -600,9 +600,9 @@ createClientLogiTasks = {
     params [["_allowedRoles", ["Strategic", "Tactical", "CLT"]]];
     private _rolesUpper = _allowedRoles apply { toUpper _x };
 
-    private _allMSRs = (missionNamespace getVariable ["logisticsBases", []]) select { "MSR" in toUpper _x };
-    private _allSBs  = (missionNamespace getVariable ["logisticsBases", []]) select { "SB" in toUpper _x };
-    private _allFOBs = (missionNamespace getVariable ["logisticsBases", []]) select { "FOB" in toUpper _x };
+    private _allMSRs = (missionNamespace getVariable ["logisticsBases", []]) select { ([_x] call logi_fnc_getBaseRole) == "MSR" };
+    private _allSBs  = (missionNamespace getVariable ["logisticsBases", []]) select { ([_x] call logi_fnc_getBaseRole) == "STRATEGIC" };
+    private _allFOBs = (missionNamespace getVariable ["logisticsBases", []]) select { ([_x] call logi_fnc_getBaseRole) == "TACTICAL" };
 
     if ("STRATEGIC" in _rolesUpper && count _allSBs > 0) then {
         if !(["Logi_Strategic_Task"] call BIS_fnc_taskExists) then {
@@ -635,7 +635,7 @@ createClientLogiTasks = {
     while { true } do {
         if (["Logi_Strategic_Task"] call BIS_fnc_taskExists) then {
             private _sbDesc = "<br/><font color='#ffffff'>Stockpile Manifest for Staging Base(s):</font><br/>";
-            private _allSBs = logisticsBases select { "SB" in toUpper _x };
+            private _allSBs = logisticsBases select { ([_x] call logi_fnc_getBaseRole) == "STRATEGIC" };
             {
                 private _sbBase = _x;
                 private _cleanName = (_sbBase splitString "_") joinString " ";
@@ -661,7 +661,7 @@ createClientLogiTasks = {
 
         if (["Logi_Tactical_Task"] call BIS_fnc_taskExists) then {
             private _fobMasterDesc = "<br/><font color='#ffffff'>Front-line Regional Stockpiles:</font><br/>";
-            private _allFOBs = logisticsBases select { "FOB" in toUpper _x };
+            private _allFOBs = logisticsBases select { ([_x] call logi_fnc_getBaseRole) == "TACTICAL" };
             {
                 private _fobBase = _x;
                 private _cleanName = _fobBase splitString "_";
@@ -973,9 +973,9 @@ createClientLogiTasks = {
                 };
             };
 
-            private _allMSRs = logisticsBases select { "MSR" in toUpper _x };
-            private _allSBs  = logisticsBases select { "SB" in toUpper _x };
-            private _allFOBs = logisticsBases select { "FOB" in toUpper _x };
+            private _allMSRs = logisticsBases select { ([_x] call logi_fnc_getBaseRole) == "MSR" };
+            private _allSBs  = logisticsBases select { ([_x] call logi_fnc_getBaseRole) == "STRATEGIC" };
+            private _allFOBs = logisticsBases select { ([_x] call logi_fnc_getBaseRole) == "TACTICAL" };
 
             private _isGroundVehicle = !(_vehicle isKindOf "Air") && !(_vehicle isKindOf "Ship");
             private _isNavalVehicle  = _vehicle isKindOf "Ship";
