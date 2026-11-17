@@ -138,18 +138,5 @@ logisticsBaseDefaults = [
             ["Vehicle", 0],
             ["Troops", 0]
         ]
-    ],
-    [
-        "CONTESTED", // Alias for Contested Bases (Default: 0 across all pools)
-        [
-            ["Role", "TACTICAL"],
-            ["Cargo", 0],
-            ["Ammo", 0],
-            ["Fuel", 0],
-            ["Medical", 0],
-            ["Repair", 0],
-            ["Vehicle", 0],
-            ["Troops", 0]
-        ]
     ]
 ];
