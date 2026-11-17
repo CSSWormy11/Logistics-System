@@ -659,11 +659,21 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
   - Establishing clear directory boundaries separates **static mission configuration data** (`templates/`) from **runtime operational engines** (`logistics/`), keeping the mission root pristine (`init.sqf`, `description.ext`, `defines.hpp`, `mission.sqm`, docs).
   - External modules (such as Combat Tasking / Intel `tsk_*`) will remain untouched in the root for now, deferred for dedicated refactoring when addressing those systems.
 
-- [ ] **Standardized Prefixing Taxonomy:**
-  - **`tp_*` (Templates & Blueprints):** All configuration matrices, base defaults, vehicle roles, scoring tables, and spawn templates housed in `templates/` will be prefixed with `tp_` for instant recognition.
-  - **`logi_*` (Logistics Engine & Cargo Operations):** Routing, manifest inspection, loading/unloading mechanics, delivery validation, and depot triggers housed in `logistics/`.
-  - **`qm_*` (Quartermaster Base Services & UI):** Motorpool dealership, recruiter, equipment trader, R4-C vehicle servicing, and pylon management housed in `logistics/`.
-  - **`tsk_*` (Tactical Command & Intel):** Preserved as-is for future modularization.
+- [ ] **Standardized Prefixing Taxonomy & Template Naming Decision:**
+  - **The Design Question: `tp_*` (Type-Based) vs. System-Specific (`qm_*` / `logi_*`):**
+    - *Consideration:* Should templates be named after the subsystem that primarily uses them (e.g. `qm_vehicleCapsTemplate.sqf`, `logi_cargoTemplates.sqf`), or should all templates share a uniform `tp_` prefix?
+    - *Evaluation:* In Framework V8, templates act as **shared global data matrices** rather than private subsystem scripts:
+      - `spawnableVehicleTemplate.sqf` feeds the Quartermaster motorpool (`c_vehicleTabs.sqf`, `fn_newCarDealership.sqf`), the WorldAI spawner, the Dropoff Zone salvage system, and base service facilities.
+      - `SupplyScores.sqf` feeds the Base Ledger economy, the physical supply spawner, the cargo delivery offloader, the recruiter, and the Cargo Manifest dialog.
+      - `logisticsCargoTemplates.sqf` feeds the dynamic tasking engine, pickup triggers, dropoff offloaders, and manifest menus.
+    - *Architectural Recommendation (Adopt `tp_*`):* 
+      - Tagging shared data files with `qm_` or `logi_` is misleading, as developers might assume a `qm_` template is only used by the Quartermaster.
+      - Standardizing all files in `templates/` with the **`tp_`** prefix creates a clean, predictable rule: **"Any file beginning with `tp_` inside `templates/` is a system-agnostic configuration blueprint."**
+  - **Subsystem Prefix Breakdown:**
+    - **`tp_*` (Templates & Blueprints):** All configuration matrices, base defaults, vehicle roles, scoring tables, and spawn templates housed in `templates/` (`tp_spawnableVehicles.sqf`, `tp_cargoTemplates.sqf`, `tp_supplyScores.sqf`, etc.).
+    - **`logi_*` (Logistics Engine & Cargo Operations):** Routing, manifest inspection, loading/unloading mechanics, delivery validation, and depot triggers housed in `logistics/`.
+    - **`qm_*` (Quartermaster Base Services & UI):** Motorpool dealership, recruiter, equipment trader, R4-C vehicle servicing, and pylon management housed in `logistics/`.
+    - **`tsk_*` (Tactical Command & Intel):** Preserved as-is for future modularization.
 
 - [ ] **Technical Guide: How Bohemia Engine Pathing & Subfolder Referencing Works:**
   - **1. Relative SQF Script Paths:**
