@@ -386,35 +386,29 @@ QM_fnc_processGarageSpawn = {
 
     if (!_canAfford) exitWith { [format ["MANAGEMENT: Insufficient %1 supply points.", _missingPool]] remoteExec ["systemChat", _clientPlayer]; };
 
-    private _typeSuffix = "GROUND";
-    if (_classname isKindOf "Ship") then { _typeSuffix = "BOAT"; }
-    else { if (_classname isKindOf "Plane") then { _typeSuffix = "PLANE"; }
-    else { if (_classname isKindOf "Helicopter") then { _typeSuffix = "HELICOPTER"; }; }; };
+    // Determine vehicle classification
+    private _isBoat = _classname isKindOf "Ship";
+    private _isPlane = _classname isKindOf "Plane";
+    private _isHeli = _classname isKindOf "Helicopter";
+    private _isGround = (!_isBoat && !_isPlane && !_isHeli);
 
-    private _validSizes = [];
-    switch (toUpper _vehSize) do {
-        case "XXS":  { _validSizes = ["XXS", "XS", "S", "M", "L", "XL", "OPEN"]; };
-        case "XS":   { _validSizes = ["XS", "S", "M", "L", "XL", "OPEN"]; };
-        case "S":    { _validSizes = ["S", "M", "L", "XL", "OPEN"]; };
-        case "M":    { _validSizes = ["M", "L", "XL", "OPEN"]; };
-        case "L":    { _validSizes = ["L", "XL", "OPEN"]; };
-        case "XL":   { _validSizes = ["XL", "OPEN"]; };
-        case "OPEN": { _validSizes = ["OPEN"]; };
-        default      { _validSizes = [_vehSize]; };
+    private _typeSuffix = if (_isBoat) then { "BOAT" } else {
+        if (_isPlane) then { "PLANE" } else {
+            if (_isHeli) then { "HELICOPTER" } else { "GROUND" }
+        }
     };
 
-    private _allowedSuffixes = [];
-    {
-        _allowedSuffixes pushBack format ["Garage_%1_%2", _typeSuffix, _x];
-        if (_typeSuffix == "HELICOPTER") then { _allowedSuffixes pushBack format ["Garage_HELI_%1", _x]; };
-        if (_typeSuffix in ["PLANE", "HELICOPTER"]) then { _allowedSuffixes pushBack format ["Garage_AIR_%1", _x]; };
-        _allowedSuffixes pushBack format ["Garage_%1", _x]; 
-    } forEach _validSizes;
-    
-    _allowedSuffixes pushBack format ["Garage_%1", _typeSuffix]; 
-    if (_typeSuffix == "HELICOPTER") then { _allowedSuffixes pushBack "Garage_HELI"; };
-    if (_typeSuffix in ["PLANE", "HELICOPTER"]) then { _allowedSuffixes pushBack "Garage_AIR"; };
-    _allowedSuffixes pushBack "Garage"; 
+    // Determine vehicle requested minimum pad size rank (0 = XXS ... 6 = OPEN)
+    private _reqSize = switch (toUpper _vehSize) do {
+        case "XXS":  { 0 };
+        case "XS":   { 1 };
+        case "S":    { 2 };
+        case "M":    { 3 };
+        case "L":    { 4 };
+        case "XL":   { 5 };
+        case "OPEN": { 6 };
+        default      { 0 };
+    };
 
     private _locations = [];
     private _allBaseGarages = [];
@@ -441,29 +435,62 @@ QM_fnc_processGarageSpawn = {
     {
         private _mName = _x;
         private _mUpper = toUpper _mName;
-        private _isValid = false;
-        
-        {
-            private _suffixUpper = toUpper format ["%1_%2", _baseKey, _x];
-            if (_mUpper == _suffixUpper) exitWith { _isValid = true; };
-            
-            for "_i" from 1 to 100 do {
-                if (_mUpper == toUpper format ["%1_%2_%3", _baseKey, _x, _i]) exitWith { _isValid = true; };
+
+        // 1. Determine the pad's category from its name/suffix
+        private _padHasGround = ("_GROUND" in _mUpper || "_CAR" in _mUpper || "_TANK" in _mUpper);
+        private _padHasBoat = ("_BOAT" in _mUpper);
+        private _padHasHeli = ("_HELI" in _mUpper || "_HELICOPTER" in _mUpper);
+        private _padHasPlane = ("_PLANE" in _mUpper);
+        private _padHasAir = ("_AIR" in _mUpper);
+        private _isUniversalPad = (!_padHasGround && !_padHasBoat && !_padHasHeli && !_padHasPlane && !_padHasAir);
+
+        // 2. Strict Type Compatibility Gate
+        private _typeValid = false;
+        if (_isGround && (_padHasGround || _isUniversalPad)) then { _typeValid = true; };
+        if (_isBoat && (_padHasBoat || _isUniversalPad)) then { _typeValid = true; };
+        if (_isHeli && (_padHasHeli || _padHasAir || _isUniversalPad)) then { _typeValid = true; };
+        if (_isPlane && (_padHasPlane || _padHasAir || _isUniversalPad)) then { _typeValid = true; };
+
+        if (_typeValid) then {
+            // 3. Determine Pad Size Rank (0=XXS ... 6=OPEN/unspecified)
+            private _padSize = 6; // Default OPEN
+            if ("_XXS" in _mUpper) then {
+                _padSize = 0;
+            } else {
+                if ("_XS" in _mUpper) then {
+                    _padSize = 1;
+                } else {
+                    if ("_XL" in _mUpper) then {
+                        _padSize = 5;
+                    } else {
+                        if ("_L" in _mUpper) then {
+                            _padSize = 4;
+                        } else {
+                            if ("_M" in _mUpper) then {
+                                _padSize = 3;
+                            } else {
+                                if ("_S" in _mUpper) then {
+                                    _padSize = 2;
+                                } else {
+                                    if ("_OPEN" in _mUpper) then {
+                                        _padSize = 6;
+                                    };
+                                };
+                            };
+                        };
+                    };
+                };
             };
-            if (_isValid) exitWith {};
 
-            // Synced short-name match (e.g. "_garage_air_L", "_garage_ground_1")
-            private _shortSuffix = toUpper _x;
-            if (_mUpper find _shortSuffix >= 0) exitWith { _isValid = true; };
-        } forEach _allowedSuffixes;
-
-        if (_isValid) then {
-            private _rawVar = missionNamespace getVariable [_mName, objNull];
-            private _padObj = if (_rawVar isEqualType objNull) then { _rawVar } else { objNull };
-            if (!isNull _padObj) then {
-                private _posASL = getPosASL _padObj;
-                private _dir = getDir _padObj;
-                _locations pushBack [_padObj, _posASL, _dir, "OBJECT", _mName];
+            // Pad size must be >= vehicle size
+            if (_padSize >= _reqSize) then {
+                private _rawVar = missionNamespace getVariable [_mName, objNull];
+                private _padObj = if (_rawVar isEqualType objNull) then { _rawVar } else { objNull };
+                if (!isNull _padObj) then {
+                    private _posASL = getPosASL _padObj;
+                    private _dir = getDir _padObj;
+                    _locations pushBack [_padObj, _posASL, _dir, "OBJECT", _mName];
+                };
             };
         };
     } forEach _allBaseGarages;
