@@ -427,6 +427,17 @@ QM_fnc_processGarageSpawn = {
         };
     } forEach (allVariables missionNamespace);
 
+    // Also include garage pads synced in Eden Editor to the master base anchor/flagpole
+    private _baseObj = missionNamespace getVariable [_baseKey, objNull];
+    if (!isNull _baseObj) then {
+        {
+            private _cName = vehicleVarName _x;
+            if ((toUpper _cName) find "GARAGE" >= 0) then {
+                _allBaseGarages pushBackUnique _cName;
+            };
+        } forEach (synchronizedObjects _baseObj);
+    };
+
     {
         private _mName = _x;
         private _mUpper = toUpper _mName;
@@ -440,6 +451,10 @@ QM_fnc_processGarageSpawn = {
                 if (_mUpper == toUpper format ["%1_%2_%3", _baseKey, _x, _i]) exitWith { _isValid = true; };
             };
             if (_isValid) exitWith {};
+
+            // Synced short-name match (e.g. "_garage_air_L", "_garage_ground_1")
+            private _shortSuffix = toUpper _x;
+            if (_mUpper find _shortSuffix >= 0) exitWith { _isValid = true; };
         } forEach _allowedSuffixes;
 
         if (_isValid) then {

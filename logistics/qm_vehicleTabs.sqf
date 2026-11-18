@@ -53,11 +53,27 @@ private _allGarages = [];
     };
 } forEach (allVariables missionNamespace);
 
+// Also include garage pads synced in Eden Editor to the master base anchor/flagpole
+private _baseObj = missionNamespace getVariable [_baseKey, objNull];
+if (!isNull _baseObj) then {
+    {
+        private _cName = vehicleVarName _x;
+        if ((toUpper _cName) find "GARAGE" >= 0) then {
+            _allGarages pushBackUnique _cName;
+        };
+    } forEach (synchronizedObjects _baseObj);
+};
+
 {
     private _mUpper = toUpper _x;
     
-    // Slice off the known prefix length (e.g., "SB_CARRIER_GARAGE_AIR_L_1" -> "_AIR_L_1")
-    private _remainder = _mUpper select [_prefixLen]; 
+    // Slice off prefix length (if full name like SB_Main_Garage_Air_1) or local garage token (if synced short name like _garage_air_1)
+    private _remainder = if (_mUpper find _prefixUpper == 0) then {
+        _mUpper select [_prefixLen]
+    } else {
+        private _gIdx = _mUpper find "GARAGE";
+        if (_gIdx >= 0) then { _mUpper select [_gIdx + 6] } else { _mUpper };
+    }; 
     
     // 1. Determine size limit index (0 = XXS ... 6 = OPEN)
     private _sz = 6; 

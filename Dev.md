@@ -1074,35 +1074,35 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
-### [ ] 6.8 Eden Editor Entity Synchronization & Proximity-Based Infrastructure Discovery (Alternatives to Strict Variable Naming)
+### [x] 6.8 Eden Editor Entity Synchronization & Proximity-Based Infrastructure Discovery (Alternatives to Strict Variable Naming)
 - **1. Context & The 2D Marker Sync Limitation:**
   - In the Arma 3 Eden Editor, map markers are 2D mission metadata (`dataType="Marker"`), not 3D simulation entities.
   - The engine's connection pipeline physically forbids dragging a synchronization wire (`Right Click -> Connect -> Sync To`) between 3D world objects/triggers and 2D map markers.
   - Currently, all base infrastructure (arsenals, terminals, spawn pads, garages, service pads, medical facilities) is discovered strictly through variable naming conventions: `<BaseKey>_<TypeSuffix>_#` (e.g. `SB_Main_Arsenal_1`, `SB_Main_Garage_Air_1`).
   - Mission makers seeking a more visual, drag-and-drop workflow desire an alternative where infrastructure can be grouped with a base via Eden connections or proximity without typing repetitive variable names.
 
-- **2. Architectural Solutions & Equivalents:**
-  - **Approach A: The Flag Pole Master Base Identifier & Sync Hub (Recommended):**
-    - **The Physical Anchor:** A physical **Flag Pole** (`FlagPole_F`, `Flag_NATO_F`, `Flag_CSAT_F`, `Flag_AAF_F`, `Flag_White_F`) is placed at the physical center of the base.
-    - **Base Key Identity:** The Flag Pole is given the variable name of the base (e.g. `SB_Main`, `FOB_AgiaMarinaBase`, `CON_Stadium`, `LHA_Peral`).
-    - **Eden Drag-and-Drop Synchronization:** The mission maker draws standard Eden sync wires (`Right Click -> Connect -> Sync To`) from the Flag Pole directly to any crates, terminals, pads, or triggers belonging to that base.
-    - **Auto-Marker Synthesis:** If no map marker with `<BaseKey>` is placed in Eden, the engine automatically creates a True-North map marker at the Flag Pole's exact coordinates.
-    - **Dynamic Visual State (Conquest & Loyalty):** When a Contested Base (`CON`) flips control, `_flagPole setFlagTexture ...` automatically hoists the capturing faction's flag.
-    - **Unified Commander Hub:** The flag pole itself can serve as an action interaction point for players to open the Base Supply Ledger, recruit garrison troops, or review active convoy tasks.
-    - At mission start, `synchronizedObjects _flagPole` collects all connected entities:
-      - Boxes / Crates (`VirtualReammoBox_*`, `B_supplyCrate_F`) $\rightarrow$ Registered as Arsenals & Terminals.
-      - Helipads / Game Logics (`Land_HelipadEmpty_F`, `Logic`) $\rightarrow$ Registered as Garages / Spawns.
-      - Triggers (`EmptyDetector`) $\rightarrow$ Classified as Dropoff, Pickup, or Service based on trigger attributes.
-      - Medical Pods / Tents (`Land_Pod_Heli_Transport_04_medevac_F`) $\rightarrow$ Registered as Medical facilities.
-  - **Approach B: Proximity Perimeter Auto-Grouping (Bounding Zone):**
-    - Any infrastructure placed within the geographic perimeter of a base marker or Flag Pole (e.g., within 250m–400m of `getPosASL _flagPole`, or inside a designated `<BaseKey>_Zone` boundary trigger) is automatically gathered into that base's logistics inventory.
-    - Eliminates the need for sync lines or naming on standard objects; simply placing a helipad or crate inside the base perimeter binds it to the local base.
-  - **Approach C: The Hybrid Triple-Tier Discovery Engine:**
-    - **Tier 1 (Explicit Naming):** `<BaseKey>_<Suffix>_#` always takes highest priority (exact, deterministic).
-    - **Tier 2 (Eden Synchronization):** Any object synced to a base's Flagpole or Game Logic is linked to that base.
-    - **Tier 3 (Perimeter Proximity):** Any remaining untagged logistics objects located within the base marker's radius are claimed by the nearest base.
+- **2. Implemented Hybrid Discovery Architecture (All 3 Options Fully Operational):**
+  - **Option 1 (2D Map Marker with Full Variable Names):**
+    - The existing system: A 2D marker defines the base (`SB_Main`, `FOB_AgiaMarinaBase`).
+    - Facilities use explicit full names (`SB_Main_Arsenal_1`, `SB_Main_Garage_Air_1`, `SB_Main_pickup_1`).
+  - **Option 2 (3D Base Anchor Object / Flagpole Establishing Base without Markers):**
+    - A 3D object (Flag Pole `Flag_NATO_F`, Game Logic, or HQ building) with a base variable name (e.g. `SB_Main`, `FOB_Beachhead`, `CON_Stadium`) automatically registers in `logisticsBases` even if NO 2D map marker exists!
+    - The framework auto-creates a True-North 2D map marker at the object's coordinates (`createMarker [_objVar, getPos _x]`), ensuring map clicking, HUD ledgers, and diary manifests work seamlessly with zero manual marker placement.
+  - **Option 3 (Eden Editor Drag-and-Drop Synchronization with Short Suffixes):**
+    - The mission maker places a master anchor (Flag Pole or Game Logic) named with the base key (e.g. `SB_Main` or `FOB_Beachhead`).
+    - The mission maker draws standard Eden sync lines (`Right Click -> Connect -> Sync To`) from the Flagpole directly to child objects and triggers.
+    - Synced child objects ONLY require short suffix names indicating what they are:
+      - `_garage`, `_garage_ground`, `_garage_air_L`, `_garage_boat` $\rightarrow$ Garages & Assembly Pads
+      - `_spawn`, `_spawn_1` $\rightarrow$ Troop & Vehicle Spawns
+      - `_pickup`, `_pickup_1` $\rightarrow$ Supply Pickup Triggers
+      - `_dropoff`, `_dropoff_1` $\rightarrow$ Supply Delivery Dropoff Triggers
+      - `_service`, `_service_1` $\rightarrow$ R4-C Service Pads
+      - `_arsenal`, `_terminal` $\rightarrow$ Quartermaster Terminals & Virtual Arsenals
+      - `_medical`, `_medical_1` $\rightarrow$ Medical Containers (Huron Pods / Clinics)
+      - `_fuel`, `_ammo`, `_repair` $\rightarrow$ Passive physical logistics caches
+    - The framework automatically ties them to the master base's identity via `synchronizedObjects _baseObj`.
 
-- **3. Status:** **Logged as Section 6 Optional Architectural Proposal** (Design fully specified; ready for implementation when prioritized).
+- **3. Status:** **Verified Resolved & Implemented** across `init.sqf`, `qm_serverFunctions.sqf`, `qm_vehicleTabs.sqf`, `logi_initTasks.sqf`, and `qm_supplyPhysicalController.sqf`.
 
 ---
 

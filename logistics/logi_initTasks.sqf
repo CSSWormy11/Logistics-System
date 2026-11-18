@@ -147,6 +147,19 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
         if (_isPickup || _isDropoff || _isService) then {
             private _cutIdx = if (_isPickup) then { _pickupIdx } else { if (_isDropoff) then { _dropoffIdx } else { _serviceIdx } };
             private _parentBase = _triggerName select [0, _cutIdx];
+
+            // If trigger uses a short name like "_pickup", "_dropoff", or "_service" synced to a master base anchor/flagpole:
+            if (_parentBase == "" || _parentBase == "_") then {
+                private _syncedBaseObj = (synchronizedObjects _trigger) select { 
+                    private _bKey = vehicleVarName _x; 
+                    _bKey != "" && { _bKey in (missionNamespace getVariable ["logisticsBases", []]) } 
+                } param [0, objNull];
+                if (!isNull _syncedBaseObj) then {
+                    _parentBase = vehicleVarName _syncedBaseObj;
+                };
+            };
+            if (_parentBase == "" || _parentBase == "_") exitWith {};
+
             private _displayName = (_parentBase splitString "_") joinString " ";
 
             // One-time startup hook: preserve mission-maker trigger Condition, but update legacy script names in OnActivation

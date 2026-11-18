@@ -32,8 +32,17 @@ private _infrastructureBlueprints = createHashMap;
             private _objName = vehicleVarName _x;
             private _objLower = toLowerANSI _objName;
             private _baseLower = toLowerANSI _base;
-            if (_objName != "" && { _objLower find (_baseLower + "_") == 0 }) then {
-                
+            private _isNamedForBase = (_objName != "" && { _objLower find (_baseLower + "_") == 0 });
+            private _isSyncedToBase = false;
+
+            if (!_isNamedForBase) then {
+                private _baseObj = missionNamespace getVariable [_base, objNull];
+                if (!isNull _baseObj && { _x in (synchronizedObjects _baseObj) }) then {
+                    _isSyncedToBase = true;
+                };
+            };
+
+            if (_isNamedForBase || _isSyncedToBase) then {
                 private _supplyLane = "";
                 if ("_fuel" in _objLower) then { _supplyLane = "Fuel"; };
                 if ("_ammo" in _objLower) then { _supplyLane = "Ammo"; };

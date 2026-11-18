@@ -96,8 +96,10 @@ logi_fnc_getBaseRole = {
 };
 
 // QM_fnc_getLocationsByPrefix
-// Purpose: Scans strictly for mission-maker placed 3D objects (by variable name)
-//          matching <BaseKey>_<typeSuffix> (un-numbered or numbered 1..100).
+// Purpose: Scans for mission-maker placed 3D objects matching:
+//          1. <BaseKey>_<typeSuffix> (un-numbered or numbered 1..100)
+//          2. Objects synced in Eden to a master base object/flagpole named <BaseKey>
+//             with short suffix names (e.g. _Arsenal, _Garage_Air, _Spawn_1).
 // Returns: Array of arrays -> [[Object, PositionASL, Direction, "OBJECT", OriginalName], ...]
 QM_fnc_getLocationsByPrefix = {
     params ["_baseKey", "_typeSuffix"];
@@ -110,16 +112,36 @@ QM_fnc_getLocationsByPrefix = {
         private _safeObj = if (_obj isEqualType objNull) then { _obj } else { objNull };
         
         if (!isNull _safeObj) then {
-            _found pushBack [_safeObj, getPosASL _safeObj, getDir _safeObj, "OBJECT", _name];
+            if !(_safeObj in (_found apply { _x # 0 })) then {
+                _found pushBack [_safeObj, getPosASL _safeObj, getDir _safeObj, "OBJECT", _name];
+            };
         };
     };
 
-    // Check base suffix without numbers (e.g. SB_Arsenal)
+    // 1. Direct match: <BaseKey>_<typeSuffix> (e.g. SB_Main_Arsenal, SB_Main_Garage_Air)
     [format ["%1_%2", _baseKey, _typeSuffix]] call _checkAndAdd;
 
-    // Check numbered suffixes 1 through 100 (e.g. SB_Arsenal_1, SB_Spawn_2)
+    // 2. Numbered match: <BaseKey>_<typeSuffix>_1 .. 100
     for "_i" from 1 to 100 do {
         [format ["%1_%2_%3", _baseKey, _typeSuffix, _i]] call _checkAndAdd;
+    };
+
+    // 3. Synchronized Match: Objects synced in Eden Editor to master base anchor/flagpole
+    private _baseObj = missionNamespace getVariable [_baseKey, objNull];
+    if (!isNull _baseObj) then {
+        private _suffixUpper = toUpper _typeSuffix;
+        {
+            private _child = _x;
+            if (!isNull _child) then {
+                private _childName = vehicleVarName _child;
+                private _childUpper = toUpper _childName;
+                if (_childUpper find _suffixUpper != -1 || { (_child getVariable ["QM_TypeSuffix", ""]) == _suffixUpper }) then {
+                    if !(_child in (_found apply { _x # 0 })) then {
+                        _found pushBack [_child, getPosASL _child, getDir _child, "OBJECT", _childName];
+                    };
+                };
+            };
+        } forEach (synchronizedObjects _baseObj);
     };
     
     _found
@@ -149,25 +171,55 @@ if (isServer) then {
     } forEach allMapMarkers;
 
     // -----------------------------------------------------------------------
-    // DEFINE BASES FIRST
-    // Discover supply bases dynamically from tp_baseDefaults.sqf
+    // DEFINE BASES
+    // Method 1: Discover bases from 2D Map Markers
+    // Method 2: Discover bases from 3D Master Anchor Objects / Flagpoles
     // -----------------------------------------------------------------------
     private _knownBaseTypes = logisticsBaseDefaults apply { toUpper (_x select 0) };
     if !("CONTESTED" in _knownBaseTypes) then { _knownBaseTypes pushBack "CONTESTED"; };
 
-    logisticsBases = allMapMarkers select {
+    private _discoveredBases = [];
+
+    // Method 1: Scan 2D Map Markers
+    {
         private _markerNameUpper = toUpper _x;
         private _parts = _markerNameUpper splitString "_";
-        if (count _parts == 0) exitWith { false };
-        private _prefix = _parts select 0;
-        (_prefix in _knownBaseTypes) &&
-        { ["SPAWN", "GARAGE", "TERMINAL", "ARSENAL", "SERVICE", "PICKUP", "DROPOFF", "MEDICAL"] findIf { _markerNameUpper find _x >= 0 } == -1 }
-    };
-    
+        if (count _parts > 0) then {
+            private _prefix = _parts select 0;
+            if (_prefix in _knownBaseTypes && { ["SPAWN", "GARAGE", "TERMINAL", "ARSENAL", "SERVICE", "PICKUP", "DROPOFF", "MEDICAL", "FUEL", "AMMO", "REPAIR"] findIf { _markerNameUpper find _x >= 0 } == -1 }) then {
+                _discoveredBases pushBackUnique _x;
+            };
+        };
+    } forEach allMapMarkers;
+
+    // Method 2: Scan 3D World Objects (Flag Poles, Game Logics, Master Anchors)
+    {
+        private _objVar = vehicleVarName _x;
+        if (_objVar != "") then {
+            private _objVarUpper = toUpper _objVar;
+            private _parts = _objVarUpper splitString "_";
+            if (count _parts > 0) then {
+                private _prefix = _parts select 0;
+                if (_prefix in _knownBaseTypes && { ["SPAWN", "GARAGE", "TERMINAL", "ARSENAL", "SERVICE", "PICKUP", "DROPOFF", "MEDICAL", "FUEL", "AMMO", "REPAIR"] findIf { _objVarUpper find _x >= 0 } == -1 }) then {
+                    _discoveredBases pushBackUnique _objVar;
+                    // Auto-synthesize a 2D map marker if no marker exists for this base object
+                    if (getMarkerPos _objVar isEqualTo [0,0,0]) then {
+                        private _m = createMarker [_objVar, getPos _x];
+                        _m setMarkerType "b_installation";
+                        _m setMarkerText ((_objVar splitString "_") joinString " ");
+                        _m setMarkerDir 0;
+                    };
+                };
+            };
+        };
+    } forEach (allMissionObjects "All");
+
     // Ensure "MSR" base key is always present in logisticsBases for infinite supply pool accounting
-    if !("MSR" in logisticsBases) then {
-        logisticsBases pushBackUnique "MSR";
+    if !("MSR" in _discoveredBases) then {
+        _discoveredBases pushBackUnique "MSR";
     };
+
+    logisticsBases = _discoveredBases;
     publicVariable "logisticsBases"; 
 
     // --- Initialize Base Ledger Economy ---
