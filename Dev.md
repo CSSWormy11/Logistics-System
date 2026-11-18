@@ -1082,16 +1082,20 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
   - Mission makers seeking a more visual, drag-and-drop workflow desire an alternative where infrastructure can be grouped with a base via Eden connections or proximity without typing repetitive variable names.
 
 - **2. Architectural Solutions & Equivalents:**
-  - **Approach A: The Base Master Logic / Flagpole Sync Hub (Recommended):**
-    - Instead of syncing to a marker (impossible in the engine), the mission maker places a single **Game Logic entity** or a physical **Flag Pole** (`Flag_NATO_F`, `Flag_CSAT_F`) at the base, named after the base (e.g. `SB_Main` or `SB_Main_Hub`).
-    - The mission maker draws standard Eden sync wires from the Flag Pole / Game Logic to any associated crates, terminals, pads, or triggers.
-    - At mission start, `synchronizedObjects _hub` collects all connected entities:
+  - **Approach A: The Flag Pole Master Base Identifier & Sync Hub (Recommended):**
+    - **The Physical Anchor:** A physical **Flag Pole** (`FlagPole_F`, `Flag_NATO_F`, `Flag_CSAT_F`, `Flag_AAF_F`, `Flag_White_F`) is placed at the physical center of the base.
+    - **Base Key Identity:** The Flag Pole is given the variable name of the base (e.g. `SB_Main`, `FOB_AgiaMarinaBase`, `CON_Stadium`, `LHA_Peral`).
+    - **Eden Drag-and-Drop Synchronization:** The mission maker draws standard Eden sync wires (`Right Click -> Connect -> Sync To`) from the Flag Pole directly to any crates, terminals, pads, or triggers belonging to that base.
+    - **Auto-Marker Synthesis:** If no map marker with `<BaseKey>` is placed in Eden, the engine automatically creates a True-North map marker at the Flag Pole's exact coordinates.
+    - **Dynamic Visual State (Conquest & Loyalty):** When a Contested Base (`CON`) flips control, `_flagPole setFlagTexture ...` automatically hoists the capturing faction's flag.
+    - **Unified Commander Hub:** The flag pole itself can serve as an action interaction point for players to open the Base Supply Ledger, recruit garrison troops, or review active convoy tasks.
+    - At mission start, `synchronizedObjects _flagPole` collects all connected entities:
       - Boxes / Crates (`VirtualReammoBox_*`, `B_supplyCrate_F`) $\rightarrow$ Registered as Arsenals & Terminals.
       - Helipads / Game Logics (`Land_HelipadEmpty_F`, `Logic`) $\rightarrow$ Registered as Garages / Spawns.
       - Triggers (`EmptyDetector`) $\rightarrow$ Classified as Dropoff, Pickup, or Service based on trigger attributes.
       - Medical Pods / Tents (`Land_Pod_Heli_Transport_04_medevac_F`) $\rightarrow$ Registered as Medical facilities.
   - **Approach B: Proximity Perimeter Auto-Grouping (Bounding Zone):**
-    - Any infrastructure placed within the geographic perimeter of a base marker (e.g., within 250m–400m of `getMarkerPos _baseKey`, or inside a designated `<BaseKey>_Zone` boundary trigger) is automatically gathered into that base's logistics inventory.
+    - Any infrastructure placed within the geographic perimeter of a base marker or Flag Pole (e.g., within 250m–400m of `getPosASL _flagPole`, or inside a designated `<BaseKey>_Zone` boundary trigger) is automatically gathered into that base's logistics inventory.
     - Eliminates the need for sync lines or naming on standard objects; simply placing a helipad or crate inside the base perimeter binds it to the local base.
   - **Approach C: The Hybrid Triple-Tier Discovery Engine:**
     - **Tier 1 (Explicit Naming):** `<BaseKey>_<Suffix>_#` always takes highest priority (exact, deterministic).
@@ -1099,6 +1103,67 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
     - **Tier 3 (Perimeter Proximity):** Any remaining untagged logistics objects located within the base marker's radius are claimed by the nearest base.
 
 - **3. Status:** **Logged as Section 6 Optional Architectural Proposal** (Design fully specified; ready for implementation when prioritized).
+
+---
+
+## 7. Major Feature Requests & System Overhauls
+
+### [ ] 7.1 Multi-Side (PvP / TvT / Multi-Faction) Logistics Engine
+- **1. Strategic Context & Competitive Logistics:**
+  - Modern conflict scenarios (PvP, TvT, or multi-faction PvE where BLUFOR, OPFOR, and Independent compete for dominance) require logistics networks that operate symmetrically and securely without cross-faction leakage.
+  - Logistics players become high-value strategic targets: ambushing an enemy ammo convoy or intercepting a fuel tanker directly starves opposing combat forces of vehicle deployments and ordnance.
+
+- **2. Architecture & Data Model:**
+  - **Side-Scoped Base Ledgers:**
+    - Ledger variables expand from global base keys to side-scoped keys where applicable: `LogiScore_<BaseKey>_<Category>` or `LogiScore_<BaseKey>_<Side>_<Category>`.
+  - **Faction-Gated Visibility & Fog of War:**
+    - The Base Supply Ledger HUD and Map Diary only display stockpile levels for bases belonging to the player's own faction (or captured `CON` sectors under friendly control).
+    - Enemy base stockpiles remain concealed unless revealed through battlefield intelligence, recon UAV flyovers, or captured documents.
+  - **Independent Supply Corridors (MSRs):**
+    - Distinct pipeline routes for each faction:
+      - BLUFOR: `MSR_WEST_1` / `CS_WEST_Carrier`
+      - OPFOR: `MSR_EAST_1` / `CS_EAST_Freighter`
+      - INDEPENDENT: `MSR_GUER_1`
+    - Task generation strictly assigns supply acquisition tasks from friendly MSRs to friendly Supply Bases.
+  - **Inter-Faction Cargo Interception & Supply Hijacking:**
+    - Players can capture enemy logistics vehicles carrying cargo.
+    - Delivering captured enemy crates to a friendly dropoff pad credits the cargo points directly to the friendly base's ledger, depriving the enemy of resources while bolstering friendly supplies.
+
+- **3. Status:** **Logged as Section 7 Major Feature Proposal**.
+
+---
+
+### [ ] 7.2 Civilian-Oriented Logistics & Non-Combat Humanitarian Infrastructure
+- **1. Operational Scope & Humanitarian Mission Profiles:**
+  - Logistics operations often encompass non-combat, stability, disaster relief, and nation-building operations alongside kinetic warfare.
+  - Incorporating civilian supply networks allows mission makers to design civilian aid missions, peacekeeping scenarios, and economic reconstruction objectives.
+
+- **2. Civilian Supply Categories & Infrastructure:**
+  - **Non-Military Supply Pools:**
+    - **`Food` / `Rations`:** Sustenance for civilian towns, refugee camps, and displaced persons.
+    - **`Water` / `Purification`:** Clean water bladders delivered to drought zones or sabotaged infrastructure.
+    - **`Medical Aid`:** Vaccines, first aid, and surgical equipment delivered to civilian clinics and disaster zones.
+    - **`Building Materials` / `Shelter`:** Construction components (lumber, sheet metal, cement, modular housing) to rebuild damaged villages.
+    - **`Civilian Fuel` / `Power`:** Diesel and generators delivered to power stations and water pumping facilities.
+  - **Civilian Base Classifications:**
+    - **`CIV_Town_<Name>`:** Civilian population centers with baseline consumption rates and stability meters.
+    - **`CIV_Hospital_<Name>`:** Regional medical centers requiring periodic pharmaceutical deliveries.
+    - **`CIV_Port_<Name>`:** Commercial maritime shipping terminals acting as humanitarian pipeline origins.
+    - **`CIV_Camp_<Name>`:** Displaced persons and refugee camps dependent on continuous humanitarian relief.
+
+- **3. Dynamic Economy & Public Goodwill System:**
+  - **Local Stability & Faction Reputation:**
+    - Successfully delivering humanitarian supplies to a town increases the population's Goodwill rating toward the delivering faction.
+    - High Goodwill yields civilian intelligence (alerts on enemy IED placements, insurgent safehouse coordinates, or local militia support).
+    - Starving civilian centers of aid or causing collateral damage reduces Goodwill, increasing the likelihood of protests, road blockades, or local insurgent recruitment.
+  - **Civilian & Commercial Fleet Vehicles:**
+    - Supports civilian and commercial logistics vehicles:
+      - Vans & Pickups (`C_Van_02_transport_F`, `C_Offroad_02_unarmed_F`).
+      - Heavy Commercial Trucks (`C_Truck_02_covered_F`, Zamak Civilian, Flatbeds).
+      - Utility & Cargo Helicopters (`C_Heli_Light_01_civil_F`, civilian Huron/Mohawk variants).
+      - Commercial Freighters & Barges.
+
+- **4. Status:** **Logged as Section 7 Major Feature Proposal**.
 
 ---
 
