@@ -413,6 +413,7 @@ QM_fnc_processGarageSpawn = {
     private _locations = [];
     private _allBaseGarages = [];
     private _searchStr = toUpper format ["%1_Garage", _baseKey];
+    private _prefixLen = count _searchStr;
 
     {
         if ((toUpper _x) find _searchStr == 0) then {
@@ -436,12 +437,20 @@ QM_fnc_processGarageSpawn = {
         private _mName = _x;
         private _mUpper = toUpper _mName;
 
-        // 1. Determine the pad's category from its name/suffix
-        private _padHasGround = ("_GROUND" in _mUpper || "_CAR" in _mUpper || "_TANK" in _mUpper);
-        private _padHasBoat = ("_BOAT" in _mUpper);
-        private _padHasHeli = ("_HELI" in _mUpper || "_HELICOPTER" in _mUpper);
-        private _padHasPlane = ("_PLANE" in _mUpper);
-        private _padHasAir = ("_AIR" in _mUpper);
+        // Slice off base prefix and "GARAGE" token so base name (e.g. "SB_MAIN") never pollutes category or size tokens
+        private _remainder = if (_mUpper find _searchStr == 0) then {
+            _mUpper select [_prefixLen]
+        } else {
+            private _gIdx = _mUpper find "GARAGE";
+            if (_gIdx >= 0) then { _mUpper select [_gIdx + 6] } else { _mUpper };
+        };
+
+        // 1. Determine the pad's category from its remaining suffix
+        private _padHasGround = ("_GROUND" in _remainder || "_CAR" in _remainder || "_TANK" in _remainder);
+        private _padHasBoat = ("_BOAT" in _remainder);
+        private _padHasHeli = ("_HELI" in _remainder || "_HELICOPTER" in _remainder);
+        private _padHasPlane = ("_PLANE" in _remainder);
+        private _padHasAir = ("_AIR" in _remainder);
         private _isUniversalPad = (!_padHasGround && !_padHasBoat && !_padHasHeli && !_padHasPlane && !_padHasAir);
 
         // 2. Strict Type Compatibility Gate
@@ -454,25 +463,25 @@ QM_fnc_processGarageSpawn = {
         if (_typeValid) then {
             // 3. Determine Pad Size Rank (0=XXS ... 6=OPEN/unspecified)
             private _padSize = 6; // Default OPEN
-            if ("_XXS" in _mUpper) then {
+            if ("_XXS" in _remainder) then {
                 _padSize = 0;
             } else {
-                if ("_XS" in _mUpper) then {
+                if ("_XS" in _remainder) then {
                     _padSize = 1;
                 } else {
-                    if ("_XL" in _mUpper) then {
+                    if ("_XL" in _remainder) then {
                         _padSize = 5;
                     } else {
-                        if ("_L" in _mUpper) then {
+                        if ("_L" in _remainder) then {
                             _padSize = 4;
                         } else {
-                            if ("_M" in _mUpper) then {
+                            if ("_M" in _remainder) then {
                                 _padSize = 3;
                             } else {
-                                if ("_S" in _mUpper) then {
+                                if ("_S" in _remainder) then {
                                     _padSize = 2;
                                 } else {
-                                    if ("_OPEN" in _mUpper) then {
+                                    if ("_OPEN" in _remainder) then {
                                         _padSize = 6;
                                     };
                                 };
