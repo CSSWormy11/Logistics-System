@@ -156,11 +156,12 @@ if (isServer) then {
     if !("CONTESTED" in _knownBaseTypes) then { _knownBaseTypes pushBack "CONTESTED"; };
 
     logisticsBases = allMapMarkers select {
-        private _parts = (toUpper _x) splitString "_";
+        private _markerNameUpper = toUpper _x;
+        private _parts = _markerNameUpper splitString "_";
         if (count _parts == 0) exitWith { false };
         private _prefix = _parts select 0;
         (_prefix in _knownBaseTypes) &&
-        { ["SPAWN", "GARAGE", "TERMINAL", "ARSENAL", "SERVICE", "PICKUP", "DROPOFF", "MEDICAL"] findIf { (toUpper _x) find _x >= 0 } == -1 }
+        { ["SPAWN", "GARAGE", "TERMINAL", "ARSENAL", "SERVICE", "PICKUP", "DROPOFF", "MEDICAL"] findIf { _markerNameUpper find _x >= 0 } == -1 }
     };
     
     // Ensure "MSR" base key is always present in logisticsBases for infinite supply pool accounting

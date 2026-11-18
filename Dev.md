@@ -1074,6 +1074,34 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
+### [ ] 6.8 Eden Editor Entity Synchronization & Proximity-Based Infrastructure Discovery (Alternatives to Strict Variable Naming)
+- **1. Context & The 2D Marker Sync Limitation:**
+  - In the Arma 3 Eden Editor, map markers are 2D mission metadata (`dataType="Marker"`), not 3D simulation entities.
+  - The engine's connection pipeline physically forbids dragging a synchronization wire (`Right Click -> Connect -> Sync To`) between 3D world objects/triggers and 2D map markers.
+  - Currently, all base infrastructure (arsenals, terminals, spawn pads, garages, service pads, medical facilities) is discovered strictly through variable naming conventions: `<BaseKey>_<TypeSuffix>_#` (e.g. `SB_Main_Arsenal_1`, `SB_Main_Garage_Air_1`).
+  - Mission makers seeking a more visual, drag-and-drop workflow desire an alternative where infrastructure can be grouped with a base via Eden connections or proximity without typing repetitive variable names.
+
+- **2. Architectural Solutions & Equivalents:**
+  - **Approach A: The Base Master Logic / Flagpole Sync Hub (Recommended):**
+    - Instead of syncing to a marker (impossible in the engine), the mission maker places a single **Game Logic entity** or a physical **Flag Pole** (`Flag_NATO_F`, `Flag_CSAT_F`) at the base, named after the base (e.g. `SB_Main` or `SB_Main_Hub`).
+    - The mission maker draws standard Eden sync wires from the Flag Pole / Game Logic to any associated crates, terminals, pads, or triggers.
+    - At mission start, `synchronizedObjects _hub` collects all connected entities:
+      - Boxes / Crates (`VirtualReammoBox_*`, `B_supplyCrate_F`) $\rightarrow$ Registered as Arsenals & Terminals.
+      - Helipads / Game Logics (`Land_HelipadEmpty_F`, `Logic`) $\rightarrow$ Registered as Garages / Spawns.
+      - Triggers (`EmptyDetector`) $\rightarrow$ Classified as Dropoff, Pickup, or Service based on trigger attributes.
+      - Medical Pods / Tents (`Land_Pod_Heli_Transport_04_medevac_F`) $\rightarrow$ Registered as Medical facilities.
+  - **Approach B: Proximity Perimeter Auto-Grouping (Bounding Zone):**
+    - Any infrastructure placed within the geographic perimeter of a base marker (e.g., within 250m–400m of `getMarkerPos _baseKey`, or inside a designated `<BaseKey>_Zone` boundary trigger) is automatically gathered into that base's logistics inventory.
+    - Eliminates the need for sync lines or naming on standard objects; simply placing a helipad or crate inside the base perimeter binds it to the local base.
+  - **Approach C: The Hybrid Triple-Tier Discovery Engine:**
+    - **Tier 1 (Explicit Naming):** `<BaseKey>_<Suffix>_#` always takes highest priority (exact, deterministic).
+    - **Tier 2 (Eden Synchronization):** Any object synced to a base's Flagpole or Game Logic is linked to that base.
+    - **Tier 3 (Perimeter Proximity):** Any remaining untagged logistics objects located within the base marker's radius are claimed by the nearest base.
+
+- **3. Status:** **Logged as Section 6 Optional Architectural Proposal** (Design fully specified; ready for implementation when prioritized).
+
+---
+
 **Ongoing Development Tracking**
 
 Maintain this checklist as part of the V8 development process. These goals are not necessarily sequential and may be addressed independently as opportunities arise during debugging, refactoring, and feature development.
