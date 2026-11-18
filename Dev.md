@@ -1133,37 +1133,117 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
-### [ ] 7.2 Civilian-Oriented Logistics & Non-Combat Humanitarian Infrastructure
-- **1. Operational Scope & Humanitarian Mission Profiles:**
-  - Logistics operations often encompass non-combat, stability, disaster relief, and nation-building operations alongside kinetic warfare.
-  - Incorporating civilian supply networks allows mission makers to design civilian aid missions, peacekeeping scenarios, and economic reconstruction objectives.
+### [ ] 7.2 Civilian Logistics Framework (Commercial, Industrial & Resource Network)
 
-- **2. Civilian Supply Categories & Infrastructure:**
-  - **Non-Military Supply Pools:**
-    - **`Food` / `Rations`:** Sustenance for civilian towns, refugee camps, and displaced persons.
-    - **`Water` / `Purification`:** Clean water bladders delivered to drought zones or sabotaged infrastructure.
-    - **`Medical Aid`:** Vaccines, first aid, and surgical equipment delivered to civilian clinics and disaster zones.
-    - **`Building Materials` / `Shelter`:** Construction components (lumber, sheet metal, cement, modular housing) to rebuild damaged villages.
-    - **`Civilian Fuel` / `Power`:** Diesel and generators delivered to power stations and water pumping facilities.
-  - **Civilian Base Classifications:**
-    - **`CIV_Town_<Name>`:** Civilian population centers with baseline consumption rates and stability meters.
-    - **`CIV_Hospital_<Name>`:** Regional medical centers requiring periodic pharmaceutical deliveries.
-    - **`CIV_Port_<Name>`:** Commercial maritime shipping terminals acting as humanitarian pipeline origins.
-    - **`CIV_Camp_<Name>`:** Displaced persons and refugee camps dependent on continuous humanitarian relief.
+> [!NOTE]
+> **Scope & Architectural Boundary:** Civilian Logistics is a subsystem of the broader Logistics framework within the Dynamic Mission System (DMS). It operates alongside Military Logistics but addresses a distinct economic and material-distribution purpose. This documentation preserves established design intentions and catalogs open design questions; it does **not** represent finalized or actively implemented code.
 
-- **3. Dynamic Economy & Public Goodwill System:**
-  - **Local Stability & Faction Reputation:**
-    - Successfully delivering humanitarian supplies to a town increases the population's Goodwill rating toward the delivering faction.
-    - High Goodwill yields civilian intelligence (alerts on enemy IED placements, insurgent safehouse coordinates, or local militia support).
-    - Starving civilian centers of aid or causing collateral damage reduces Goodwill, increasing the likelihood of protests, road blockades, or local insurgent recruitment.
-  - **Civilian & Commercial Fleet Vehicles:**
-    - Supports civilian and commercial logistics vehicles:
-      - Vans & Pickups (`C_Van_02_transport_F`, `C_Offroad_02_unarmed_F`).
-      - Heavy Commercial Trucks (`C_Truck_02_covered_F`, Zamak Civilian, Flatbeds).
-      - Utility & Cargo Helicopters (`C_Heli_Light_01_civil_F`, civilian Huron/Mohawk variants).
-      - Commercial Freighters & Barges.
+- **1. Core Purpose & Distinction from Military Logistics:**
+  - **Military Logistics:** Primarily handles the movement of military supplies (`Cargo`, `Ammo`, `Fuel`, `Medical`, `Repair`, `Vehicle`, `Troops`) between MSR supply pipelines, rear Staging Bases, and forward operating bases (FOBs). Supplies are delivered into base inventory pools to sustain authorized military units and combat readiness.
+  - **Civilian Logistics:** Handles a broader civilian economic, industrial, and material-distribution network. It supports the extraction, transportation, storage, processing, commercial distribution, purchasing, and consumption of civilian goods, raw materials, and finished assets.
+  - **Not a Simple Military Sub-Category:** Civilian Logistics cannot simply force all materials into the existing seven military supply categories; it operates as an independent resource and distribution framework.
 
-- **4. Status:** **Logged as Section 7 Major Feature Proposal**.
+- **2. Civilian Resource Classifications (Beyond the Seven Military Pools):**
+  - **Minimum Resource Types Identified:**
+    - `Fuel` (Civilian/Commercial power, heating, transport)
+    - `Repair Materials` (Civilian maintenance, construction, toolsets)
+    - `Cargo` (General commercial freight, boxed goods, retail merchandise)
+    - `Water` (Potable municipal water, agricultural supply, drought relief)
+    - `Wood` (Harvested timber, lumber, construction materials)
+    - `Coal` (Energy production, smelting fuel, industrial heating)
+    - `Iron Ore` (Mined mineral resources, raw manufacturing feedstock)
+  - **Industrial & Commercial Movement:** Resources such as water, wood, coal, and iron ore represent materials that flow through extraction, refinement, manufacturing, distribution, and consumption pipelines.
+  - **Dedicated Classification:** A distinct civilian resource classification schema is necessary rather than forcing civilian goods into military ledgers.
+
+- **3. Civilian Shops vs. Military Arsenals (Strict System Separation):**
+  - **Isolated User Roles & Facilities:**
+    - Civilian players interface exclusively with **Civilian Shops**.
+    - Military players interface exclusively with **Military Arsenal Facilities** (`VirtualReammoBox_*`, Quartermaster Terminals).
+    - **No Cross-Access:** Civilian shops maintain completely independent inventories from military armories; there is no automatic cross-access or bleed-over between systems.
+  - **Network-Linked Stock & Real Availability:**
+    - Civilian shops are not static, bottomless inventories.
+    - Shop stock connects dynamically to the wider civilian supply network: availability of retail goods, tools, and consumables reflects physical deliveries made to that shop or commercial district.
+  - **Previously Discussed Commercial Mechanics:** Discussions have explored shop inventory tracking, stock limits, goods valuation/pricing, retail purchasing, and civilian consumption (exact technical integration remains an open design decision).
+
+- **4. Civilian Infrastructure & Proposed Supply Flow:**
+  - **Proposed Facility Archetypes:**
+    - **Mines / Extraction Sites:** Primary sources providing raw, extracted resources (iron ore, coal, stone).
+    - **Industrial Sites / Factories:** Facilities that receive raw materials and process/manufacture refined goods or construction supplies.
+    - **Warehouses / Depots:** Regional storage hubs that consolidate, hold, and distribute bulk resources.
+    - **Ports & Railheads:** Major commercial transit hubs serving as maritime/intermodal transportation gateways.
+    - **Commercial Shops / Retail Markets:** Urban and rural storefronts that maintain consumer inventory and vend goods to civilians.
+  - **Proposed Supply Flow Model (Unfinalized Proposal):**
+    ```mermaid
+    flowchart LR
+        Sources["Resource Sources<br/>(Mines, Forests, Wells)"] --> Trans1["Transportation<br/>(Trucks, Freighters)"]
+        Trans1 --> Storage["Storage Hubs<br/>(Warehouses, Ports)"]
+        Storage --> Processing["Processing Facilities<br/>(Factories, Mills, Refineries)"]
+        Processing --> Distribution["Commercial Distribution<br/>(Wholesale Depots)"]
+        Distribution --> Shops["Commercial Shops<br/>(Storefronts, Markets)"]
+        Shops --> Consumption["Civilian Consumption<br/>(Local Populations, Players)"]
+    ```
+    *(Note: This represents a conceptual operational model from discussions, NOT a finalized engineering commitment. Facility types and production relationships remain subject to evaluation.)*
+
+- **5. Comparative Framework: Military vs. Civilian Logistics:**
+  | Dimension | Military Logistics (Logistics V8 Core) | Civilian Logistics (Proposed Framework) |
+  | :--- | :--- | :--- |
+  | **Primary Purpose** | Sustaining combat readiness & operational persistence | Economic distribution, commerce, industrial processing |
+  | **Resource Types** | 7 Pools: Cargo, Ammo, Fuel, Medical, Repair, Vehicle, Troops | Broad spectrum: Fuel, Repair, Cargo, Water, Wood, Coal, Iron Ore, finished goods |
+  | **Primary Nodes** | MSR Pipelines, Staging Bases (`SB`, `CVN`, `LHA`, `LPD`), `FOB`s | Mines, Factories, Warehouses, Ports, Commercial Shops |
+  | **User Interaction** | Quartermaster Terminals, Garages, Virtual Arsenals, R4-C Pads | Commercial Shops, Vendor Kiosks, Industrial Loading Bays |
+  | **Access Control** | Faction-gated (BLUFOR, OPFOR, INDEP), side permanence | Open civilian commerce, regional consumer markets |
+  | **Inventory Dynamics** | Point ledgers deducted by vehicle deployment & loadouts | Physical cargo, raw material processing, retail stock & purchasing |
+
+  > [!IMPORTANT]
+  > **Shared vs. Independent Infrastructure:** While both systems may share transportation mechanics (e.g. flatbed trucks, cargo loading triggers, ViV integration, dropoff/pickup routines), their resource classifications, inventory data stores, and user interfaces must remain strictly isolated. The precise degree of shared code vs independent modules remains an open architectural decision.
+
+- **6. Clear Boundary: Civilian Logistics vs. DMS Humanitarian Operational Framework:**
+  - **Civilian Logistics Network:** The persistent underlying economic, resource, and commercial distribution network (moving wood/coal, stocking shops, warehouse inventories).
+  - **Humanitarian Operational Framework:** Independent tactical mission tasking within DMS, including:
+    - Search and Rescue (SAR)
+    - Civilian Medical Evacuations (MEDEVAC)
+    - Disaster response (wildfire suppression, flood relief)
+    - IDAP humanitarian aid drops and refugee camp logistics
+    - Critical municipal infrastructure repair (power restoration, water decontamination)
+  - **Conceptual Separation:** A humanitarian relief task (e.g., delivering medical supplies to an IDAP clinic) may utilize logistics transport vehicles, but it represents an *operational activity*, not a permanent modification to commercial shop retail ledgers. Civilian Logistics and Humanitarian Operations belong to distinct functional domains within DMS.
+
+- **7. Catalog of Outstanding Design Questions:**
+  The following design questions must be formally resolved through future design discussions prior to any implementation:
+
+  - **A. Resource Classification & Taxonomy:**
+    - What complete list of civilian resource types will be supported?
+    - How will resources be categorized across Raw Materials, Processed Goods, Finished Commercial Products, and Consumables?
+    - How should civilian resources be valued, measured, and represented (unit counts, volumetric mass, point equivalents, or physical cargo objects)?
+
+  - **B. Resource Production & Industrial Processing:**
+    - How are raw resources extracted (passive background yield, interactive mining, player labor, or external delivery)?
+    - Do industrial processing plants convert raw inputs into finished outputs (e.g. Iron Ore + Coal $\rightarrow$ Steel $\rightarrow$ Repair Parts)?
+    - Are production rates static, dynamic, or tied to available input stockpiles?
+
+  - **C. Transportation & Storage Architecture:**
+    - How are civilian resources physically transported across the map (standard cargo crates, loose bulk materials, tankers, flatbeds)?
+    - Do regional warehouses maintain discrete, persistent per-building inventories?
+    - How are civilian transportation assets classified, and can they safely leverage existing Logistics V8 vehicle loading routines?
+
+  - **D. Shops & Commercial Distribution:**
+    - How do commercial storefronts receive inventory (scheduled warehouse deliveries, merchant player runs, or baseline restock timers)?
+    - How are retail purchase prices calculated (fixed pricing vs dynamic supply-and-demand valuation)?
+    - Does customer purchasing directly consume physical shop inventory, causing storefronts to run out of stock?
+
+  - **E. Economy, Currency & Facility Ownership:**
+    - Does Civilian Logistics utilize an explicit currency / financial ledger, or does it operate on barter, resource allocation, and trade credits?
+    - Who owns civilian infrastructure (neutral civilian population, private commercial entities, municipal governments)?
+    - Can civilian facilities be bought, leased, or captured by players or factions?
+
+  - **F. Persistence & DMS System Integration:**
+    - Which civilian inventories require server-side persistence across sessions or mission restarts?
+    - How does civilian inventory data interface with the central Logistics framework without degrading performance?
+    - How does the civilian logistics framework gracefully handle scenarios where civilian operational modules (e.g. IDAP missions, SAR) are disabled?
+
+- **8. Status & Roadmap Classification:**
+  - **Established Design Intentions:** Complete separation from military arsenals; support for raw industrial resources (wood, coal, iron ore, water); independent commercial shop network; strict decoupling from humanitarian operational missions.
+  - **Unfinalized Concepts:** Extraction-to-consumption supply chain flow; shop stock valuation models; shared vehicle loading mechanics.
+  - **Current Status:** **Documented as Design Foundation (Section 7.2)**. No SQF implementation or code modifications authorized until design questions are fully aligned.
 
 ---
 
