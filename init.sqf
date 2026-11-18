@@ -188,6 +188,11 @@ if (isServer) then {
             private _prefix = _parts select 0;
             if (_prefix in _knownBaseTypes && { ["SPAWN", "GARAGE", "TERMINAL", "ARSENAL", "SERVICE", "PICKUP", "DROPOFF", "MEDICAL", "FUEL", "AMMO", "REPAIR"] findIf { _markerNameUpper find _x >= 0 } == -1 }) then {
                 _discoveredBases pushBackUnique _x;
+                if (markerText _x == "") then {
+                    private _nameParts = _x splitString "_";
+                    if (count _nameParts > 1) then { _nameParts deleteAt 0; };
+                    _x setMarkerText (_nameParts joinString " ");
+                };
             };
         };
     } forEach allMapMarkers;
@@ -206,7 +211,18 @@ if (isServer) then {
                     if (getMarkerPos _objVar isEqualTo [0,0,0]) then {
                         private _m = createMarker [_objVar, getPos _x];
                         _m setMarkerType "b_installation";
-                        _m setMarkerText ((_objVar splitString "_") joinString " ");
+                        
+                        private _customName = _x getVariable ["QM_BaseName", _x getVariable ["QM_BaseDisplayName", ""]];
+                        private _displayName = if (_customName != "") then {
+                            _customName
+                        } else {
+                            private _nameParts = _objVar splitString "_";
+                            if (count _nameParts > 1) then { _nameParts deleteAt 0; };
+                            _nameParts joinString " "
+                        };
+
+                        _m setMarkerText _displayName;
+                        _m setMarkerColor "ColorWEST";
                         _m setMarkerDir 0;
                     };
                 };
