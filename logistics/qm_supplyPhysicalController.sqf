@@ -14,7 +14,8 @@
 */
 
 if (!isServer) exitWith {};
-waitUntil { !isNil "logisticsBases" };
+waitUntil { !isNil "logisticsBases" && { count logisticsBases > 0 } };
+waitUntil { time > 0 };
 diag_log "PART 3B: Initializing Hybrid Vehicle-Tracker Watchdog...";
 
 private _infrastructureBlueprints = createHashMap;
@@ -26,7 +27,9 @@ private _infrastructureBlueprints = createHashMap;
     
     // Only map physical objects if there is NO virtual trigger pad at this base
     if (isNull _padTrigger) then {
-        private _searchObjects = vehicles + allMissionObjects "ReammoBox_F" + allMissionObjects "ThingX" + allMissionObjects "Building";
+        private _baseObj = missionNamespace getVariable [_base, objNull];
+        private _syncedObjs = if (!isNull _baseObj) then { synchronizedObjects _baseObj } else { [] };
+        private _searchObjects = vehicles + allMissionObjects "ReammoBox_F" + allMissionObjects "ThingX" + allMissionObjects "Building" + _syncedObjs;
         
         {
             private _objName = vehicleVarName _x;

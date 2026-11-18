@@ -427,7 +427,8 @@ QM_fnc_processGarageSpawn = {
     if (!isNull _baseObj) then {
         {
             private _cName = vehicleVarName _x;
-            if ((toUpper _cName) find "GARAGE" >= 0) then {
+            private _cUpper = toUpper _cName;
+            if (_cUpper find "GARAGE" >= 0 || _cUpper find "BOAT" >= 0 || _cUpper find "GROUND" >= 0 || _cUpper find "AIR" >= 0 || _cUpper find "HELI" >= 0 || _cUpper find "PLANE" >= 0 || _cUpper find "PAD" >= 0) then {
                 _allBaseGarages pushBackUnique _cName;
             };
         } forEach (synchronizedObjects _baseObj);
@@ -446,11 +447,11 @@ QM_fnc_processGarageSpawn = {
         };
 
         // 1. Determine the pad's category from its remaining suffix
-        private _padHasGround = ("_GROUND" in _remainder || "_CAR" in _remainder || "_TANK" in _remainder);
-        private _padHasBoat = ("_BOAT" in _remainder);
-        private _padHasHeli = ("_HELI" in _remainder || "_HELICOPTER" in _remainder);
-        private _padHasPlane = ("_PLANE" in _remainder);
-        private _padHasAir = ("_AIR" in _remainder);
+        private _padHasGround = ("_GROUND" in _remainder || "GROUND" in _remainder || "_CAR" in _remainder || "CAR" in _remainder || "_TANK" in _remainder || "TANK" in _remainder);
+        private _padHasBoat = ("_BOAT" in _remainder || "BOAT" in _remainder);
+        private _padHasHeli = ("_HELI" in _remainder || "HELI" in _remainder || "_HELICOPTER" in _remainder || "HELICOPTER" in _remainder);
+        private _padHasPlane = ("_PLANE" in _remainder || "PLANE" in _remainder);
+        private _padHasAir = ("_AIR" in _remainder || "AIR" in _remainder);
         private _isUniversalPad = (!_padHasGround && !_padHasBoat && !_padHasHeli && !_padHasPlane && !_padHasAir);
 
         // 2. Strict Type Compatibility Gate

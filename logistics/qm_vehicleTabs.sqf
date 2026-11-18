@@ -58,7 +58,8 @@ private _baseObj = missionNamespace getVariable [_baseKey, objNull];
 if (!isNull _baseObj) then {
     {
         private _cName = vehicleVarName _x;
-        if ((toUpper _cName) find "GARAGE" >= 0) then {
+        private _cUpper = toUpper _cName;
+        if (_cUpper find "GARAGE" >= 0 || _cUpper find "BOAT" >= 0 || _cUpper find "GROUND" >= 0 || _cUpper find "AIR" >= 0 || _cUpper find "HELI" >= 0 || _cUpper find "PLANE" >= 0 || _cUpper find "PAD" >= 0) then {
             _allGarages pushBackUnique _cName;
         };
     } forEach (synchronizedObjects _baseObj);
@@ -85,11 +86,11 @@ if (!isNull _baseObj) then {
     else { if (_remainder find "_XL" >= 0) then { _sz = 5; }; }; }; }; }; };
     
     // 2. Identify Pad Engine Type exclusively from the remaining string modifiers
-    private _isPadBoat = (_remainder find "_BOAT" >= 0);
-    private _isPadHeli = (_remainder find "_HELI" >= 0);
-    private _isPadPlane = (_remainder find "_PLANE" >= 0);
-    private _isPadAir = (_remainder find "_AIR" >= 0);
-    private _isPadGround = (_remainder find "_GROUND" >= 0) || (_remainder find "_CAR" >= 0) || (_remainder find "_TANK" >= 0);
+    private _isPadBoat = (_remainder find "BOAT" >= 0);
+    private _isPadHeli = (_remainder find "HELI" >= 0) || (_remainder find "HELICOPTER" >= 0);
+    private _isPadPlane = (_remainder find "PLANE" >= 0);
+    private _isPadAir = (_remainder find "AIR" >= 0);
+    private _isPadGround = (_remainder find "GROUND" >= 0) || (_remainder find "CAR" >= 0) || (_remainder find "TANK" >= 0);
     
     // _AIR acts as a catch-all for both planes (hangars) and helicopters (open pads)
     if (_isPadAir) then { _isPadHeli = true; _isPadPlane = true; };

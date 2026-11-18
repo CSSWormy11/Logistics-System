@@ -9,6 +9,9 @@
 // Called By: init.sqf
 // ============================================================================
 
+waitUntil { !isNil "logisticsBases" && { count logisticsBases > 0 } };
+waitUntil { time > 0 };
+
 LOGI_fnc_handlePickupTrigger = {
     params [
         ["_vehicle", objNull, [objNull]],
