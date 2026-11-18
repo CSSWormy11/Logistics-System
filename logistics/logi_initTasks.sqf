@@ -137,9 +137,9 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
     
     if (_triggerName != "") then {
         private _tLower = toLowerANSI _triggerName;
-        private _pickupIdx = _tLower find "_pickup";
-        private _dropoffIdx = _tLower find "_dropoff";
-        private _serviceIdx = _tLower find "_service";
+        private _pickupIdx = _tLower find "pickup";
+        private _dropoffIdx = _tLower find "dropoff";
+        private _serviceIdx = _tLower find "service";
         private _isPickup = (_pickupIdx != -1);
         private _isDropoff = (_dropoffIdx != -1);
         private _isService = (_serviceIdx != -1);
@@ -147,9 +147,12 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
         if (_isPickup || _isDropoff || _isService) then {
             private _cutIdx = if (_isPickup) then { _pickupIdx } else { if (_isDropoff) then { _dropoffIdx } else { _serviceIdx } };
             private _parentBase = _triggerName select [0, _cutIdx];
+            if (count _parentBase > 0 && { _parentBase select [count _parentBase - 1, 1] == "_" }) then {
+                _parentBase = _parentBase select [0, count _parentBase - 1];
+            };
 
-            // If trigger uses a short name like "_pickup", "_dropoff", or "_service" synced to a master base anchor/flagpole:
-            if (_parentBase == "" || _parentBase == "_") then {
+            // If trigger uses a short name (e.g. "Pickup_1", "Dropoff_1", "Service_1") or parentBase not found in logisticsBases:
+            if (_parentBase == "" || !(_parentBase in (missionNamespace getVariable ["logisticsBases", []]))) then {
                 private _syncedBaseObj = (synchronizedObjects _trigger) select { 
                     private _bKey = vehicleVarName _x; 
                     _bKey != "" && { _bKey in (missionNamespace getVariable ["logisticsBases", []]) } 
@@ -158,7 +161,7 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
                     _parentBase = vehicleVarName _syncedBaseObj;
                 };
             };
-            if (_parentBase == "" || _parentBase == "_") exitWith {};
+            if (_parentBase == "" || !(_parentBase in (missionNamespace getVariable ["logisticsBases", []]))) exitWith {};
 
             private _displayName = (_parentBase splitString "_") joinString " ";
 

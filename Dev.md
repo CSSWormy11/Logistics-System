@@ -1088,18 +1088,19 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
   - **Option 2 (3D Base Anchor Object / Flagpole Establishing Base without Markers):**
     - A 3D object (Flag Pole `Flag_NATO_F`, Game Logic, or HQ building) with a base variable name (e.g. `SB_Main`, `FOB_Beachhead`, `CON_Stadium`) automatically registers in `logisticsBases` even if NO 2D map marker exists!
     - The framework auto-creates a True-North 2D map marker at the object's coordinates (`createMarker [_objVar, getPos _x]`), ensuring map clicking, HUD ledgers, and diary manifests work seamlessly with zero manual marker placement.
-  - **Option 3 (Eden Editor Drag-and-Drop Synchronization with Short Suffixes):**
+  - **Option 3 (Eden Editor Drag-and-Drop Synchronization with Suffix / Role Names):**
     - The mission maker places a master anchor (Flag Pole or Game Logic) named with the base key (e.g. `SB_Main` or `FOB_Beachhead`).
     - The mission maker draws standard Eden sync lines (`Right Click -> Connect -> Sync To`) from the Flagpole directly to child objects and triggers.
-    - Synced child objects ONLY require short suffix names indicating what they are:
-      - `_garage`, `_garage_ground`, `_garage_air_L`, `_garage_boat` $\rightarrow$ Garages & Assembly Pads
-      - `_spawn`, `_spawn_1` $\rightarrow$ Troop & Vehicle Spawns
-      - `_pickup`, `_pickup_1` $\rightarrow$ Supply Pickup Triggers
-      - `_dropoff`, `_dropoff_1` $\rightarrow$ Supply Delivery Dropoff Triggers
-      - `_service`, `_service_1` $\rightarrow$ R4-C Service Pads
-      - `_arsenal`, `_terminal` $\rightarrow$ Quartermaster Terminals & Virtual Arsenals
-      - `_medical`, `_medical_1` $\rightarrow$ Medical Containers (Huron Pods / Clinics)
-      - `_fuel`, `_ammo`, `_repair` $\rightarrow$ Passive physical logistics caches
+    - **Eden Variable Naming Rule:** In Arma 3 Eden Editor, variable names define global variables in `missionNamespace`. Variable names **CANNOT start with an underscore** (`_`), as leading underscores are reserved for local script scope. Additionally, variable names must be globally unique across the mission.
+    - Synced child objects ONLY require role names (with optional numbering/sizes):
+      - `Garage_Ground_1`, `Garage_Air_L_1`, `Garage_Boat_1` $\rightarrow$ Garages & Assembly Pads
+      - `Spawn_1`, `Spawn_2` $\rightarrow$ Troop & Vehicle Spawns
+      - `Pickup_1`, `Pickup_2` $\rightarrow$ Supply Pickup Triggers
+      - `Dropoff_1`, `Dropoff_2` $\rightarrow$ Supply Delivery Dropoff Triggers
+      - `Service_1`, `Service_2` $\rightarrow$ R4-C Service Pads
+      - `Arsenal_1`, `Terminal_1` $\rightarrow$ Quartermaster Terminals & Virtual Arsenals
+      - `Medical_1`, `Medical_2` $\rightarrow$ Medical Containers (Huron Pods / Clinics)
+      - `Fuel_1`, `Ammo_1`, `Repair_1` $\rightarrow$ Passive physical logistics caches
     - The framework automatically ties them to the master base's identity via `synchronizedObjects _baseObj`.
 
 - **3. Status:** **Verified Resolved & Implemented** across `init.sqf`, `qm_serverFunctions.sqf`, `qm_vehicleTabs.sqf`, `logi_initTasks.sqf`, and `qm_supplyPhysicalController.sqf`.

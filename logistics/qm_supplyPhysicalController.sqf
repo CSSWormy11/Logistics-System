@@ -44,10 +44,10 @@ private _infrastructureBlueprints = createHashMap;
 
             if (_isNamedForBase || _isSyncedToBase) then {
                 private _supplyLane = "";
-                if ("_fuel" in _objLower) then { _supplyLane = "Fuel"; };
-                if ("_ammo" in _objLower) then { _supplyLane = "Ammo"; };
-                if ("_repair" in _objLower) then { _supplyLane = "Repair"; };
-                if ("_medical" in _objLower) then { _supplyLane = "Medical"; };
+                if ("fuel" in _objLower) then { _supplyLane = "Fuel"; };
+                if ("ammo" in _objLower) then { _supplyLane = "Ammo"; };
+                if ("repair" in _objLower) then { _supplyLane = "Repair"; };
+                if ("medical" in _objLower) then { _supplyLane = "Medical"; };
                 
                 if (_supplyLane != "") then {
                     _infrastructureBlueprints set [_objName, [_x, _supplyLane, _base]];
