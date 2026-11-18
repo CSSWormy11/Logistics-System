@@ -404,6 +404,11 @@ Replace the current blind radius-based salvage check (`fn_usedCarSalesman.sqf`) 
   - Upon successful capture, all base infrastructure (terminals, arsenals, helipads, garages) is claimed by the new faction. Intact facilities become immediately operational.
   - Destroyed infrastructure adheres to the 1-hour supply reconstruction rules detailed in Section 6.4.
 
+- **5. Faction Permanence vs. Dynamic Contested Bases:**
+  - **`CON` are the ONLY bases that can trade sides:** Contested sectors represent dynamic tactical frontline objectives that can flip control between factions during gameplay.
+  - **All other base types maintain side permanence:** Standard bases (`MSR`, `CS`, `AOR`, `SB`, `CVN`, `LHA`, `LPD`, `LST`, `DDG`, `DD`, `FFG`/`FG`, `FOB`) remain permanently aligned with their original starting faction. Enemy forces cannot capture or flip them.
+  - **Starvation / Supply Depletion Behavior:** If a permanent base runs out of supplies (or its infrastructure is destroyed), it becomes dormant/inactive—players lose the ability to spawn vehicles, rearm, or use it as an operational staging point. However, ownership does not flip; as soon as friendly logistics units resupply the base, it becomes fully active and operational again.
+
 - [ ] Transition `Contested_*` facility markers (`_Arsenal`, `_Garage`, `_Spawn`, `_Service`) to 3D editor objects in `mission.sqm`.
 - [ ] Build isolated `conquest/conq_captureDaemon.sqf` with dominance radius math and faction state synchronization.
 - [ ] Implement Plunder ledger transfer and terminal/respawn handover callbacks.
@@ -912,8 +917,21 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
     - **`FOB`**: Forward Operating Base (Land outpost stores)
     - **`DDG`**: Guided-Missile Destroyer (Surface escort & light aviation)
     - **`DD`**: Gun Destroyer (Surface escort)
-    - **`FFG`**: Guided-Missile Frigate (Surface escort, e.g. HAFM Barbaros/Hydra)
+    - **`FFG` / `FG`**: Guided-Missile Frigate (Surface escort, e.g. HAFM Barbaros/Hydra)
     - **`CON`**: Contested Base Sector (Frontline capture sector, $0$ starting supplies)
+  - **The Three Functional Shipping / Receiving Echelons:**
+    - **Echelon 1: MSR — Shipping Only (Infinite Pipeline Source):**
+      - Bases: `MSR`, `CS`, `AOR`.
+      - Role: External acquisition corridors into the AO with infinite (`-1`) reserves.
+      - Behavior: Logistics assets only pick up supplies here to haul forward; no base dropoffs, garrisons, or vehicle procurement are performed here.
+    - **Echelon 2: Supply Base (SB) — Shipping and Receiving (Central Staging & Distribution):**
+      - Bases: `SB`, `CVN`, `LHA`, `LPD`, `LST`.
+      - Role: Consolidation hubs with large starting stockpiles.
+      - Behavior: Receives bulk supplies from MSR pipeline runs, stores and organizes material, and distributes cargo to forward tactical bases. Supports vehicle manufacturing/garages and maintenance.
+    - **Echelon 3: FOB — Receiving Only (Forward Operational Support):**
+      - Bases: `FOB`, `DDG`, `DD`, `FFG` / `FG`, `CON`.
+      - Role: Forward frontline installations with tailored, localized combat stockpiles.
+      - Behavior: Receives supplies from Supply Bases to maintain frontline combat units (rearming aircraft/tanks, fueling, field surgery, vehicle repair, and local respawn points).
   - **Syntax & Display Name Parsing:**
     - The first segment before the first underscore designates the **Base Type** (e.g. `CVN`, `DDG`, `LPD`, `LST`, `FOB`, `CON`).
     - The segment after the first underscore defines the **Specific Base Name** (e.g. `11`, `86`, `Beachhead_Alpha`, `Liberty`, `Washington`, `Abdera`).

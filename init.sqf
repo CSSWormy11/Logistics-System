@@ -77,6 +77,7 @@ logi_fnc_getBaseType = {
     if (count _parts == 0) exitWith { "FOB" };
     private _prefix = _parts select 0;
     if (_prefix == "CONTESTED") exitWith { "CON" };
+    if (_prefix == "FG") exitWith { "FFG" };
     _prefix
 };
 

@@ -168,6 +168,19 @@ logisticsBaseDefaults = [
             ["Troops", 15]
         ]
     ],
+    [
+        "FG", // Frigate (Surface Escort - Alternate Designation for FFG)
+        [
+            ["Role", "TACTICAL"],
+            ["Cargo", 12000],
+            ["Ammo", 20000],
+            ["Fuel", 12000],
+            ["Medical", 4000],
+            ["Repair", 12000],
+            ["Vehicle", 40000],
+            ["Troops", 15]
+        ]
+    ],
 
     // ------------------------------------------------------------------------
     // CONTESTED BASES (Frontline Sectors, 0 Starting Supplies, 100% Deliver/Capture)
