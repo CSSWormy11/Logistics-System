@@ -1118,6 +1118,14 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
   - Logistics players become high-value strategic targets: ambushing an enemy ammo convoy or intercepting a fuel tanker directly starves opposing combat forces of vehicle deployments and ordnance.
 
 - **2. Architecture & Data Model:**
+  - **Established Eden Anchor & Side-Ownership Standard (Side Logics vs. `LocationArea_F`):**
+    - **Permanent Side-Locked Bases (`MSR`, `SB`, `FOB`, Naval):** Use Bohemia's native Side Logic entities (`Systems (F5) -> Logic Entities -> Sides`) as the master base anchor and synchronization hub:
+      - `SideBLUFOR_F` $\rightarrow$ `WEST` (Blue map marker; locked to BLUFOR; ignored by Bohemia `Spawn AI: Sector Tactic`).
+      - `SideOPFOR_F` $\rightarrow$ `EAST` (Red map marker; locked to OPFOR; ignored by Bohemia `Spawn AI: Sector Tactic`).
+      - `SideResistance_F` $\rightarrow$ `INDEPENDENT` (Green map marker; locked to Independent; ignored by Bohemia `Spawn AI: Sector Tactic`).
+    - **Contested / Capturable Bases (`CON_*`):** Use **`LocationArea_F`** (`Systems (F5) -> Logic Entities -> Locations -> Area`) as the master base anchor, synced both to Logistics V8 infrastructure and to Bohemia's native `ModuleSector_F` + capture Trigger + `Spawn AI: Sector Tactic` so AI actively attack and capture `CON` sectors while leaving rear `MSR`/`SB`/`FOB` hubs untouched.
+    - **Fallback & Legacy Compatibility:** Optional side prefixes (`BLU_`, `OPF_`, `IND_`) may be supported as a fallback for 2D-marker-only missions; unspecified legacy markers/logics default to `WEST`.
+    - **Unbounded Synced Child Numbering:** Because synced objects are discovered directly via `QM_fnc_getSyncedObjects` (not bounded `1..100` loops), arbitrarily high unique Eden variable numbers (`Arsenal_500`, `Garage_Ground_500`, `dropoff_500`) are natively supported alongside legacy `<BaseKey>_<Suffix>_#` naming.
   - **Side-Scoped Base Ledgers:**
     - Ledger variables expand from global base keys to side-scoped keys where applicable: `LogiScore_<BaseKey>_<Category>` or `LogiScore_<BaseKey>_<Side>_<Category>`.
   - **Faction-Gated Visibility & Fog of War:**
