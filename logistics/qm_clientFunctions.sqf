@@ -414,9 +414,13 @@ QM_fnc_getVehicleDropoffBase = {
     {
         private _bKey = _x;
         private _trigList = missionNamespace getVariable [format ["LogiDropoffTriggers_%1", _bKey], []];
-        if ({ _vehicle inArea _x } count _trigList > 0) exitWith {
-            _foundBase = _bKey;
-        };
+        {
+            private _tArea = triggerArea _x;
+            if (_vehicle inArea [_x, _tArea # 0, _tArea # 1, _tArea # 2, _tArea # 3]) exitWith {
+                _foundBase = _bKey;
+            };
+        } forEach _trigList;
+        if (_foundBase != "") exitWith {};
     } forEach _allBases;
 
     _foundBase

@@ -112,9 +112,17 @@ if (count _cargoList > 0) then {
 private _allSBs = (missionNamespace getVariable ["logisticsBases", []]) select { "SB" in toUpper _x };
 private _defaultSB = _allSBs param [0, "SB"];
 private _targetDeliveryBase = _vehicle getVariable ["logistics_intended_fob", _defaultSB];
-private _deliveryMarker = format ["Dropoff_%1", _targetDeliveryBase];
-if (getMarkerColor _deliveryMarker == "" && _targetDeliveryBase == "SB") then { _deliveryMarker = "Dropoff_SB"; };
-private _deliveryPos = if (getMarkerColor _deliveryMarker != "") then { getMarkerPos _deliveryMarker } else { getMarkerPos _targetDeliveryBase };
+
+// Resolve the destination dropoff trigger geometry (prioritizing 3D Trigger Area over 2D point marker)
+private _destTrigList = missionNamespace getVariable [format ["LogiDropoffTriggers_%1", _targetDeliveryBase], []];
+private _destTrigger = _destTrigList param [0, objNull];
+private _deliveryPos = if (!isNull _destTrigger) then {
+    getPos _destTrigger
+} else {
+    private _m = format ["Dropoff_%1", _targetDeliveryBase];
+    if (getMarkerColor _m == "" && _targetDeliveryBase == "SB") then { _m = "Dropoff_SB"; };
+    if (getMarkerColor _m != "") then { getMarkerPos _m } else { getMarkerPos _targetDeliveryBase }
+};
 
 // =========================================================================
 // UNLOADED EXECUTION PROFILES
@@ -138,6 +146,68 @@ if (_supplyType == "Troops") exitWith {
     _vehicle setVariable ["logistics_loaded_weight", _totalCargoPointWeight, true];
     _vehicle setVariable ["QM_LogisticsTroopsGroup", _grp, true];
     _vehicle setVariable ["QM_LogisticsTroopsUnits", _troopUnits, true];
+
+    // Give squad an initial movement waypoint to the destination dropoff zone trigger center
+    private _wp = _grp addWaypoint [_deliveryPos, 0];
+    _wp setWaypointType "MOVE";
+    _wp setWaypointBehaviour "AWARE";
+    _wp setWaypointCombatMode "YELLOW";
+    _wp setWaypointSpeed "NORMAL";
+
+    // Launch independent guardian thread: handles both vehicle dropoff disembarkation and foot arrival (if vehicle destroyed)
+    [_grp, _vehicle, _destTrigger, _deliveryPos, _targetDeliveryBase] spawn {
+        params ["_group", "_veh", "_destTrig", "_destCenterPos", "_destinationKey"];
+        private _cleanBase = _destinationKey splitString "_" joinString " ";
+        private _delivered = false;
+
+        while { count (units _group) > 0 && !_delivered } do {
+            sleep 1.5;
+            private _aliveUnits = (units _group) select { alive _x };
+            if (count _aliveUnits == 0) exitWith {};
+
+            // Check 1: Vehicle arrived in dropoff zone and stopped
+            if (!isNull _veh && { alive _veh } && { abs (speed _veh) < 2 }) then {
+                private _isInZone = if (!isNull _destTrig) then {
+                    private _tArea = triggerArea _destTrig;
+                    _veh inArea [_destTrig, _tArea # 0, _tArea # 1, _tArea # 2, _tArea # 3]
+                } else {
+                    (_veh distance2D _destCenterPos) < 50
+                };
+
+                if (_isInZone) then {
+                    _delivered = true;
+                    // Move waypoint to the vehicle position and set to GETOUT
+                    private _curWP = [_group, currentWaypoint _group];
+                    _curWP setWaypointPosition [getPosATL _veh, 0];
+                    _curWP setWaypointType "GETOUT";
+                    
+                    // Execute disembarkation
+                    [_veh, _destinationKey] call QM_fnc_disembarkLogisticsTroops;
+                };
+            };
+
+            // Check 2: Foot arrival (if transport vehicle was destroyed or abandoned)
+            if (!_delivered) then {
+                private _footUnitsInZone = _aliveUnits select {
+                    isNull (objectParent _x) && {
+                        if (!isNull _destTrig) then {
+                            private _tArea = triggerArea _destTrig;
+                            _x inArea [_destTrig, _tArea # 0, _tArea # 1, _tArea # 2, _tArea # 3]
+                        } else {
+                            (_x distance2D _destCenterPos) < 50
+                        }
+                    }
+                };
+
+                if (count _footUnitsInZone > 0) then {
+                    private _fCount = count _footUnitsInZone;
+                    [_destinationKey, _fCount, _footUnitsInZone] remoteExec ["QM_fnc_serverProcessTroopDelivery", 2];
+                    systemChat format ["[LOGISTICS]: %1 reinforcement troops arrived on foot and garrisoned at %2.", _fCount, _cleanBase];
+                };
+            };
+        };
+        deleteGroup _group;
+    };
 
     systemChat format ["[LOGISTICS]: %1 troops secured in passenger bay. Transport them to %2 Dropoff Zone.", count _troopUnits, _targetDeliveryBase splitString "_" joinString " "];
 };
@@ -213,6 +283,29 @@ systemChat format ["LOGISTICS COMMAND: Surface cargo grid storage locked down: [
         diag_log format ["[LOGISTICS ERROR]: setVehicleCargo failed to load %1 into %2", _x, typeOf _vehicle];
     };
 } forEach _cargoList;
+
+// Auto-salvage/delivery hook for ViV cargo offloaded in Dropoff Zones
+if (isNil { _vehicle getVariable "QM_ViVUnloadEH" }) then {
+    private _eh = _vehicle addEventHandler ["VehicleCargoUnloaded", {
+        params ["_carrier", "_cargo"];
+        _cargo setVariable ["QM_UnloadedFromViV", true, true];
+        _cargo setVariable ["QM_CarrierVehicle", _carrier, true];
+        _cargo setVariable ["QM_DrivenByPlayer", false, true];
+
+        private _bKey = [_cargo] call QM_fnc_getVehicleDropoffBase;
+        if (_bKey == "") then { _bKey = [_carrier] call QM_fnc_getVehicleDropoffBase; };
+        if (_bKey != "") then {
+            [_cargo, _bKey, driver _carrier] spawn {
+                params ["_cObj", "_base", "_drv"];
+                sleep 0.5;
+                if (alive _cObj) then {
+                    [_base, _cObj, _drv] remoteExec ["QM_fnc_serverVehicleSale", 2];
+                };
+            };
+        };
+    }];
+    _vehicle setVariable ["QM_ViVUnloadEH", _eh];
+};
 
 _vehicle setVariable ["logistics_is_loaded", true, true];
 _vehicle setVariable ["logistics_loaded_type", _supplyType, true];

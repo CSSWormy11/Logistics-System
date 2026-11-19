@@ -78,7 +78,7 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
     private _triggerPos = getPos _triggerArea;
     private _tArea = triggerArea _triggerArea;
     private _triggerScale = (((_tArea # 0) max (_tArea # 1)) max 15) + 5; 
-    private _nearbyObjects = nearestObjects [_triggerPos, ["Strategic", "ReammoBox_F", "Cargo_base_F", "AllVehicles", "ThingX", "Air"], _triggerScale];
+    private _nearbyObjects = nearestObjects [_triggerPos, ["Strategic", "ReammoBox_F", "Cargo_base_F", "AllVehicles", "ThingX", "Air", "LandVehicle", "Ship"], _triggerScale];
 
     // Proactively tag any active slingload on an aircraft/carrier in or above the dropoff zone
     {
@@ -95,7 +95,7 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
     {
         private _object = _x;
         private _type = typeOf _object;
-        private _isWithinUnloadZone = (_object inArea _triggerArea) || { (_object distance2D _triggerPos) <= 15 };
+        private _isWithinUnloadZone = (_object inArea [_triggerArea, _tArea # 0, _tArea # 1, _tArea # 2, _tArea # 3]) || { (_object distance2D _triggerPos) <= _triggerScale };
         
         // STRICT SAFETY CHECK 1: Drivable vehicles vs freight crates
         private _isDrivableVehicle = (_object isKindOf "LandVehicle" || _object isKindOf "Air" || _object isKindOf "Ship");
@@ -212,14 +212,27 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
         };
     };
 
-    // If no cargo remains on the tarmac and no truck with cargo or troops is in the zone, exit the loop
+    // If no cargo remains on the tarmac and no truck with cargo or troops is in the zone, exit after checking for pending loose items
     private _truckStillHasCargo = !isNull _activeTruck && { 
         count (getVehicleCargo _activeTruck) > 0 || 
         !isNull (getSlingLoad _activeTruck) ||
         (_activeTruck getVariable ["logistics_loaded_type", ""] == "Troops") ||
         ({ alive _x && { _x getVariable ["QM_IsLogisticsPassenger", false] } } count (crew _activeTruck) > 0)
     };
-    if (_activeCratesFound == 0 && !_truckStillHasCargo) exitWith {
+
+    // Check if any loose logistics cargo or delivered vehicles are currently on the ground in the zone waiting to settle
+    private _pendingCargoInZone = {
+        alive _x && 
+        { isNull (attachedTo _x) } &&
+        { isNull (isVehicleCargo _x) } &&
+        { 
+            (_x getVariable ["isLogisticsCargo", false]) || 
+            (_x getVariable ["QM_SystemLoaded", false]) ||
+            (_x getVariable ["QM_UnloadedFromViV", false])
+        }
+    } count _nearbyObjects;
+
+    if (_activeCratesFound == 0 && !_truckStillHasCargo && _pendingCargoInZone == 0) exitWith {
         _triggerArea setVariable ["isProcessingLogistics", false];
     };
 
