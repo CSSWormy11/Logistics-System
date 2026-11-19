@@ -145,7 +145,7 @@ QM_fnc_getLocationsByPrefix = {
         private _suffixUpper = toUpper _typeSuffix;
         {
             private _child = _x;
-            if (!isNull _child) then {
+            if (!isNull _child && { !(_child isKindOf "EmptyDetector") }) then {
                 private _childName = vehicleVarName _child;
                 private _childUpper = toUpper _childName;
                 if (_childUpper find _suffixUpper != -1 || { (_child getVariable ["QM_TypeSuffix", ""]) == _suffixUpper }) then {
@@ -228,6 +228,13 @@ if (isServer) then {
                         private _customName = _x getVariable ["QM_BaseName", _x getVariable ["QM_BaseDisplayName", ""]];
                         if (_customName == "" && { _x isKindOf "EmptyDetector" }) then {
                             _customName = triggerText _x;
+                        };
+                        // Also check any trigger synced to this base logic for mission-maker assigned trigger text
+                        if (_customName == "") then {
+                            private _syncedTrig = ([_x] call QM_fnc_getSyncedObjects) select { _x isKindOf "EmptyDetector" && { triggerText _x != "" } } param [0, objNull];
+                            if (!isNull _syncedTrig) then {
+                                _customName = triggerText _syncedTrig;
+                            };
                         };
                         private _displayName = if (_customName != "") then {
                             _customName

@@ -426,10 +426,12 @@ QM_fnc_processGarageSpawn = {
     private _baseObj = missionNamespace getVariable [_baseKey, objNull];
     if (!isNull _baseObj) then {
         {
-            private _cName = vehicleVarName _x;
-            private _cUpper = toUpper _cName;
-            if (_cUpper find "GARAGE" >= 0 || _cUpper find "BOAT" >= 0 || _cUpper find "GROUND" >= 0 || _cUpper find "AIR" >= 0 || _cUpper find "HELI" >= 0 || _cUpper find "PLANE" >= 0 || _cUpper find "PAD" >= 0) then {
-                _allBaseGarages pushBackUnique _cName;
+            if !(_x isKindOf "EmptyDetector") then {
+                private _cName = vehicleVarName _x;
+                private _cUpper = toUpper _cName;
+                if (_cUpper find "GARAGE" >= 0 || _cUpper find "BOAT" >= 0 || _cUpper find "GROUND" >= 0 || _cUpper find "AIR" >= 0 || _cUpper find "HELI" >= 0 || _cUpper find "PLANE" >= 0 || _cUpper find "PAD" >= 0) then {
+                    _allBaseGarages pushBackUnique _cName;
+                };
             };
         } forEach ([_baseObj] call QM_fnc_getSyncedObjects);
     };
