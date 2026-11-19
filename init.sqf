@@ -226,6 +226,9 @@ if (isServer) then {
                         _m setMarkerType "b_installation";
                         
                         private _customName = _x getVariable ["QM_BaseName", _x getVariable ["QM_BaseDisplayName", ""]];
+                        if (_customName == "" && { _x isKindOf "EmptyDetector" }) then {
+                            _customName = triggerText _x;
+                        };
                         private _displayName = if (_customName != "") then {
                             _customName
                         } else {
