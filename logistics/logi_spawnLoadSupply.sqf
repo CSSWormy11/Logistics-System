@@ -123,43 +123,23 @@ if (_supplyType == "Troops") exitWith {
     systemChat format ["LOGISTICS COMMAND: Manifest compiled. Boarding [%1] reinforcement squad...", _displayAssetName];
     
     private _grp = createGroup [playerSide, true];
+    private _troopUnits = [];
     {
         private _unit = _grp createUnit [_x, [0,0,0], [], 0, "NONE"];
+        _unit setVariable ["QM_IsLogisticsPassenger", true, true];
+        _unit setVariable ["QM_PassengerDestination", _targetDeliveryBase, true];
         _unit moveInCargo _vehicle;
+        _troopUnits pushBack _unit;
     } forEach _cargoList;
 
-    // Give the group a physical moving waypoint to the delivery zone marker location
-    private _wp = _grp addWaypoint [_deliveryPos, 0];
-    _wp setWaypointType "MOVE";
-    _wp setWaypointBehaviour "SAFE";
-    _wp setWaypointSpeed "FULL";
+    // Track state on the vehicle
+    _vehicle setVariable ["logistics_is_loaded", true, true];
+    _vehicle setVariable ["logistics_loaded_type", "Troops", true];
+    _vehicle setVariable ["logistics_loaded_weight", _totalCargoPointWeight, true];
+    _vehicle setVariable ["QM_LogisticsTroopsGroup", _grp, true];
+    _vehicle setVariable ["QM_LogisticsTroopsUnits", _troopUnits, true];
 
-    // Launch independent tracking loop locked strictly to these infantry units
-    [_grp, _deliveryPos, _targetDeliveryBase] spawn {
-        params ["_group", "_targetPos2D", "_destinationKey"];
-        private _processingActive = true;
-
-        while { _processingActive && {count (units _group) > 0} } do {
-            {
-                private _unit = _x;
-                if (alive _unit && {(_unit distance2D _targetPos2D) < 35}) then {
-                    private _scoreVarName = format ["LogiScore_%1_Troops", _destinationKey];
-                    missionNamespace setVariable [_scoreVarName, (missionNamespace getVariable [_scoreVarName, 0]) + 1, true];
-                    
-                    systemChat format ["[LOGISTICS]: Reinforcement unit arrived and garrisoned at %1.", _destinationKey splitString "_" joinString " "];
-                    deleteVehicle _unit;
-                };
-            } forEach (units _group);
-
-            if (count (units _group) == 0) then { _processingActive = false; };
-            sleep 2;
-        };
-        deleteGroup _group;
-    };
-
-    _vehicle setVariable ["logistics_is_loaded", false, true];
-    _vehicle setVariable ["logistics_loaded_type", "", true];
-    _vehicle setVariable ["logistics_loaded_weight", 0, true];
+    systemChat format ["[LOGISTICS]: %1 troops secured in passenger bay. Transport them to %2 Dropoff Zone.", count _troopUnits, _targetDeliveryBase splitString "_" joinString " "];
 };
 
 // --- STANDARD FREIGHT CARGO AND VEHICLE SLINGLOAD / VIV PACKING PROFILE ---

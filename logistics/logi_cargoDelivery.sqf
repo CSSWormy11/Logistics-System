@@ -61,6 +61,15 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
             };
             _hasGreetedDriver = true;
         };
+
+        // --- TROOP CARGO AUTOMATIC DISEMBARKATION ---
+        if (_currentLoadedType == "Troops" || { ({ alive _x && { _x getVariable ["QM_IsLogisticsPassenger", false] } } count (crew _activeTruck)) > 0 }) then {
+            if (abs (speed _activeTruck) < 2) then {
+                [_activeTruck, _baseKey] call QM_fnc_disembarkLogisticsTroops;
+                _anyDeliveryRecorded = true;
+                _hasGreetedDriver = true;
+            };
+        };
     };
 
     // --- IMMEDIATE CRATE & DELIVERED VEHICLE DETECTION, CREDITING & ANTI-COLLISION DELETION ---
@@ -203,8 +212,13 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
         };
     };
 
-    // If no cargo remains on the tarmac and no truck with cargo is in the zone, exit the loop
-    private _truckStillHasCargo = !isNull _activeTruck && { count (getVehicleCargo _activeTruck) > 0 || !isNull (getSlingLoad _activeTruck) };
+    // If no cargo remains on the tarmac and no truck with cargo or troops is in the zone, exit the loop
+    private _truckStillHasCargo = !isNull _activeTruck && { 
+        count (getVehicleCargo _activeTruck) > 0 || 
+        !isNull (getSlingLoad _activeTruck) ||
+        (_activeTruck getVariable ["logistics_loaded_type", ""] == "Troops") ||
+        ({ alive _x && { _x getVariable ["QM_IsLogisticsPassenger", false] } } count (crew _activeTruck) > 0)
+    };
     if (_activeCratesFound == 0 && !_truckStillHasCargo) exitWith {
         _triggerArea setVariable ["isProcessingLogistics", false];
     };

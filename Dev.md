@@ -1259,6 +1259,37 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
+### [ ] 7.3 Mechanized Combat Logistics & High Command Dismount Squads (IFVs, APCs & Armed Transports)
+
+> [!NOTE]
+> **Operational Scope & Architectural Boundary:** This proposal establishes the design foundation for separating **Combat Crew** (gunners, commanders, drivers who stay in the vehicle) from **Dismount Infantry / High Command Squads** (fireteams transported into the combat zone who disembark to fight on foot) when operating armored fighting vehicles (IFVs, APCs, MRAPs, and armed helicopters).
+
+- **1. Strategic Problem & Core Motivation:**
+  - Players operating mechanized assets (e.g., AMV-7 Marshall, AFV-4 Gorgon, BTR-K Kamysh, Hunter HMG) frequently require two distinct groups of personnel:
+    1. **Vehicle Crew:** Specialists tasked with operating internal weapons systems (cannon, coaxial MG, ATGM launcher, commander optics). These units must remain inside the vehicle during engagements.
+    2. **Dismount Troops / Infantry Fireteam:** Riflemen, autoriflemen, and AT specialists transported in the passenger bay who must deploy onto the battlefield upon reaching the objective.
+  - Currently, when AI units are boarded into a player's vehicle as logistics cargo, they are not part of the player's direct group and cannot be ordered out via standard squad commands (1–9 menu).
+  - Conversely, if all units are automatically added to the player's personal squad, the player's command bar becomes cluttered, and the system cannot distinguish between dedicated vehicle gunners versus passengers intended to disembark.
+
+- **2. Proposed High Command & Sub-Group Architecture:**
+  - **Vehicle Crew vs. Dismount Squad Separation:**
+    - **Vehicle Crew Sub-Group:** Manned via R4C crew deployment or recruitment. Remains assigned to vehicle operational turrets under the player's direct vehicle command.
+    - **High Command Dismount Squad:** Transported troops are placed into an independent AI squad bound to the player's **High Command interface (`Ctrl + Space`)**.
+  - **High Command Control:**
+    - The player commander can assign waypoints, fire orders, or bounding maneuvers to the dismounted squad directly from the tactical map or High Command interface without micromanaging individual soldiers.
+  - **Dismount / Mount Action Triggers:**
+    - Mechanized commanders receive dedicated action menu items:
+      - `[HIGH COMMAND] Dismount Passenger Squad` $\rightarrow$ Orders passenger fireteam to exit vehicle and establish 360-degree perimeter security.
+      - `[HIGH COMMAND] Mount Passenger Squad` $\rightarrow$ Orders dismounted fireteam to re-board cargo seats.
+
+- **3. Vehicle Classification & Role Redefinition:**
+  - Re-evaluate vehicle roster definitions between **Combat Logistics** (IFVs, armed APCs with crew + dismount capacity) and **Pure Freight Logistics** (unarmed trucks, flatbeds, cargo vans, heavy haulers).
+  - Vehicle procurement menus will reflect whether a vehicle supports automated cargo freight, troop cargo transport, or mechanized crew/dismount configurations.
+
+- **4. Status:** **Logged as Section 7 Major Feature Proposal (Design Phase)**.
+
+---
+
 **Ongoing Development Tracking**
 
 Maintain this checklist as part of the V8 development process. These goals are not necessarily sequential and may be addressed independently as opportunities arise during debugging, refactoring, and feature development.

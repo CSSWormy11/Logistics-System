@@ -745,3 +745,29 @@ QM_fnc_serverR4CCreateVehicleCrew = {
     };
     [format ["R4-C CREW: %1 personnel deployed.", _missingSeatCount]] remoteExec ["systemChat", _playerUnit];
 };
+
+// =========================================================================
+// TROOP CARGO DELIVERY HANDLER
+// Credits disembarked reinforcement troops to the base ledger and removes them
+// =========================================================================
+QM_fnc_serverProcessTroopDelivery = {
+    params [["_baseKey", "", [""]], ["_count", 0, [0]], ["_units", [], [[]]]];
+    if (!isServer || _baseKey == "" || _count <= 0) exitWith {};
+
+    private _troopVar = format ["LogiScore_%1_Troops", _baseKey];
+    private _currentPool = missionNamespace getVariable [_troopVar, 0];
+    if (_currentPool != -1) then {
+        missionNamespace setVariable [_troopVar, _currentPool + _count, true];
+    };
+
+    diag_log format ["[LOGISTICS TROOPS]: %1 reinforcement troops delivered and garrisoned at %2.", _count, _baseKey];
+
+    // Safely delete units after disembark animation
+    [_units] spawn {
+        params ["_uList"];
+        sleep 6;
+        {
+            if (alive _x) then { deleteVehicle _x; };
+        } forEach _uList;
+    };
+};

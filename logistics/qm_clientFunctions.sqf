@@ -453,14 +453,22 @@ QM_fnc_initDropoffSalvageListener = {
         private _baseKey = [_vehicle] call QM_fnc_getVehicleDropoffBase;
         if (_baseKey == "") exitWith {};
 
-        // Delivered vehicles (slingload, ViV cargo, logistics spawns) never show disembark prompts
+        // Delivered vehicles (slingload, ViV cargo, logistics spawns) auto-deliver when the delivery driver disembarks
         if (
             _vehicle getVariable ["QM_WasSlingLoaded", false] ||
             _vehicle getVariable ["QM_DroppedFromSling", false] ||
             _vehicle getVariable ["QM_UnloadedFromViV", false] ||
             _vehicle getVariable ["isLogisticsCargo", false] ||
             _vehicle getVariable ["QM_SystemLoaded", false]
-        ) exitWith {};
+        ) exitWith {
+            [_vehicle, _baseKey, _unit] spawn {
+                params ["_veh", "_bKey", "_playerUnit"];
+                sleep 0.8;
+                if (alive _veh && { { isPlayer _x } count (crew _veh) == 0 }) then {
+                    [_bKey, _veh, _playerUnit] remoteExec ["QM_fnc_serverVehicleSale", 2];
+                };
+            };
+        };
 
         // The ONLY time the salvage option pops up is when it was a vehicle driven by players
         if !(_vehicle getVariable ["QM_DrivenByPlayer", false]) exitWith {};
@@ -534,6 +542,68 @@ QM_fnc_initDropoffSalvageListener = {
         "private _v = cursorObject; !isNull _v && {alive _v} && {player distance _v < 8} && {(_v isKindOf 'LandVehicle' || _v isKindOf 'Air' || _v isKindOf 'Ship')} && {!(_v isKindOf 'Man')} && {({isPlayer _x} count (crew _v)) == 0} && {([_v] call QM_fnc_getVehicleDropoffBase) != ''}",
         5
     ];
+
+    // 4. Driver Action: Manual Disembark of Reinforcement Troop Cargo in Dropoff Zones
+    player addAction [
+        "<t color='#00E5FF' font='RobotoCondensedBold'>[TROOP TRANSPORT] Disembark Reinforcements to Base</t>",
+        {
+            params ["_target", "_caller", "_actionId", "_arguments"];
+            private _veh = vehicle _caller;
+            if (isNull _veh || _veh == _caller) exitWith {};
+            private _baseKey = [_veh] call QM_fnc_getVehicleDropoffBase;
+            if (_baseKey == "") exitWith { hint "Vehicle is not inside a designated Dropoff Zone."; };
+            [_veh, _baseKey] call QM_fnc_disembarkLogisticsTroops;
+        },
+        [],
+        6,
+        false,
+        true,
+        "",
+        "vehicle player != player && { driver (vehicle player) == player } && { abs (speed (vehicle player)) < 2 } && { count ((crew (vehicle player)) select { _x getVariable ['QM_IsLogisticsPassenger', false] }) > 0 } && { ([(vehicle player)] call QM_fnc_getVehicleDropoffBase) != '' }"
+    ];
+};
+
+// =========================================================================
+// HELPER: DISEMBARK LOGISTICS TROOPS
+// =========================================================================
+QM_fnc_disembarkLogisticsTroops = {
+    params [["_vehicle", objNull, [objNull]], ["_baseKey", "", [""]]];
+    if (isNull _vehicle || !alive _vehicle) exitWith {};
+    if (_baseKey == "") then {
+        _baseKey = [_vehicle] call QM_fnc_getVehicleDropoffBase;
+    };
+    if (_baseKey == "") exitWith {
+        hint "Vehicle is not inside a designated Dropoff Zone.";
+    };
+
+    private _passengers = (crew _vehicle) select {
+        alive _x && { _x getVariable ["QM_IsLogisticsPassenger", false] } && { !isPlayer _x }
+    };
+
+    if (count _passengers == 0) exitWith {
+        hint "No reinforcement troop cargo aboard this transport.";
+    };
+
+    private _count = count _passengers;
+    private _cleanBase = _baseKey splitString "_" joinString " ";
+
+    // Order units to disembark
+    {
+        unassignVehicle _x;
+        _x action ["GetOut", _vehicle];
+        doGetOut _x;
+        [_x] orderGetIn false;
+    } forEach _passengers;
+
+    // Credit troops to the base on server
+    [_baseKey, _count, _passengers] remoteExec ["QM_fnc_serverProcessTroopDelivery", 2];
+
+    systemChat format ["[TROOP TRANSPORT]: Disembarking %1 reinforcement troops to %2 garrison.", _count, _cleanBase];
+
+    _vehicle setVariable ["logistics_is_loaded", false, true];
+    _vehicle setVariable ["logistics_loaded_type", "", true];
+    _vehicle setVariable ["logistics_loaded_weight", 0, true];
+    _vehicle setVariable ["QM_LogisticsTroopsUnits", [], true];
 };
 
 // Auto-initialize salvage listener with persistent respawn support
