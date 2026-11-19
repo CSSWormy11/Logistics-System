@@ -431,7 +431,7 @@ QM_fnc_processGarageSpawn = {
             if (_cUpper find "GARAGE" >= 0 || _cUpper find "BOAT" >= 0 || _cUpper find "GROUND" >= 0 || _cUpper find "AIR" >= 0 || _cUpper find "HELI" >= 0 || _cUpper find "PLANE" >= 0 || _cUpper find "PAD" >= 0) then {
                 _allBaseGarages pushBackUnique _cName;
             };
-        } forEach (synchronizedObjects _baseObj);
+        } forEach ([_baseObj] call QM_fnc_getSyncedObjects);
     };
 
     {

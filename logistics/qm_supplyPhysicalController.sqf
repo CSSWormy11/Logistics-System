@@ -28,7 +28,7 @@ private _infrastructureBlueprints = createHashMap;
     // Only map physical objects if there is NO virtual trigger pad at this base
     if (isNull _padTrigger) then {
         private _baseObj = missionNamespace getVariable [_base, objNull];
-        private _syncedObjs = if (!isNull _baseObj) then { synchronizedObjects _baseObj } else { [] };
+        private _syncedObjs = if (!isNull _baseObj) then { [_baseObj] call QM_fnc_getSyncedObjects } else { [] };
         private _searchObjects = vehicles + allMissionObjects "ReammoBox_F" + allMissionObjects "ThingX" + allMissionObjects "Building" + _syncedObjs;
         
         {
@@ -39,8 +39,7 @@ private _infrastructureBlueprints = createHashMap;
             private _isSyncedToBase = false;
 
             if (!_isNamedForBase) then {
-                private _baseObj = missionNamespace getVariable [_base, objNull];
-                if (!isNull _baseObj && { _x in (synchronizedObjects _baseObj) }) then {
+                if (_x in _syncedObjs) then {
                     _isSyncedToBase = true;
                 };
             };

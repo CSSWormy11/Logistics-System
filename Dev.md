@@ -1089,8 +1089,11 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
     - A 3D object (Flag Pole `Flag_NATO_F`, Game Logic, or HQ building) with a base variable name (e.g. `SB_Main`, `FOB_Beachhead`, `CON_Stadium`) automatically registers in `logisticsBases` even if NO 2D map marker exists!
     - The framework auto-creates a True-North 2D map marker at the object's coordinates (`createMarker [_objVar, getPos _x]`), ensuring map clicking, HUD ledgers, and diary manifests work seamlessly with zero manual marker placement.
   - **Option 3 (Eden Editor Drag-and-Drop Synchronization with Suffix / Role Names):**
-    - The mission maker places a master anchor (Flag Pole or Game Logic) named with the base key (e.g. `SB_Main` or `FOB_Beachhead`).
-    - The mission maker draws standard Eden sync lines (`Right Click -> Connect -> Sync To`) from the Flagpole directly to child objects and triggers.
+    - The mission maker places a **Game Logic** (`Systems (F5) -> Logic Entities -> Game Logic`) or **Trigger** named with the base key (e.g. `SB_Main` or `FOB_Camp_Tempest`).
+    - > [!IMPORTANT]
+      > **Arma 3 Engine Rule (`synchronizedObjects`):** The Bohemia engine's `synchronizedObjects` command **ONLY** returns linked objects when called on a **Game Logic**, **Module**, **Trigger**, or **AI Unit**. Calling `synchronizedObjects` on a static prop / empty object (such as `FlagPole_F` or `PortableFlagPole_01_F`) **always returns `[]`** at runtime, even though Eden Editor allows drawing sync lines to it. Therefore, use a **Game Logic** (placed right at/under your flagpole if desired) as the sync hub.
+    - The mission maker draws standard Eden sync lines (`Right Click -> Connect -> Sync To`) from the Game Logic directly to child objects and triggers.
+    - **Multiplayer Locality Safety:** Because `synchronizedObjects` on a server-owned Game Logic only evaluates locally on the server, `init.sqf` caches and broadcasts `QM_SyncedObjects` (`publicVariable` / object variable) at `time > 0`, and all subsystems read it via `QM_fnc_getSyncedObjects`.
     - **Eden Variable Naming Rule:** In Arma 3 Eden Editor, variable names define global variables in `missionNamespace`. Variable names **CANNOT start with an underscore** (`_`), as leading underscores are reserved for local script scope. Additionally, variable names must be globally unique across the mission.
     - Synced child objects ONLY require role names (with optional numbering/sizes):
       - `Garage_Ground_1`, `Garage_Air_L_1`, `Garage_Boat_1` $\rightarrow$ Garages & Assembly Pads

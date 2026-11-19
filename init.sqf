@@ -95,6 +95,19 @@ logi_fnc_getBaseRole = {
     }
 };
 
+// QM_fnc_getSyncedObjects
+// Purpose: Multiplayer-safe wrapper around synchronizedObjects.
+//          Note: Arma 3 engine only returns synchronizedObjects on Game Logics,
+//          Modules, Triggers, or AI Units (static props like Flagpoles return []).
+//          Server caches & broadcasts the list to QM_SyncedObjects so remote MP clients can read it.
+QM_fnc_getSyncedObjects = {
+    params [["_obj", objNull, [objNull]]];
+    if (isNull _obj) exitWith { [] };
+    private _cached = _obj getVariable ["QM_SyncedObjects", []];
+    if (count _cached > 0) exitWith { _cached };
+    synchronizedObjects _obj
+};
+
 // QM_fnc_getLocationsByPrefix
 // Purpose: Scans for mission-maker placed 3D objects matching:
 //          1. <BaseKey>_<typeSuffix> (un-numbered or numbered 1..100)
@@ -141,7 +154,7 @@ QM_fnc_getLocationsByPrefix = {
                     };
                 };
             };
-        } forEach (synchronizedObjects _baseObj);
+        } forEach ([_baseObj] call QM_fnc_getSyncedObjects);
     };
     
     _found
@@ -271,6 +284,20 @@ if (isServer) then {
             } forEach ((logisticsBaseDefaults select _typeIndex) select 1);
         };
     } forEach logisticsBases;
+
+    // Broadcast synchronizedObjects from server-owned Game Logics / Triggers to all clients (MP locality safety)
+    [] spawn {
+        waitUntil { time > 0 };
+        {
+            private _baseObj = missionNamespace getVariable [_x, objNull];
+            if (!isNull _baseObj) then {
+                private _synced = synchronizedObjects _baseObj;
+                if (count _synced > 0) then {
+                    _baseObj setVariable ["QM_SyncedObjects", _synced, true];
+                };
+            };
+        } forEach logisticsBases;
+    };
 
     // Start server-side daemons if present
     if (fileExists "logistics\qm_supplyPhysicalController.sqf") then { [] execVM "logistics\qm_supplyPhysicalController.sqf"; };
