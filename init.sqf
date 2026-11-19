@@ -244,7 +244,7 @@ if (isServer) then {
                 };
             };
         };
-    } forEach (allMissionObjects "All");
+    } forEach (allMissionObjects "All" + allMissionObjects "EmptyDetector");
 
     // Ensure "MSR" base key is always present in logisticsBases for infinite supply pool accounting
     if !("MSR" in _discoveredBases) then {
