@@ -448,7 +448,7 @@ QM_fnc_initDropoffSalvageListener = {
         };
     }];
 
-    // 2. Disembark Watchdog: Prompts the last player exiting a vehicle they were DRIVING in a dropoff pad
+    // 2. Disembark Watchdog: Prompts the driver exiting any vehicle they were DRIVING in a dropoff pad
     player addEventHandler ["GetOutMan", {
         params ["_unit", "_role", "_vehicle", "_turret"];
         if (isNull _vehicle || !alive _vehicle) exitWith {};
@@ -457,25 +457,8 @@ QM_fnc_initDropoffSalvageListener = {
         private _baseKey = [_vehicle] call QM_fnc_getVehicleDropoffBase;
         if (_baseKey == "") exitWith {};
 
-        // Delivered vehicles (slingload, ViV cargo, logistics spawns) auto-deliver when the delivery driver disembarks
-        if (
-            _vehicle getVariable ["QM_WasSlingLoaded", false] ||
-            _vehicle getVariable ["QM_DroppedFromSling", false] ||
-            _vehicle getVariable ["QM_UnloadedFromViV", false] ||
-            _vehicle getVariable ["isLogisticsCargo", false] ||
-            _vehicle getVariable ["QM_SystemLoaded", false]
-        ) exitWith {
-            [_vehicle, _baseKey, _unit] spawn {
-                params ["_veh", "_bKey", "_playerUnit"];
-                sleep 0.8;
-                if (alive _veh && { { isPlayer _x } count (crew _veh) == 0 }) then {
-                    [_bKey, _veh, _playerUnit] remoteExec ["QM_fnc_serverVehicleSale", 2];
-                };
-            };
-        };
-
-        // The ONLY time the salvage option pops up is when it was a vehicle driven by players
-        if !(_vehicle getVariable ["QM_DrivenByPlayer", false]) exitWith {};
+        // Only prompt for vehicles the player was actually DRIVING
+        if (_role != "driver" && { !(_vehicle getVariable ["QM_DrivenByPlayer", false]) }) exitWith {};
 
         [_vehicle, _baseKey, _unit] spawn {
             params ["_veh", "_bKey", "_playerUnit"];

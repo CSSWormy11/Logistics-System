@@ -140,19 +140,24 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
             };
         };
 
-        // --- AUTOMATIC DELIVERED VEHICLE PROCESSING (SLINGLOAD, VIV, OR LOGISTICS DELIVERY) ---
-        // Despawns delivered vehicles and credits base points automatically without requiring pilot disembark
+        // --- AUTOMATIC FREIGHT VEHICLE SALVAGE (SLINGLOAD OR VIV UNLOAD) ---
+        // Despawns hauled cargo vehicles automatically without requiring pilot disembark.
+        // DRIVEN VEHICLES ARE STRICTLY EXCLUDED: A vehicle that was driven by a player must ALWAYS
+        // be handled via the driver disembark confirmation prompt or direct look-at salvage action!
         if (_isDrivableVehicle && _isWithinUnloadZone && !_isBaseInfrastructure) then {
+            private _wasDrivenByPlayer = _object getVariable ["QM_DrivenByPlayer", false];
+            if (_wasDrivenByPlayer) exitWith {}; // Player-driven vehicles MUST prompt the driver! Never auto-despawn.
+
             private _hasPlayerCrew = ({ isPlayer _x } count (crew _object)) > 0;
             private _isSlingAttached = !isNull (ropeAttachedTo _object) || { ({ getSlingLoad _x == _object } count vehicles) > 0 };
-            private _isAttachedCargo = !isNull (attachedTo _object);
+            private _isAttachedCargo = !isNull (attachedTo _object) || !isNull (isVehicleCargo _object);
             private _isPlayerOperating = (vehicle player == _object);
             private _declinedSalvage = _object getVariable ["QM_PlayerDeclinedSalvage", false];
             private _recentlySpawned = (diag_tickTime - (_object getVariable ["QM_Spawn_Time", 0])) < 10;
             private _speedSafe = abs (speed _object) < 3;
             private _heightSafe = (getPosATL _object # 2) < 2.5;
 
-            private _isDeliveredVehicle = (
+            private _isDeliveredCargoVehicle = (
                 !_hasPlayerCrew &&
                 !_isSlingAttached &&
                 !_isAttachedCargo &&
@@ -164,14 +169,11 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
                 (
                     (_object getVariable ["QM_WasSlingLoaded", false]) ||
                     (_object getVariable ["QM_DroppedFromSling", false]) ||
-                    (_object getVariable ["QM_UnloadedFromViV", false]) ||
-                    (_object getVariable ["isLogisticsCargo", false]) ||
-                    (_object getVariable ["QM_SystemLoaded", false]) ||
-                    (!(_object getVariable ["QM_DrivenByPlayer", false]))
+                    (_object getVariable ["QM_UnloadedFromViV", false])
                 )
             );
 
-            if (_isDeliveredVehicle) then {
+            if (_isDeliveredCargoVehicle) then {
                 _activeCratesFound = _activeCratesFound + 1;
                 _anyDeliveryRecorded = true;
 

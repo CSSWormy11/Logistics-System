@@ -58,6 +58,19 @@ if (_unloaded) then {
     _cargoObj setVariable ["QM_DrivenByPlayer", false, true];
     _cargoObj setVariable ["QM_ViVUnloadTime", diag_tickTime, true];
 
+    // If an unload action offloads a vehicle in a dropoff zone, auto-salvage directly
+    private _bKey = [_cargoObj] call QM_fnc_getVehicleDropoffBase;
+    if (_bKey == "") then { _bKey = [_veh] call QM_fnc_getVehicleDropoffBase; };
+    if (_bKey != "") then {
+        [_cargoObj, _bKey, driver _veh] spawn {
+            params ["_cObj", "_base", "_drv"];
+            sleep 0.5;
+            if (alive _cObj && { !(_cObj getVariable ["QM_DrivenByPlayer", false]) }) then {
+                [_base, _cObj, _drv] remoteExec ["QM_fnc_serverVehicleSale", 2];
+            };
+        };
+    };
+
     // Update vehicle loading status
     private _remainingCargo = getVehicleCargo _veh;
     if (count _remainingCargo == 0) then {

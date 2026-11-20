@@ -29,16 +29,22 @@ This document tracks verified bugs, inconsistencies, incomplete features, and up
 - **2. Proposed / Applied Corrections:** Updated `QM_fnc_serverR4CCreateVehicleCrew` in `qm_serverFunctions.sqf` (Lines 609–615) to spawn the crew on the server via `createVehicleCrew _vehicle` and then transfer the newly created crew members into `group _playerUnit` using `joinSilent`.
 - **3. Status:** **In Testing** (Corrections applied in `qm_serverFunctions.sqf` — needs in-game verification).
 
-### [x] 1.5 Vehicle Salvage System (Redesigned with Dropoff Zone Disembark Confirmation)
+### [x] 1.5 Vehicle Salvage System (Redesigned with Dropoff Zone Disembark Confirmation & Cargo Unload Separation)
 - **1. Initial Issue Summary:** In `fn_usedCarSalesman.sqf` (Lines 9–17), salvage detection searched within a 14m 3D sphere around `getMarkerPos _baseKey` (the master base marker at `Z=0`) for `["LandVehicle", "Air"]`. Because `getMarkerPos` is at sea level (`Z=0`), elevated decks (e.g., `SB_Carrier` at ~24m ASL or Destroyers) and garage pads located >14m away from the central base marker were completely out of range, and `"Ship"` / boats inside Boat Racks were excluded. In-game testing confirmed that triggering salvage blindly from a terminal crate does not reliably detect unoccupied vehicles on distant pads.
 - **2. Proposed / Applied Corrections:**
   - Removed the broken `fn_usedCarSalesman.sqf` scroll-wheel action from base terminals in `qm_clientActionCompiler.sqf`.
-  - Implemented **Option C (Dropoff Zone Disembark Confirmation Prompt & Context Action)**:
-    1. Base **Dropoff Zones** serve as the universal vehicle return point.
-    2. When a player drives, lands, or docks an unoccupied vehicle into a dropoff zone and disembarks, `GetOutMan` triggers a modal `BIS_fnc_guiMessage` confirmation prompt asking: `"Would you like to SALVAGE this [Vehicle Name] and recycle its resources back to [Base Name]? [YES / NO]"`.
-    3. If confirmed **YES**, the vehicle is despawned, crew safely deleted, 100% of chassis resources credited to base ledgers, and its vehicle cap (`QM_CAP`) unregistered via `QM_fnc_serverVehicleSale`.
-    4. If declined **NO**, the vehicle remains completely untouched on the pad.
-    5. Added a context-sensitive look-at `addAction` on the player (`[SALVAGE CONTROL] Recycle Vehicle to Base`) for ad-hoc salvage of unoccupied vehicles inside any base dropoff zone.
+  - Implemented **Strict Separation Between Hauled Freight Cargo and Player-Driven Vehicles**:
+    1. **Hauled Freight Vehicles (ViV Cargo / Slingload):**
+       - When an unload action offloads a vehicle from internal cargo (e.g., a Hunter unloaded from a HEMTT bed or dropped from helicopter slingload) into any base Dropoff Zone, it was never driven by a player (`QM_DrivenByPlayer == false`).
+       - It is recognized as freight cargo and **automatically salvaged immediately upon touching the ground** without prompting the player, crediting 100% of resources back to the base ledger.
+    2. **Player-Driven Vehicles:**
+       - Any vehicle driven into a Dropoff Zone by a player is tagged `QM_DrivenByPlayer = true`.
+       - The background dropoff trigger is strictly blocked from auto-despawning driven vehicles.
+       - When the player disembarks (`GetOutMan`), the system **ALWAYS prompts the driver for confirmation**: `"Would you like to SALVAGE this [Vehicle Name] and recycle its resources back to [Base Name]? [YES / NO]"`.
+       - If confirmed **YES**, the vehicle is despawned, crew safely deleted, 100% of chassis resources credited to base ledgers, and its vehicle cap (`QM_CAP`) unregistered via `QM_fnc_serverVehicleSale`.
+       - If declined **NO**, the vehicle remains completely untouched on the pad (`QM_PlayerDeclinedSalvage = true`).
+    3. **Ad-Hoc Manual Salvage Action:**
+       - Added a context-sensitive look-at `addAction` on the player (`[SALVAGE CONTROL] Recycle Vehicle to Base`) for ad-hoc salvage of unoccupied vehicles parked inside any base dropoff zone.
 - **3. Status:** **Verified Resolved** (In Testing).
 
 ### [x] 1.6 Multi-Tier Task Visibility, Priority Auto-Assignment & Aircraft Support in `fn_manageLogisticsMissions.sqf`
