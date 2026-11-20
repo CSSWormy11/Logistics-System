@@ -603,6 +603,7 @@ createClientLogiTasks = {
     private _allMSRs = (missionNamespace getVariable ["logisticsBases", []]) select { ([_x] call logi_fnc_getBaseRole) == "MSR" };
     private _allSBs  = (missionNamespace getVariable ["logisticsBases", []]) select { ([_x] call logi_fnc_getBaseRole) == "STRATEGIC" };
     private _allFOBs = (missionNamespace getVariable ["logisticsBases", []]) select { ([_x] call logi_fnc_getBaseRole) == "TACTICAL" };
+    private _allCONs = (missionNamespace getVariable ["logisticsBases", []]) select { ([_x] call logi_fnc_getBaseRole) in ["CLT", "COMBAT", "CONTESTED"] };
 
     if ("STRATEGIC" in _rolesUpper && count _allSBs > 0) then {
         if !(["Logi_Strategic_Task"] call BIS_fnc_taskExists) then {
@@ -623,6 +624,16 @@ createClientLogiTasks = {
             if ([_x] call BIS_fnc_taskExists) then { [_x] call BIS_fnc_deleteTask; };
         } forEach ["Logi_Tactical_Pickup", "Logi_Tactical_Manifest", "Logi_Tactical_Delivery", "Logi_Tactical_Task"];
     };
+
+    if ("CLT" in _rolesUpper && count _allCONs > 0) then {
+        if !(["Logi_CLT_Task"] call BIS_fnc_taskExists) then {
+            [player, "Logi_CLT_Task", ["Combat Logistics Run: Deliver critical frontline combat supplies and reinforcements into contested combat sectors.", "Combat Logistics Route", ""], [0,0,0], "CREATED", 1, false, "attack", false] call BIS_fnc_taskCreate;
+        };
+    } else {
+        {
+            if ([_x] call BIS_fnc_taskExists) then { [_x] call BIS_fnc_deleteTask; };
+        } forEach ["Logi_CLT_Pickup", "Logi_CLT_Manifest", "Logi_CLT_Delivery", "Logi_CLT_Task"];
+    };
 };
 
 // =========================================================================
@@ -632,6 +643,7 @@ createClientLogiTasks = {
     waitUntil { !isNil "logisticsBases" };
     private _lastSbDesc = "";
     private _lastFobDesc = "";
+    private _lastConDesc = "";
     while { true } do {
         if (["Logi_Strategic_Task"] call BIS_fnc_taskExists) then {
             private _sbDesc = "<br/><font color='#ffffff'>Stockpile Manifest for Staging Base(s):</font><br/>";
@@ -683,6 +695,32 @@ createClientLogiTasks = {
             };
         } else {
             _lastFobDesc = "";
+        };
+
+        if (["Logi_CLT_Task"] call BIS_fnc_taskExists) then {
+            private _conMasterDesc = "<br/><font color='#ffffff'>Contested Sector Stockpiles:</font><br/>";
+            private _allCONs = logisticsBases select { ([_x] call logi_fnc_getBaseRole) in ["CLT", "COMBAT", "CONTESTED"] };
+            {
+                private _conBase = _x;
+                private _cleanName = _conBase splitString "_";
+                _conMasterDesc = _conMasterDesc + format ["<br/><font color='#ff4444'>■ %1:</font>", _cleanName joinString " "];
+                {
+                    private _points = missionNamespace getVariable [format ["LogiScore_%1_%2", _conBase, _x], 0];
+                    private _displayStr = [_points] call logi_fnc_formatPoints;
+                    _conMasterDesc = _conMasterDesc + format ["<br/>  • %1: %2", _x, _displayStr];
+                } forEach ["Cargo", "Ammo", "Fuel", "Medical", "Repair", "Vehicle", "Troops"];
+                _conMasterDesc = _conMasterDesc + "<br/>----------------------------------------<br/>";
+            } forEach _allCONs;
+
+            if (_conMasterDesc != _lastConDesc) then {
+                private _realCltTask = ["Logi_CLT_Task", player] call BIS_fnc_taskReal;
+                if (!isNull _realCltTask) then {
+                    _realCltTask setSimpleTaskDescription [_conMasterDesc, "Combat Logistics Route", ""];
+                };
+                _lastConDesc = _conMasterDesc;
+            };
+        } else {
+            _lastConDesc = "";
         };
         
         sleep 5;
@@ -865,7 +903,12 @@ createClientLogiTasks = {
                         [_stickyTaskID, "SUCCEEDED", true] call BIS_fnc_taskSetState;
                     };
                     
-                    private _routeDisplayName = if (_stickyTaskID == "Logi_Strategic_Task") then {"Strategic Route"} else {"Tactical Route"};
+                    private _routeDisplayName = switch (_stickyTaskID) do {
+                        case "Logi_Strategic_Task": { "Strategic Route" };
+                        case "Logi_Tactical_Task":  { "Tactical Route" };
+                        case "Logi_CLT_Task":       { "Combat Logistics Route" };
+                        default                     { "Logistics Route" };
+                    };
                     if (_deliveredBase == _targetBase) then {
                         systemChat format ["LOGISTICS ENGINE: %1 completed successfully! Cycling next assignment...", _routeDisplayName];
                     } else {
@@ -976,6 +1019,7 @@ createClientLogiTasks = {
             private _allMSRs = logisticsBases select { ([_x] call logi_fnc_getBaseRole) == "MSR" };
             private _allSBs  = logisticsBases select { ([_x] call logi_fnc_getBaseRole) == "STRATEGIC" };
             private _allFOBs = logisticsBases select { ([_x] call logi_fnc_getBaseRole) == "TACTICAL" };
+            private _allCONs = logisticsBases select { ([_x] call logi_fnc_getBaseRole) in ["CLT", "COMBAT", "CONTESTED"] };
 
             private _isGroundVehicle = !(_vehicle isKindOf "Air") && !(_vehicle isKindOf "Ship");
             private _isNavalVehicle  = _vehicle isKindOf "Ship";
@@ -1120,6 +1164,65 @@ createClientLogiTasks = {
 
                     // Deploy / update the 3-tier sub-task hierarchy for this leg
                     ["Logi_Tactical_Task", _primarySB, _targetFOB, _targetCategory, _isLoaded, _vehicle] call logi_fnc_updateRouteTasks;
+
+                    _lockedAssignment = true;
+                };
+            };
+
+            if (_stickyTaskID == "Logi_CLT_Task") then {
+                if (!_lockedAssignment && count _allCONs > 0) then {
+                    // Ground vehicles cannot drive to ocean-based sectors; naval vessels cannot sail to inland sectors
+                    private _candidateCONs = _allCONs;
+                    if (_isGroundVehicle) then {
+                        private _landCONs = _allCONs select { !surfaceIsWater (["Dropoff", _x, _x] call logi_fnc_getMarkerPosSafe) };
+                        if (count _landCONs > 0) then { _candidateCONs = _landCONs; };
+                    };
+                    if (_isNavalVehicle) then {
+                        private _waterCONs = _allCONs select { surfaceIsWater (["Dropoff", _x, _x] call logi_fnc_getMarkerPosSafe) };
+                        if (count _waterCONs > 0) then { _candidateCONs = _waterCONs; };
+                    };
+
+                    // Sort candidate CONs by route travel distance from origin SB (road distance for land, flight for air)
+                    private _orderedCONs = (_candidateCONs apply { 
+                        private _dist = [_primarySB, _x, _isGroundVehicle] call logi_fnc_getRouteDistance;
+                        [_dist, _x] 
+                    });
+                    _orderedCONs sort true;
+                    _candidateCONs = _orderedCONs apply { _x # 1 };
+
+                    // Preserve existing intended CON if vehicle is already loaded
+                    private _savedCON = _vehicle getVariable ["logistics_intended_fob", ""];
+                    private _targetCON = if (_isLoaded && _savedCON != "" && _savedCON in _candidateCONs) then {
+                        _savedCON
+                    } else {
+                        _candidateCONs # 0
+                    };
+
+                    private _targetCategory = _allowedVehicleCategories param [0, "Cargo"];
+                    private _lowestScore = 999999999;
+
+                    if (!_isLoaded || _savedCON == "") then {
+                        {
+                            private _con = _x;
+                            {
+                                private _category = _x;
+                                private _score = missionNamespace getVariable [format ["LogiScore_%1_%2", _con, _category], 0];
+                                if (_score != -1 && _score < _lowestScore) then {
+                                    _lowestScore = _score;
+                                    _targetCON = _con;
+                                    _targetCategory = _category;
+                                };
+                            } forEach _allowedVehicleCategories;
+                        } forEach _candidateCONs;
+                    } else {
+                        _targetCategory = player getVariable ["logistics_current_assigned_category", _allowedVehicleCategories param [0, "Cargo"]];
+                    };
+
+                    _vehicle setVariable ["logistics_intended_fob", _targetCON, true];
+                    player setVariable ["logistics_current_assigned_category", _targetCategory, true];
+
+                    // Deploy / update the 3-tier sub-task hierarchy for this leg
+                    ["Logi_CLT_Task", _primarySB, _targetCON, _targetCategory, _isLoaded, _vehicle] call logi_fnc_updateRouteTasks;
 
                     _lockedAssignment = true;
                 };

@@ -85,14 +85,15 @@ logi_fnc_getBaseRole = {
     params ["_baseKey"];
     private _bType = [_baseKey] call logi_fnc_getBaseType;
     private _typeIdx = logisticsBaseDefaults findIf { toUpper (_x select 0) == _bType };
-    if (_typeIdx == -1) exitWith { "TACTICAL" };
-    private _props = (logisticsBaseDefaults select _typeIdx) select 1;
-    private _roleIdx = _props findIf { (_x select 0) == "Role" };
-    if (_roleIdx != -1) then { (_props select _roleIdx) select 1 } else {
-        if (_bType in ["MSR", "CS", "AOR"]) exitWith { "MSR" };
-        if (_bType in ["SB", "CVN", "LHA", "LST", "LPD"]) exitWith { "STRATEGIC" };
-        "TACTICAL"
-    }
+    if (_typeIdx != -1) then {
+        private _props = (logisticsBaseDefaults select _typeIdx) select 1;
+        private _roleIdx = _props findIf { (_x select 0) == "Role" };
+        if (_roleIdx != -1) exitWith { (_props select _roleIdx) select 1 };
+    };
+    if (_bType in ["MSR", "CS", "AOR"]) exitWith { "MSR" };
+    if (_bType in ["SB", "CVN", "LHA", "LST", "LPD"]) exitWith { "STRATEGIC" };
+    if (_bType in ["CON"]) exitWith { "CLT" };
+    "TACTICAL"
 };
 
 // QM_fnc_getSyncedObjects

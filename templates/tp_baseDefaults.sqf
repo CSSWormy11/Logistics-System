@@ -189,7 +189,7 @@ logisticsBaseDefaults = [
     [
         "CON", // Contested Base Sector (Default: 0 across all pools)
         [
-            ["Role", "TACTICAL"],
+            ["Role", "CLT"],
             ["Cargo", 0],
             ["Ammo", 0],
             ["Fuel", 0],

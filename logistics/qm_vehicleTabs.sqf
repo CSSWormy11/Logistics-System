@@ -27,7 +27,7 @@ private _baseType = if (!isNil "logi_fnc_getBaseType") then { [_baseKey] call lo
 private _baseRole = if (!isNil "logi_fnc_getBaseRole") then { [_baseKey] call logi_fnc_getBaseRole } else { "TACTICAL" };
 
 private _isSB = (_baseRole == "STRATEGIC");
-private _isFOB = (_baseRole == "TACTICAL");
+private _isFOB = (_baseRole in ["TACTICAL", "CLT"]);
 
 private _playerFaction = toUpper (str playerSide);
 private _currentTerrain = toUpper (call fn_G_getTerrain);

@@ -286,7 +286,7 @@ systemChat format ["LOGISTICS COMMAND: Surface cargo grid storage locked down: [
 
 // Auto-salvage/delivery hook for ViV cargo offloaded in Dropoff Zones
 if (isNil { _vehicle getVariable "QM_ViVUnloadEH" }) then {
-    private _eh = _vehicle addEventHandler ["VehicleCargoUnloaded", {
+    private _eh = _vehicle addEventHandler ["CargoUnloaded", {
         params ["_carrier", "_cargo"];
         _cargo setVariable ["QM_UnloadedFromViV", true, true];
         _cargo setVariable ["QM_CarrierVehicle", _carrier, true];

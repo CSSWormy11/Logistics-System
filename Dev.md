@@ -1296,6 +1296,37 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
+### [x] 7.4 Frontline Contested Sector Separation & Combat Logistics Routing (`Logi_CLT_Task`)
+
+> [!NOTE]
+> **Operational Scope & Role Boundary:** Implemented strict operational isolation between **Rear-Line Tactical Outposts (`FOB_*` $\rightarrow$ `TACTICAL`)** and **Frontline Contested Sectors (`CON_*` $\rightarrow$ `CLT`)**. Unarmed logistics haulers (HEMTT cargo/flatbeds, utility vans) are strictly restricted to strategic/tactical routes and are never routed into contested combat zones.
+
+- **1. Strategic Problem & Root Cause Analysis:**
+  - **The Symptom:** When players boarded tactical logistics trucks at `SB_Main`, the automated task manager (`logi_manageMissions.sqf`) consistently generated delivery tasks directing them to `CON_Spartan`—the furthest base from the airfield on Stratis.
+  - **The Root Cause:** In `templates/tp_baseDefaults.sqf`, the default configuration for `CON` sectors mistakenly specified `["Role", "TACTICAL"]`. Because `CON_Spartan` initializes with $0$ starting supplies across all resource pools (unlike standard FOBs with 10,000–30,000 points), the task assignment algorithm's lowest-score sort (`_candidateFOBs sort by lowest score`) always prioritized `CON_Spartan` above all established FOBs.
+  - **Engine ViV Event Handler Bug:** In `logi_spawnLoadSupply.sqf`, the auto-salvage hook subscribed to `"VehicleCargoUnloaded"`, which produced a foreign enum RPT error (`Unknown enum value: "VehicleCargoUnloaded"`). The Bohemia engine event handler name is `"CargoUnloaded"`.
+
+- **2. Applied Architecture Corrections:**
+  - **Contested Base Reclassification (`CON` $\rightarrow$ `CLT`):**
+    - Updated `templates/tp_baseDefaults.sqf` to classify `CON` sectors strictly as `["Role", "CLT"]`.
+    - Updated `init.sqf` (`logi_fnc_getBaseRole`) so any base with the `CON_` prefix defaults to `"CLT"`.
+  - **Vehicle Role Partitioning (`tp_vehicleRoles.sqf`):**
+    - Removed `"CLT"` from rear-echelon unarmed trucks (HEMTT flatbeds, transports, covered trucks, cargo box trucks, and utility vans). These assets strictly support `Strategic` and `Tactical` routes.
+    - Reserved `"CLT"` for combat-rated, armed, or high-survivability transport platforms (Prowler armed/AT, Hunter MRAP, Ghost Hawk, Hummingbird, Pawnee Scout, armed technicals).
+  - **Dynamic Combat Logistics Task Generation (`Logi_CLT_Task`):**
+    - Implemented `Logi_CLT_Task` creation in `createClientLogiTasks` and sticky task management in `logi_manageMissions.sqf`.
+    - `Logi_Tactical_Task` now filters candidate destination bases strictly by `getBaseRole == "TACTICAL"` (`FOB_*`, naval DDGs), completely preventing tactical haulers from being routed into contested sectors.
+    - `Logi_CLT_Task` routes candidate destinations strictly from `_allCONs` (`getBaseRole in ["CLT", "COMBAT", "CONTESTED"]`).
+    - Added real-time Live Resource HUD Manifest tracking for contested sectors with dedicated red section formatting (`#ff4444`).
+  - **Event Handler Typo Correction:**
+    - Corrected `"VehicleCargoUnloaded"` to `"CargoUnloaded"` in `logi_spawnLoadSupply.sqf`, resolving the RPT error during freight loading/unloading.
+
+- **3. Status:** **Completed & Verified (Production V8)**.
+
+---
+
+---
+
 **Ongoing Development Tracking**
 
 Maintain this checklist as part of the V8 development process. These goals are not necessarily sequential and may be addressed independently as opportunities arise during debugging, refactoring, and feature development.
