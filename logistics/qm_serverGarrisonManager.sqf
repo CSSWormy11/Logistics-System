@@ -23,8 +23,8 @@ private _serverFaction = toUpper (missionNamespace getVariable ["QM_ServerFactio
 while {true} do {
     {
         private _baseKey = _x;
-        // MSR is strictly an off-map supply pipeline corridor, not a base with arsenals/terminals
-        if (toUpper _baseKey == "MSR") then { continue; };
+        // MSRs are strictly supply pipeline corridors, not bases with arsenals/terminals
+        if (toUpper _baseKey == "MSR" || ([_baseKey] call logi_fnc_getBaseRole) == "MSR" || ([_baseKey] call logi_fnc_getBaseType) == "MSR") then { continue; };
         
         // ====================================================================
         // 1. TERMINALS & ARSENALS (Editor-Placed 3D Objects Only)
@@ -32,7 +32,10 @@ while {true} do {
         private _terminals = ([_baseKey, "Arsenal"] call QM_fnc_getLocationsByPrefix) + ([_baseKey, "Terminal"] call QM_fnc_getLocationsByPrefix);
         
         if (count _terminals == 0) then { 
-            diag_log format ["QUARTERMASTER WARNING: No explicit _Arsenal or _Terminal 3D objects found for %1.", _baseKey];
+            if !(missionNamespace getVariable [format ["QM_Warned_NoTerm_%1", _baseKey], false]) then {
+                missionNamespace setVariable [format ["QM_Warned_NoTerm_%1", _baseKey], true];
+                diag_log format ["QUARTERMASTER WARNING: No explicit _Arsenal or _Terminal 3D objects found for %1.", _baseKey];
+            };
         };
 
         {
