@@ -1126,45 +1126,52 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
   - Continuous volumetric smoke particles place a heavy burden on the engine's particle rendering pipeline, especially around major bases with multiple pads.
   - At night, smoke plumes become invisible in pitch black, while active chemlights or portable lights are required to guide drivers and pilots onto pads.
 
-- **2. Standardized Color Mapping & Faction Awareness:**
+- **2. Standardized Color Mapping & Tactical Symbology:**
   - **Service Areas (Repair, Refuel, Rearm):**
-    - **Color:** `Yellow` (Maintenance).
+    - **Color:** `Yellow` (Universal maintenance / caution).
     - **Day Smoke:** `SmokeShellYellow`.
-    - **Night Center:** `Chemlight_yellow` + `PortableHelipadLight_01_yellow_F`.
-    - **Night Perimeter:** `PortableHelipadLight_01_yellow_F`.
-  - **Pickup Zones (Loading Supply):**
-    - **Color:** `Green` (Go / Supply Available).
+    - **Outer Edges & Corners:** `Land_runway_edgelight_yellow_F` / `Land_Flush_Light_yellow_F`.
+    - **Centerline (Night):** `Chemlight_yellow` + `PortableHelipadLight_01_yellow_F` (or `_constant`).
+  - **Dropoff Zones (Offloading / Delivering Supply):**
+    - **Color:** `Green` (Matches BLUFOR standard tactical field marker: ground squads deploy green smoke/chemlights to designate friendly drop zones & LZs).
     - **Day Smoke:** `SmokeShellGreen`.
-    - **Night Center:** `Chemlight_green` + `PortableHelipadLight_01_green_F`.
-    - **Night Perimeter:** `PortableHelipadLight_01_green_F`.
-  - **Dropoff Zones (Offloading Supply):**
-    - **Color:** `Purple` or `Orange` (or `Blue`) to strictly avoid `Red` (which standard military symbology reserves for hostiles / danger / off-limits).
-    - **Day Smoke:** `SmokeShellPurple` or `SmokeShellOrange` (100% native in vanilla Arma 3).
-    - **Night Center / Perimeter:** `PortableHelipadLight_01_blue_F` / `Chemlight_blue` (or custom-tinted `#lightpoint` for vivid purple/orange).
+    - **Outer Edges & Corners:** `Land_Flush_Light_green_F` / `Land_runway_edgelight` (Green / High-candela).
+    - **Centerline (Night):** `Chemlight_green` + `PortableHelipadLight_01_green_F` (or `_constant`).
+  - **Pickup Zones (Loading Supply / Warehouse Pads):**
+    - **Color:** `Purple` (Distinct, high-contrast, zero confusion with hostile red or dropoff green).
+    - **Day Smoke:** `SmokeShellPurple` (100% native in vanilla Arma 3).
+    - **Outer Edges & Corners:** `Land_runway_edgelight_blue_F` / `Land_runway_edgelight` (Blue/Purple spectrum).
+    - **Centerline (Night):** `Chemlight_blue` / `Chemlight_purple` + `PortableHelipadLight_01_blue_F` / `Land_PortableHelipadLight_01_F`.
 
-- **3. Dimensional Hierarchy & Geometric Layout:**
-  - **Zone Classification Threshold:** $\le 100\text{ m}$ is a **Small Pad**; $> 100\text{ m}$ is a **Large Pad / Airfield Corridor**.
+- **3. Dimensional Hierarchy & Multi-Tier Lighting Architecture:**
+  - **Visual Tier 1: Outer Edges & Corners (Runway / Flush Lights - 2,000m+ Range):**
+    - Utilizes airport runway edge lights (`Land_runway_edgelight*`, `Land_Flush_Light_*`) placed at the 4 corners and spaced every $100\text{ m}$ down the long flanks.
+    - Extended billboard optical glow LODs allow approaching pilots to identify zone boundaries from miles out.
+  - **Visual Tier 2: Centerline Approach Alignment (Helipad Lights - 400m–600m Range):**
+    - Placed along the major axis centerline every $100\text{ m}$ (with a 25m–50m buffer from the zone edges).
+    - Dynamic class selection: uses non-blinking `_constant` variants if 3den Enhanced / CBA is present, falling back dynamically via `isClass` to vanilla `_F` without breaking pure vanilla environments.
+  - **Visual Tier 3: Ground Touchdown & Taxiing (Chemlights - 50m Range):**
+    - Paired with centerline lights to provide soft, glare-free deck illumination as the aircraft flares for touchdown or trucks reverse into loading bays.
+  - **Visual Tier 4: Daytime Centerline Smoke (Particle Overdraw Optimization):**
+    - Placed strictly down the centerline every $200\text{ m}$ (Small pads: exactly 1 single center smoke).
+    - Zero perimeter smoke ensures pristine frame rates with zero GPU fill-rate particle bottlenecks.
+
+- **4. Dimensional Layout Rules:**
   - **Small Pads ($\le 100\text{ m}$):**
-    - **Day:** Exactly 1 single smoke in the center of the pad. Zero perimeter smoke.
-    - **Night:** 1 Chemlight + 1 Helipad Light in the center (touchdown guidance); 4 Helipad Lights at the perimeter corners.
+    - **Day:** 1 single center smoke (`SmokeShell*`). Zero perimeter smoke.
+    - **Night:** 1 Chemlight + 1 Helipad Light in the center; 4 Runway / Flush lights at the outer corners.
   - **Large Corridors & Airfields ($> 100\text{ m}$):**
-    - Geometry derived from `triggerArea`: identifies Major Axis (Length) and Minor Axis (Width) at any orientation `_angle`.
-    - **Along the Minor Axis (Width):** Marked only at the corners; no cross-width clutter.
-    - **Centerline (Down the Major Axis):**
-      - Originates at the exact center of the trigger area and expands outward symmetrically along the long axis.
-      - **End Margin Offset:** Stops short of the trigger boundary by **$25\text{ m}$ to $50\text{ m}$** on both ends to clearly separate zone threshold from the interior.
-      - **Daytime Smoke:** Placed every **$200\text{ m}$** along the centerline (wide spacing prevents particle overlap and saves FPS).
-      - **Nighttime Lights:** Spaced every **$100\text{ m}$** along the centerline with alternating/paired Chemlights and Helipad Lights.
-    - **Outer Long Edges (Perimeter along Major Axis):**
-      - **Daytime:** Zero smoke on outer edges (completely clean, particle-free).
-      - **Nighttime:** Helipad Lights starting from the outer corners and working inward every **$100\text{ m}$** down both flanks.
+    - Derived dynamically from `triggerArea`: detects Major Axis (Length) and Minor Axis (Width) at any orientation `_angle`.
+    - **Minor Axis (Width):** Marked only at the corners; zero interior width clutter.
+    - **Major Axis Centerline:** Center-originating, expanding symmetrically every $100\text{ m}$ (Night) or $200\text{ m}$ (Day Smoke), with a 25m–50m end-buffer.
+    - **Major Axis Flanks:** Night runway lights every $100\text{ m}$ from the corners inward; zero daytime smoke.
 
-- **4. Day / Night State Machine & Lifecycle:**
+- **5. Day / Night State Machine & Mod Compatibility:**
   - Environmental monitor evaluates `sunOrMoon` (or sunrise/sunset times).
-  - **Dawn Transition:** Silently deletes/turns off night lights and ignites daytime centerline smoke emitters.
-  - **Dusk Transition:** Extinguishes smoke and spawns/illuminates perimeter helipad lights and centerline chemlights.
+  - Automatically toggles objects at dawn and dusk.
+  - Dynamic `isClass` checking supports both pure vanilla servers and modded (3den Enhanced) environments seamlessly.
 
-- **5. Status:** **Comprehensive Architecture & Geometric Layout Fully Defined in Section 6.9.**
+- **6. Status:** **Refined & Fully Specified in Section 6.9 (Green Dropoff, Purple Pickup, Yellow Service, Multi-Tier Runway/Helipad/Chemlight Hybrid).**
 
 ---
 
