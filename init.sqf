@@ -314,6 +314,7 @@ if (isServer) then {
     if (fileExists "logistics\qm_supplyPhysicalController.sqf") then { [] execVM "logistics\qm_supplyPhysicalController.sqf"; };
     if (fileExists "logistics\qm_serverGarrisonManager.sqf") then { [] execVM "logistics\qm_serverGarrisonManager.sqf"; };
     if (fileExists "logistics\qm_serverRespawnManager.sqf") then { [] execVM "logistics\qm_serverRespawnManager.sqf"; };
+    if (fileExists "logistics\logi_groundVisuals.sqf") then { [] execVM "logistics\logi_groundVisuals.sqf"; };
     if (fileExists "tsk_serverGIN.sqf") then { [] execVM "tsk_serverGIN.sqf"; };
 };
 

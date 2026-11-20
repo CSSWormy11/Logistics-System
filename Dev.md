@@ -1116,7 +1116,7 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
-### [ ] 6.9 Dynamic Ground Visual Markers & Color-Coding (Chemlights, Helipad Lights & Particle-Free Visual Cues)
+### [x] 6.9 Dynamic Ground Visual Markers & Color-Coding (Chemlights, Helipad Lights & Particle-Free Visual Cues)
 
 > [!NOTE]
 > **Operational Scope & Performance Goal:** Replace manual, continuous Eden smoke grenades (which produce heavy particle plumes that severely degrade rendering FPS) with an automated, lightweight, day/night-adaptive visual cue system.
@@ -1171,7 +1171,7 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
   - Automatically toggles objects at dawn and dusk.
   - Dynamic `isClass` checking supports both pure vanilla servers and modded (3den Enhanced) environments seamlessly.
 
-- **6. Status:** **Refined & Fully Specified in Section 6.9 (Green Dropoff, Purple Pickup, Yellow Service, Multi-Tier Runway/Helipad/Chemlight Hybrid).**
+- **6. Status:** **Verified Resolved & Implemented** via `logistics/logi_groundVisuals.sqf`, `logistics/logi_initTasks.sqf`, and `init.sqf`.
 
 ---
 

@@ -224,14 +224,20 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
                 _trigger setTriggerStatements [_cond, _act, _deact];
             };
 
+            // Register into unified visual cue registry for Section 6.9 dynamic ground visuals
+            private _visType = if (_isPickup) then { "PICKUP" } else { if (_isDropoff) then { "DROPOFF" } else { "SERVICE" } };
+            private _allVis = missionNamespace getVariable ["Logi_AllVisualTriggers", []];
+            _allVis pushBackUnique [_trigger, _visType];
+            missionNamespace setVariable ["Logi_AllVisualTriggers", _allVis, true];
+
             // Server-only: Standardized map marker generation (Clean Icon without text + Exact Trigger Area Bounding Box)
             if (isServer) then {
                 private _prefix = if (_isPickup) then {"Pickup_"} else { if (_isDropoff) then {"Dropoff_"} else {"Service_"} };
                 private _expectedMarkerID = format ["%1%2", _prefix, _parentBase]; 
                 private _triggerMarkerID = format ["%1%2", _prefix, _triggerName];
                 
-                // Color coding: Pickup = Blue (BLUFOR), Dropoff = Green, Service = Yellow
-                private _markerColor = if (_isPickup) then {"ColorBLUFOR"} else { if (_isDropoff) then {"ColorGreen"} else {"ColorYellow"} };
+                // Color coding: Pickup = Purple (ColorCivilian), Dropoff = Green (ColorGreen), Service = Yellow (ColorYellow)
+                private _markerColor = if (_isPickup) then {"ColorCivilian"} else { if (_isDropoff) then {"ColorGreen"} else {"ColorYellow"} };
                 private _markerType = if (_isPickup) then {"mil_pickup"} else { if (_isDropoff) then {"mil_end"} else {"b_maint"} };
 
                 // Primary base-level marker (used by spawning & routing scripts)
@@ -247,7 +253,7 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
                         createMarker [_triggerMarkerID, getPos _trigger];
                         _triggerMarkerID setMarkerColor _markerColor;
                         _triggerMarkerID setMarkerType _markerType;
-                        _triggerMarkerID setMarkerText ""; // Text removed: clean icon only
+                        _triggerMarkerID setMarkerText ""; // Clean icon only
                         _triggerMarkerID setMarkerAlpha 0; // Default global alpha 0 (Spotlight hierarchy controls local visibility)
                     };
                 };
@@ -262,7 +268,7 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
                         _areaMarkerID setMarkerSize [_sizeA, _sizeB];
                         _areaMarkerID setMarkerDir _angle;
                         _areaMarkerID setMarkerBrush "SolidBorder";
-                        _areaMarkerID setMarkerColor (if (_isPickup) then {"ColorBLUFOR"} else { if (_isDropoff) then {"ColorGreen"} else {"ColorYellow"} });
+                        _areaMarkerID setMarkerColor (if (_isPickup) then {"ColorCivilian"} else { if (_isDropoff) then {"ColorGreen"} else {"ColorYellow"} });
                         _areaMarkerID setMarkerAlpha 0; // Default global alpha 0 (Spotlight hierarchy controls local visibility)
                     };
                 };
