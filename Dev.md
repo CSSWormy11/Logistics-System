@@ -1126,19 +1126,45 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
   - Continuous volumetric smoke particles place a heavy burden on the engine's particle rendering pipeline, especially around major bases with multiple pads.
   - At night, smoke plumes become invisible in pitch black, while active chemlights or portable lights are required to guide drivers and pilots onto pads.
 
-- **2. Proposed Dynamic Ground Visual System:**
-  - **Day / Night State Machine:**
-    - Monitor environmental illumination via `sunOrMoon` or `call BIS_fnc_sunriseSunsetTime`.
-    - **Daytime:** Clean, low-density particle markers or daylight portable markers.
-    - **Nighttime:** High-visibility emissive lights (`Chemlight_*` or portable airfield/helipad lights `PortableHelipadLight_01_*_F`).
-  - **Standardized Zone Color Coding:**
-    - **Pickup Zones:** `Green` (or `Blue` / BLUFOR).
-    - **Dropoff Zones:** `Red` (or contrasting high-visibility hue).
-    - **Service Areas (Repair, Refuel, Rearm):** `Yellow` (Maintenance).
-  - **Performance Optimization:**
-    - Use lightweight native light entities (`PortableHelipadLight_01_green_F`, `PortableHelipadLight_01_red_F`, `PortableHelipadLight_01_yellow_F`) or scripted low-particle emitters that activate only when a vehicle approaches within visual range (e.g., < 800m), instantly freeing up frame rates across the entire map.
+- **2. Standardized Color Mapping & Faction Awareness:**
+  - **Service Areas (Repair, Refuel, Rearm):**
+    - **Color:** `Yellow` (Maintenance).
+    - **Day Smoke:** `SmokeShellYellow`.
+    - **Night Center:** `Chemlight_yellow` + `PortableHelipadLight_01_yellow_F`.
+    - **Night Perimeter:** `PortableHelipadLight_01_yellow_F`.
+  - **Pickup Zones (Loading Supply):**
+    - **Color:** `Green` (Go / Supply Available).
+    - **Day Smoke:** `SmokeShellGreen`.
+    - **Night Center:** `Chemlight_green` + `PortableHelipadLight_01_green_F`.
+    - **Night Perimeter:** `PortableHelipadLight_01_green_F`.
+  - **Dropoff Zones (Offloading Supply):**
+    - **Color:** `Purple` or `Orange` (or `Blue`) to strictly avoid `Red` (which standard military symbology reserves for hostiles / danger / off-limits).
+    - **Day Smoke:** `SmokeShellPurple` or `SmokeShellOrange` (100% native in vanilla Arma 3).
+    - **Night Center / Perimeter:** `PortableHelipadLight_01_blue_F` / `Chemlight_blue` (or custom-tinted `#lightpoint` for vivid purple/orange).
 
-- **3. Status:** **Documented as Section 6 Optional System Upgrade (Design Phase)**.
+- **3. Dimensional Hierarchy & Geometric Layout:**
+  - **Zone Classification Threshold:** $\le 100\text{ m}$ is a **Small Pad**; $> 100\text{ m}$ is a **Large Pad / Airfield Corridor**.
+  - **Small Pads ($\le 100\text{ m}$):**
+    - **Day:** Exactly 1 single smoke in the center of the pad. Zero perimeter smoke.
+    - **Night:** 1 Chemlight + 1 Helipad Light in the center (touchdown guidance); 4 Helipad Lights at the perimeter corners.
+  - **Large Corridors & Airfields ($> 100\text{ m}$):**
+    - Geometry derived from `triggerArea`: identifies Major Axis (Length) and Minor Axis (Width) at any orientation `_angle`.
+    - **Along the Minor Axis (Width):** Marked only at the corners; no cross-width clutter.
+    - **Centerline (Down the Major Axis):**
+      - Originates at the exact center of the trigger area and expands outward symmetrically along the long axis.
+      - **End Margin Offset:** Stops short of the trigger boundary by **$25\text{ m}$ to $50\text{ m}$** on both ends to clearly separate zone threshold from the interior.
+      - **Daytime Smoke:** Placed every **$200\text{ m}$** along the centerline (wide spacing prevents particle overlap and saves FPS).
+      - **Nighttime Lights:** Spaced every **$100\text{ m}$** along the centerline with alternating/paired Chemlights and Helipad Lights.
+    - **Outer Long Edges (Perimeter along Major Axis):**
+      - **Daytime:** Zero smoke on outer edges (completely clean, particle-free).
+      - **Nighttime:** Helipad Lights starting from the outer corners and working inward every **$100\text{ m}$** down both flanks.
+
+- **4. Day / Night State Machine & Lifecycle:**
+  - Environmental monitor evaluates `sunOrMoon` (or sunrise/sunset times).
+  - **Dawn Transition:** Silently deletes/turns off night lights and ignites daytime centerline smoke emitters.
+  - **Dusk Transition:** Extinguishes smoke and spawns/illuminates perimeter helipad lights and centerline chemlights.
+
+- **5. Status:** **Comprehensive Architecture & Geometric Layout Fully Defined in Section 6.9.**
 
 ---
 
