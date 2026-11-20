@@ -1325,6 +1325,30 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
+### [ ] 7.5 Dynamic Cross-Tier Resupply & Mid-Transit Route Swapping (Strategic / Tactical / CLT)
+
+> [!NOTE]
+> **Operational Scope & Architectural Boundary:** This proposal establishes the design foundation for **Cross-Tier Resupply & Dynamic Mid-Transit Cargo Rerouting**. It explores allowing players who load supplies under one tier (e.g., Strategic bulk containers) to dynamically deliver or reroute them to lower-tier or contested sectors (e.g., Tactical FOBs or Contested bases), with intelligent task navigation adapting to the physically loaded cargo.
+
+- **1. Strategic Motivation & Operational Flexibility:**
+  - Logistics operators frequently face changing battlefield conditions where supplies loaded at a rear Staging Base or MSR need to be diverted to an outpost under heavy contact.
+  - For example, a heavy lift helicopter pilot (CH-67 Huron or Blackfish) might load a strategic ammunition container intended for a Staging Base, but a squad pinned down at `CON_Spartan` or `FOB_CampMaxwell` urgently needs that ammunition.
+  - Players should have the operational freedom to deliver any valid logistics cargo to any friendly or contested dropoff pad, with the receiving base crediting the full value of the resources.
+
+- **2. Current V8 Capabilities vs. Proposed Overhaul:**
+  - **What Current V8 Handles Today:**
+    - **Physical Delivery Freedom:** Any cargo offloaded in *any* base dropoff zone is accepted and credited 100% to that base ledger via `logi_cargoDelivery.sqf`. The system never rejects supplies.
+    - **Reroute Detection:** If a player delivers to an alternate base than the one originally designated by their task, the mission manager recognizes the delivery, marks the task completed, and notifies the player: `[LOGISTICS ENGINE]: Tactical Route rerouted to FOB Mike 26 and completed successfully!`.
+    - **Role Priority & Manual Overrides:** All vehicles retain their full prioritized role array (e.g. `["Strategic", "Tactical", "CLT"]`). The vehicle auto-assigns `#0` by default, but the player can manually click "Assign" on any other route in their map task list. Once that run completes, auto-assignment seamlessly returns them to their primary vehicle role.
+    - **Task-Adaptive Cargo Spawning:** [logi_spawnLoadSupply.sqf](file:///C:/Users/JSHer/OneDrive/Documents/Arma%203/missions/Mine/Testing/Logistics/Logistics%20System/logistics/logi_spawnLoadSupply.sqf#L44-L58) dynamically checks the player's current active task and sub-task to spawn the appropriate cargo tier (`Strategic` vs. `Tactical` vs. `CLT`).
+  - **Proposed Future Enhancements (Section 7.5):**
+    - **Intelligent Mid-Transit Rerouting:** If a player has already loaded cargo under a Strategic run and manually switches their active map task to `Tactical Route` or `Combat Logistics Route` while en route:
+      - The task engine will inspect the *currently loaded* cargo object in the vehicle.
+      - It will query all candidate destination bases (`FOBs` or `CONs`) to find which outpost has the *lowest stockpile of that specific loaded resource* (e.g. lowest Ammo).
+      - It will dynamically reroute the 3D delivery waypoint to that base on the fly, eliminating the need for manual off-grid navigation.
+
+- **3. Status:** **Documented as Design Foundation (Section 7.5)**.
+
 ---
 
 **Ongoing Development Tracking**

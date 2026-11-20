@@ -45,9 +45,19 @@ if (count _cargoList > 0 && { (_cargoList # 0) isEqualType [] }) then {
     private _activeRoute = if ("MSR" in toUpper _pickupBaseKey) then { "Strategic" } else { "Tactical" };
     private _realTask = currentTask player;
     if (!isNull _realTask) then {
-        if (["Logi_Strategic_Task"] call BIS_fnc_taskExists && { _realTask isEqualTo (["Logi_Strategic_Task", player] call BIS_fnc_taskReal) }) then { _activeRoute = "Strategic"; };
-        if (["Logi_Tactical_Task"] call BIS_fnc_taskExists && { _realTask isEqualTo (["Logi_Tactical_Task", player] call BIS_fnc_taskReal) }) then { _activeRoute = "Tactical"; };
-        if (["Logi_CLT_Task"] call BIS_fnc_taskExists && { _realTask isEqualTo (["Logi_CLT_Task", player] call BIS_fnc_taskReal) }) then { _activeRoute = "CLT"; };
+        {
+            private _rName = _x;
+            private _pTask = format ["Logi_%1_Task", _rName];
+            if ([_pTask] call BIS_fnc_taskExists && { _realTask isEqualTo ([_pTask, player] call BIS_fnc_taskReal) }) exitWith {
+                _activeRoute = _rName;
+            };
+            {
+                private _sTask = format ["Logi_%1_%2", _rName, _x];
+                if ([_sTask] call BIS_fnc_taskExists && { _realTask isEqualTo ([_sTask, player] call BIS_fnc_taskReal) }) exitWith {
+                    _activeRoute = _rName;
+                };
+            } forEach ["Pickup", "Manifest", "Delivery"];
+        } forEach ["Strategic", "Tactical", "CLT"];
     };
     private _routeIdx = _cargoList findIf { toUpper (_x # 0) == toUpper _activeRoute };
     if (_routeIdx != -1) then {
