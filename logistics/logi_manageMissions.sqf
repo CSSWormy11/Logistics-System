@@ -266,24 +266,25 @@ logi_fnc_getRouteDistance = {
 // Dynamic local alpha manager for pickup, dropoff, service, and area pads.
 //
 // 1. INFANTRY ON FOOT (vehicle player == player):
-//    - All Pickup, Dropoff, Service, and Area markers: Alpha 0 (Clean map, 0 clutter).
+//    - Master Base Markers: Alpha 1.0 (Always visible: SB_Main, FOB_*, MSR_*, CON_*)
+//    - ALL Trigger Area Bounding Boxes (Area_*): Alpha 0 (Clean map, ZERO polygons)
+//    - ALL Pickup, Dropoff, and Service Markers: Alpha 0 (Hidden from infantry)
 //
-// 2. ANY PLAYER IN A VEHICLE (Combat aircraft, Tanks, APCs, Boats, Cars, Transports):
-//    - Service Markers (Service_* & Area_*_service*):
-//      * Nominal Status: Alpha 0.50 (Area: 0.20) for global base repair/refuel awareness.
-//      * Distress / Damaged (>25% dmg, <50% fuel, or low ammo): Spotlighted at Alpha 1.0 (Area: 0.45).
-//    - Pickup & Dropoff Markers:
-//      * Non-logistics vehicles (Wipeout, Slammer, etc.): Alpha 0 (No cargo clutter).
+// 2. COMBAT VEHICLES (Non-logistics: Tanks, Jets, APCs, Boats, Technicals):
+//    - Master Base Markers: Alpha 1.0
+//    - Service Markers & Service Areas:
+//      * Nominal Status: Icon Alpha 0.80, Area Bounding Box Alpha 0.30
+//      * Distress Status (>25% dmg, <50% fuel, low ammo): Icon Alpha 1.0, Area Alpha 0.50
+//    - Cargo Pickup & Dropoff Markers/Areas: Alpha 0 (No cargo clutter for combat crews)
 //
-// 3. LOGISTICS DRIVERS (Authorized Logistics Transport):
-//    - Overview Mode (no active route locked):
-//      * Pad Icons: Alpha 1.0, Area triggers: Alpha 0.25.
-//    - Active Route Mode (Route locked with origin & destination):
-//      * Active Assigned Route Pads (Origin Pickup & Dest Dropoff): Alpha 1.0 (Area: 0.45).
-//      * Secondary Alternative Pads (All other bases): Alpha 0.25 (Area: 0.10).
-//      * Service Pads: Alpha 1.0 on active bases, Alpha 0.50 on secondary bases (or 1.0 if damaged).
+// 3. LOGISTICS DRIVERS (Authorized Logistics Vehicles):
+//    - Overview Mode: All Logistics & Service Pads visible at Alpha 1.0 (Area: 0.25)
+//    - Active Route Mode:
+//      * Origin Pickup & Dest Dropoff: Alpha 1.0 (Area: 0.45)
+//      * Secondary Base Pads: Alpha 0.25 (Area: 0.10)
+//      * Service Pads: Alpha 0.80/1.0 (Area: 0.30/0.50)
 //
-// 4. MASTER BASE MARKERS (SB_Main, FOB_*, MSR):
+// 4. MASTER BASE MARKERS (SB_Main, FOB_*, MSR, CON):
 //    - Always visible to all players at Alpha 1.0 with human-readable labels.
 // =========================================================================
 logi_fnc_updateMarkerSpotlight = {
@@ -338,15 +339,26 @@ logi_fnc_updateMarkerSpotlight = {
     private _fromBaseLower = toLowerANSI _activeFromBase;
     private _targetBaseLower = toLowerANSI _activeTargetBase;
 
+    // Collect all master base keys (lowercased) so base markers are NEVER hidden
+    private _baseKeysLower = (missionNamespace getVariable ["logisticsBases", []]) apply { toLowerANSI _x };
+
     {
         private _m = toLowerANSI _x;
-        private _isArea = (_m find "area_" == 0);
-        private _isPickup = (_m find "pickup_" == 0);
-        private _isDropoff = (_m find "dropoff_" == 0);
-        private _isService = (_m find "service_" == 0);
+
+        // Master base marker (e.g. SB_Main, FOB_CampMaxwell, MSR_Air_1, CON_Spartan)
+        // Must ALWAYS be 100% visible with base name to all players on foot or in vehicles!
+        if (_m in _baseKeysLower) then {
+            _x setMarkerAlphaLocal 1.0;
+            continue;
+        };
+
+        private _isArea = (_m find "area_" == 0) || (markerShape _x in ["RECTANGLE", "ELLIPSE"]);
+        private _isPickup = (_m find "pickup_" == 0 || "_pickup" in _m);
+        private _isDropoff = (_m find "dropoff_" == 0 || "_dropoff" in _m);
+        private _isService = (_m find "service_" == 0 || "_service" in _m);
 
         if (_isArea || _isPickup || _isDropoff || _isService) then {
-            private _isServiceArea = (_isArea && { "_service" in _m });
+            private _isServiceArea = (_isArea && _isService);
             private _isServiceRelated = (_isService || _isServiceArea);
 
             if (_isServiceRelated) then {
@@ -354,39 +366,23 @@ logi_fnc_updateMarkerSpotlight = {
                 // SERVICE PAD VISIBILITY RULES
                 // =============================================================
                 if (!_inAnyVehicle) then {
-                    // Infantry on foot: hidden
+                    // Infantry on foot: completely hidden (clean map, zero trigger clutter)
                     _x setMarkerAlphaLocal 0;
                 } else {
-                    // In any vehicle (Combat plane, tank, boat, or logistics truck)
+                    // In ANY vehicle (Combat plane, tank, IFV, boat, car, or logistics truck)
                     if (_needsService) then {
-                        // Vehicle damaged >25%, fuel <50%, or low ammo: Spotlight at 100%
+                        // Vehicle damaged >25%, fuel <50%, or low ammo: Spotlight in distress!
                         if (_isServiceArea) then {
-                            _x setMarkerAlphaLocal 0.45;
+                            _x setMarkerAlphaLocal 0.50;
                         } else {
                             _x setMarkerAlphaLocal 1.0;
                         };
                     } else {
-                        // Vehicle in nominal condition: Check if active logistics base
-                        private _basePart = if (_isArea) then { _m select [5] } else { _m select [8] };
-                        private _isActiveLogiBase = false;
-                        if (_hasActiveRoute) then {
-                            if (_fromBaseLower != "" && { (_basePart find _fromBaseLower) == 0 }) then {
-                                private _len = count _fromBaseLower;
-                                private _next = _basePart select [_len, 1];
-                                if (_next == "" || _next == "_") then { _isActiveLogiBase = true; };
-                            };
-                            if (_targetBaseLower != "" && { (_basePart find _targetBaseLower) == 0 }) then {
-                                private _len = count _targetBaseLower;
-                                private _next = _basePart select [_len, 1];
-                                if (_next == "" || _next == "_") then { _isActiveLogiBase = true; };
-                            };
-                        };
-
-                        if (_isActiveLogiBase) then {
-                            if (_isServiceArea) then { _x setMarkerAlphaLocal 0.45; } else { _x setMarkerAlphaLocal 1.0; };
+                        // Vehicle in nominal condition:
+                        if (_isServiceArea) then {
+                            _x setMarkerAlphaLocal 0.30;
                         } else {
-                            // Baseline vehicle visibility (50% icon, 20% area boundary)
-                            if (_isServiceArea) then { _x setMarkerAlphaLocal 0.20; } else { _x setMarkerAlphaLocal 0.50; };
+                            _x setMarkerAlphaLocal 0.80;
                         };
                     };
                 };
@@ -395,7 +391,7 @@ logi_fnc_updateMarkerSpotlight = {
                 // CARGO PICKUP & DROPOFF VISIBILITY RULES (Logistics Only)
                 // =============================================================
                 if (!_isLogiDriver) then {
-                    // Non-logistics players & combat vehicles: hidden
+                    // Infantry on foot & combat vehicles (non-logistics): completely hidden!
                     _x setMarkerAlphaLocal 0;
                 } else {
                     if (!_hasActiveRoute) then {
@@ -734,17 +730,20 @@ createClientLogiTasks = {
     waitUntil { !isNil "logisticsBases" };
     // Initialize map marker visibility for client (combat units start with clean map)
     [false, "", "", false, false] call logi_fnc_updateMarkerSpotlight;
+    private _lastClientMode = -1; // -1: uninitialized, 0: on foot, 1: combat vehicle, 2: logistics driver
     private _wasLogisticsDriver = false;
-    private _wasInVehicle = false;
     private _lastNeedsService = false;
     private _lastVehicle = objNull;
     private _wasLoaded = false;
     private _stickyTaskID = "";
     private _lockedAssignment = false;
+    private _clientSweepUntil = time + 12; // Continuous sweep to catch async markers created during mission load
 
     while { true } do {
         private _vehicle = vehicle player;
         private _inAnyVehicle = (_vehicle != player && alive _vehicle);
+        private _isLogisticsDriver = (_inAnyVehicle && { typeOf _vehicle in allowedLogisticsVehicles && driver _vehicle == player });
+        private _currentMode = if (!_inAnyVehicle) then { 0 } else { if (!_isLogisticsDriver) then { 1 } else { 2 } };
 
         // Any-Vehicle Service Distress Evaluation (Combat aircraft, armor, boats, transports)
         private _needsService = false;
@@ -771,13 +770,6 @@ createClientLogiTasks = {
             };
         };
 
-        // Dismount transition: player exited onto foot
-        if (!_inAnyVehicle && _wasInVehicle) then {
-            [false, "", "", false, false] call logi_fnc_updateMarkerSpotlight;
-            _wasInVehicle = false;
-            _lastNeedsService = false;
-        };
-
         // =====================================================================
         // CATASTROPHIC LOSS SAFETY NET
         // If the logistics transport is blown up or vanishes, force a total
@@ -787,18 +779,17 @@ createClientLogiTasks = {
             call logi_fnc_clearAllLogiTasks;
             [false, "", "", false, false] call logi_fnc_updateMarkerSpotlight;
             _wasLogisticsDriver = false;
-            _wasInVehicle = false;
             _lastNeedsService = false;
             _lastVehicle = objNull;
             _wasLoaded = false;
             _stickyTaskID = "";
             _lockedAssignment = false;
+            _lastClientMode = 0;
             player setVariable ["logistics_current_assigned_category", "", true];
             systemChat "LOGISTICS ALERT: Asset link severed due to vehicle destruction. Manifest purged.";
         };
 
-        private _isLogisticsDriver = (_inAnyVehicle && { typeOf _vehicle in allowedLogisticsVehicles && driver _vehicle == player });
-
+        // Dismount or transition out of logistics vehicle
         if (!_isLogisticsDriver && _wasLogisticsDriver) then {
             call logi_fnc_clearAllLogiTasks;
             _wasLogisticsDriver = false;
@@ -806,26 +797,32 @@ createClientLogiTasks = {
             _stickyTaskID = "";
             _lockedAssignment = false;
             systemChat "LOGISTICS ENGINE: Logistics tasks cleared from HUD.";
-            if (_inAnyVehicle) then {
-                [false, "", "", true, _needsService] call logi_fnc_updateMarkerSpotlight;
-            } else {
-                [false, "", "", false, false] call logi_fnc_updateMarkerSpotlight;
-                _wasInVehicle = false;
-                _lastNeedsService = false;
-                _lastVehicle = objNull;
-            };
         };
 
-        // Non-logistics vehicle transition (e.g. combat plane, attack helicopter, tank)
-        if (_inAnyVehicle && !_isLogisticsDriver && (!_wasInVehicle || _vehicle != _lastVehicle || _needsService != _lastNeedsService)) then {
-            [false, "", "", true, _needsService] call logi_fnc_updateMarkerSpotlight;
-            _wasInVehicle = true;
+        // ---------------------------------------------------------------------
+        // MODE TRANSITION & CONTINUOUS STARTUP SWEEP
+        // Ensures infantrymen on foot have 100% clean maps with ZERO trigger areas,
+        // and combat vehicles always see service pads (repair, refuel, rearm).
+        // ---------------------------------------------------------------------
+        private _inStartupSweep = (time < _clientSweepUntil);
+        private _modeChanged = (_currentMode != _lastClientMode) || (_inAnyVehicle && (_vehicle != _lastVehicle || _needsService != _lastNeedsService));
+
+        if (_modeChanged || (_inStartupSweep && _currentMode == 0)) then {
+            if (_currentMode == 0) then {
+                // Infantry on foot: hide all trigger areas, pickup/dropoff, and service markers
+                [false, "", "", false, false] call logi_fnc_updateMarkerSpotlight;
+            } else {
+                if (_currentMode == 1) then {
+                    // Combat vehicle: show service areas, hide cargo logistics
+                    [false, "", "", true, _needsService] call logi_fnc_updateMarkerSpotlight;
+                };
+            };
+            _lastClientMode = _currentMode;
             _lastNeedsService = _needsService;
             _lastVehicle = _vehicle;
         };
 
         if (_isLogisticsDriver) then {
-            _wasInVehicle = true;
             private _vehType = typeOf _vehicle;
             private _vehicleRoles = [_vehType] call logi_fnc_getVehicleRoles;
 
@@ -839,6 +836,7 @@ createClientLogiTasks = {
                 _wasLoaded = false;
                 _stickyTaskID = "";
                 _lockedAssignment = false;
+                _lastClientMode = 2;
                 systemChat "LOGISTICS ENGINE: Routing assets mapped to navigation system.";
             };
 

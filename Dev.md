@@ -1116,6 +1116,32 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
+### [ ] 6.9 Dynamic Ground Visual Markers & Color-Coding (Chemlights, Helipad Lights & Particle-Free Visual Cues)
+
+> [!NOTE]
+> **Operational Scope & Performance Goal:** Replace manual, continuous Eden smoke grenades (which produce heavy particle plumes that severely degrade rendering FPS) with an automated, lightweight, day/night-adaptive visual cue system.
+
+- **1. Strategic Motivation & Mission-Maker Workflow:**
+  - Mission makers currently place physical smoke grenades in the Eden Editor and script them to continuously emit smoke so arriving pilots and drivers can visually identify logistics pads and service areas from distance.
+  - Continuous volumetric smoke particles place a heavy burden on the engine's particle rendering pipeline, especially around major bases with multiple pads.
+  - At night, smoke plumes become invisible in pitch black, while active chemlights or portable lights are required to guide drivers and pilots onto pads.
+
+- **2. Proposed Dynamic Ground Visual System:**
+  - **Day / Night State Machine:**
+    - Monitor environmental illumination via `sunOrMoon` or `call BIS_fnc_sunriseSunsetTime`.
+    - **Daytime:** Clean, low-density particle markers or daylight portable markers.
+    - **Nighttime:** High-visibility emissive lights (`Chemlight_*` or portable airfield/helipad lights `PortableHelipadLight_01_*_F`).
+  - **Standardized Zone Color Coding:**
+    - **Pickup Zones:** `Green` (or `Blue` / BLUFOR).
+    - **Dropoff Zones:** `Red` (or contrasting high-visibility hue).
+    - **Service Areas (Repair, Refuel, Rearm):** `Yellow` (Maintenance).
+  - **Performance Optimization:**
+    - Use lightweight native light entities (`PortableHelipadLight_01_green_F`, `PortableHelipadLight_01_red_F`, `PortableHelipadLight_01_yellow_F`) or scripted low-particle emitters that activate only when a vehicle approaches within visual range (e.g., < 800m), instantly freeing up frame rates across the entire map.
+
+- **3. Status:** **Documented as Section 6 Optional System Upgrade (Design Phase)**.
+
+---
+
 ## 7. Major Feature Requests & System Overhauls
 
 ### [ ] 7.1 Multi-Side (PvP / TvT / Multi-Faction) Logistics Engine
