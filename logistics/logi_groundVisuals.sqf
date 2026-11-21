@@ -75,6 +75,7 @@ if (isNull _logicGrp) then {
 // -----------------------------------------------------------------------------
 // HELPER: MODULE ACTIVATOR
 // Activates dynamically spawned Eden Effect Modules across all clients.
+// Follows Bohemia module execution convention: ["init", [_logic, []], true]
 // -----------------------------------------------------------------------------
 logi_fnc_activateModule = {
     params ["_mod"];
@@ -82,15 +83,15 @@ logi_fnc_activateModule = {
     
     // Read the registered function from CfgVehicles
     private _fncName = getText (configFile >> "CfgVehicles" >> typeOf _mod >> "function");
-    if (_fncName == "") then { _fncName = "BIS_fnc_moduleEffectsSmoke"; };
+    if (_fncName == "") then { _fncName = "BIS_fnc_moduleGrenade"; };
 
-    // Broadcast initialization so particle emitters generate locally on all connected clients
-    [_mod] remoteExec [_fncName, 0, true];
+    // Broadcast standard module init parameters: ["init", [_logic, _units], _isActivated]
+    ["init", [_mod, []], true] remoteExec [_fncName, 0, true];
 };
 
 // Helper: Safely spawn and initialize a continuous smoke module
 logi_fnc_createSmokeModule = {
-    params ["_class", "_pos", "_colorName", "_logicGroup"];
+    params ["_class", "_pos", "_colorName", "_ammoClass", "_logicGroup"];
     
     private _mod = _logicGroup createUnit [_class, _pos, [], 0, "CAN_COLLIDE"];
     if (isNull _mod) then {
@@ -98,8 +99,15 @@ logi_fnc_createSmokeModule = {
         _mod = _logicGroup createUnit ["ModuleSmoke_F", _pos, [], 0, "CAN_COLLIDE"];
     };
     
+    // Set attributes read by BIS_fnc_moduleGrenade / ModuleSmoke
+    _mod setVariable ["Type", _ammoClass, true];
+    _mod setVariable ["type", _ammoClass, true];
+    _mod setVariable ["Color", _colorName, true];
     _mod setVariable ["color", _colorName, true];
-    _mod setVariable ["type", _colorName, true];
+    _mod setVariable ["Repeat", 1, true];
+    _mod setVariable ["repeat", 1, true];
+    _mod setVariable ["Timeout", 0, true];
+    _mod setVariable ["timeout", 0, true];
     
     if (surfaceIsWater _pos) then {
         _mod setPosASL _pos;
@@ -258,6 +266,11 @@ private _zoneData = [];
             case "PICKUP":  { "Purple" };
             default         { "Yellow" };
         };
+        private _ammoClass = switch (_padType) do {
+            case "DROPOFF": { "SmokeShellGreen" };
+            case "PICKUP":  { "SmokeShellPurple" };
+            default         { "SmokeShellYellow" };
+        };
         private _helipadClass = switch (_padType) do {
             case "DROPOFF": { _dropoffHelipadClass };
             case "PICKUP":  { _pickupHelipadClass };
@@ -274,6 +287,7 @@ private _zoneData = [];
             _padType,
             _smokeClass,
             _colorName,
+            _ammoClass,
             _helipadClass,
             _chemClass,
             _smokePositions,
@@ -294,7 +308,7 @@ diag_log format ["[LOGISTICS GROUND VISUALS]: Configured %1 logistics visual zon
 private _permanentEdgeLights = [];
 {
     _x params [
-        "_trgName", "_padType", "_smokeClass", "_colorName",
+        "_trgName", "_padType", "_smokeClass", "_colorName", "_ammoClass",
         "_helipadClass", "_chemClass", "_smokePositions",
         "_centerLightPositions", "_perimeterLightPositions", "_dirLen"
     ];
@@ -350,19 +364,19 @@ while { true } do {
         if (_newMode == 1) then {
             // -----------------------------------------------------------------
             // DAYTIME MODE: Continuous Centerline Smoke Modules
-            // Spawned once, activated via BIS_fnc_moduleEffectsSmoke.
+            // Spawned once, activated via BIS_fnc_moduleGrenade / ModuleSmoke.
             // -----------------------------------------------------------------
             diag_log "[LOGISTICS GROUND VISUALS]: Transitioning to DAYTIME (Activating centerline smoke modules)...";
 
             {
                 _x params [
-                    "_trgName", "_padType", "_smokeClass", "_colorName",
+                    "_trgName", "_padType", "_smokeClass", "_colorName", "_ammoClass",
                     "_helipadClass", "_chemClass", "_smokePositions",
                     "_centerLightPositions", "_perimeterLightPositions", "_dirLen"
                 ];
 
                 {
-                    private _smokeMod = [_smokeClass, _x, _colorName, _logicGrp] call logi_fnc_createSmokeModule;
+                    private _smokeMod = [_smokeClass, _x, _colorName, _ammoClass, _logicGrp] call logi_fnc_createSmokeModule;
                     _activeCenterlineEntities pushBack _smokeMod;
                 } forEach _smokePositions;
             } forEach _zoneData;
@@ -377,7 +391,7 @@ while { true } do {
 
             {
                 _x params [
-                    "_trgName", "_padType", "_smokeClass", "_colorName",
+                    "_trgName", "_padType", "_smokeClass", "_colorName", "_ammoClass",
                     "_helipadClass", "_chemClass", "_smokePositions",
                     "_centerLightPositions", "_perimeterLightPositions", "_dirLen"
                 ];
