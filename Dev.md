@@ -1412,6 +1412,52 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 - **3. Status:** **Documented as Design Foundation (Section 7.5)**.
 
+### [ ] 7.6 Direct Engine Particle Source (`#particlesource`) Overhaul for Dynamic Ground Visuals
+
+> [!NOTE]
+> **Operational Scope & Architectural Boundary:** This proposal establishes the technical specification for transitioning the dynamic ground visual markers (Section 6.9) from Bohemia's editor/curator module framework (`ModuleSmoke_F` / `fn_moduleGrenade.sqf`) to native client-side `#particlesource` engine emitters. This architecture provides 100% immunity to internal module parameter deprecation, zero network sync overhead, and instant script-driven lifecycle cleanup.
+
+- **1. Strategic Context & Technical Rationale:**
+  - In Bohemia Interactive's module architecture, `ModuleSmoke_F`, `ModuleSmokeBlue_F`, and related visual helpers were originally authored specifically for the 3D Eden Editor GUI and Zeus curator interface via `fn_moduleGrenade.sqf`.
+  - Spawning and activating Bohemia Eden modules programmatically at runtime via SQF requires satisfying complex private argument structures (`_params = [_logic, _isActivated, _isCuratorPlaced]`), which are undocumented and sensitive to engine updates or execution environments.
+  - In contrast, Arma 3's real-time engine exposes native C++ particle generation directly via the `createVehicleLocal ["#particlesource", ...]` primitive, which attaches pure volumetric rendering directly to coordinates or memory points without any SQF wrapper functions, curator event listeners, or module logic overhead.
+
+- **2. Comparative Architectural Breakdown:**
+  | Dimension | Bohemia Module Framework (`ModuleSmoke_F`) | Native Engine Particle Source (`#particlesource`) |
+  | :--- | :--- | :--- |
+  | **Invocation Mechanism** | `createVehicle` $\rightarrow$ `remoteExec ["fn_moduleGrenade", 0]` | Local C++ primitive: `createVehicleLocal ["#particlesource", _pos]` |
+  | **Script Overhead** | High (triggers Bohemia SQF event loops, curator listeners) | Zero (handled 100% inside RV engine particle pipeline) |
+  | **Network Bandwidth** | JIP broadcasts, logic object synchronizations | Zero (purely client-side rendering via `createVehicleLocal`) |
+  | **Parameter Sensitivity** | Prone to `Type Array, expected Bool` or undefined `_params` | Zero parameters beyond class string; 100% crash immune |
+  | **Lifecycle & Deletion** | Complex module logic hierarchy | Instant, atomic cleanup via `deleteVehicle _ps` |
+  | **Visual Fidelity** | Standard smoke plume | Identical standard smoke plume (`setParticleClass`) |
+
+- **3. Proposed Implementation Architecture:**
+  - **Color & Particle Class Mapping:**
+    - **Service Areas (Yellow):** `_ps setParticleClass "SmokeShellYellowEffect"`
+    - **Dropoff Zones (Green):** `_ps setParticleClass "SmokeShellGreenEffect"`
+    - **Pickup Zones (Purple):** `_ps setParticleClass "SmokeShellPurpleEffect"`
+    - **Vehicle Spawn Pads & Helipads (Blue):** `_ps setParticleClass "SmokeShellBlueEffect"`
+  - **Client-Side Emitter Generation Helper:**
+    ```sqf
+    // logistics/logi_groundVisuals.sqf overhaul function
+    logi_fnc_createSmokeEmitter = {
+        params ["_pos", "_particleClass"];
+        private _ps = "#particlesource" createVehicleLocal _pos;
+        _ps setParticleClass _particleClass;
+        _ps setPosATL _pos;
+        _ps
+    };
+    ```
+  - **Day / Night State Transition Lifecycle:**
+    - **Permanent Fixtures:** Runway edge lights (`Land_runway_edgelight_yellow_F`, `Land_runway_edgelight_blue_F`) remain permanent fixtures on the terrain with `switchLight "AUTO"`, requiring no despawn or recreation.
+    - **Day State:** Server broadcasts or local clients evaluate `sunOrMoon > 0.1` and instantiate local `#particlesource` emitters along pad centerlines and helipad warning locations. Centerline chemlights and helipad lights are deleted.
+    - **Night State:** Local `#particlesource` emitters are immediately deleted via `deleteVehicle`. Centerline helipad lights and chemlights are spawned.
+
+- **4. Migration Trigger & Current Status:**
+  - **Current Status:** **Documented as Design Foundation (Section 7.6)**.
+  - **Trigger Condition:** Framework commit `9779ca1` resolved Bohemia's `_activated` boolean array signature (`["init", [_mod, true, false], true]`). If active user testing of `9779ca1` encounters any further module-layer friction or unhandled internal states, the visual system in `logistics/logi_groundVisuals.sqf` will immediately swap its smoke backend to `#particlesource` under this specification.
+
 ---
 
 **Ongoing Development Tracking**
