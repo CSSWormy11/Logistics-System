@@ -1142,6 +1142,10 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
     - **Day Smoke:** `SmokeShellPurple` (100% native in vanilla Arma 3).
     - **Outer Edges & Corners:** `Land_runway_edgelight_blue_F` / `Land_runway_edgelight` (Blue/Purple spectrum).
     - **Centerline (Night):** `Chemlight_blue` / `Chemlight_purple` + `PortableHelipadLight_01_blue_F` / `Land_PortableHelipadLight_01_F`.
+  - **Vehicle Spawn Pads & Helipads (Motorpool / Factory Delivery):**
+    - **Color:** `Blue` (BLUFOR vehicle procurement & spawn safety: warns ground personnel and drivers to keep the pad clear to avoid vehicle crushing/collision during spawning).
+    - **Day Smoke:** `SmokeShellBlue` (`ModuleSmokeBlue_F`).
+    - **Night Lighting:** `PortableHelipadLight_01_blue_F` (or `_constant`) + `Chemlight_blue`.
 
 - **3. Dimensional Hierarchy & Multi-Tier Lighting Architecture:**
   - **Visual Tier 1: Outer Edges & Corners (Runway / Flush Lights - 2,000m+ Range):**

@@ -65,6 +65,12 @@ private _dropoffChemClass     = "Chemlight_green";
 private _pickupHelipadClass   = if (_hasConstantHelipadLight) then { "PortableHelipadLight_01_blue_constant" } else { "PortableHelipadLight_01_blue_F" };
 private _pickupChemClass      = "Chemlight_blue";
 
+// 4. VEHICLE SPAWN PADS / FACTORY HELIPADS (BLUE SAFETY WARNING)
+private _spawnSmokeClass      = "ModuleSmokeBlue_F";
+private _spawnAmmoClass       = "SmokeShellBlue";
+private _spawnHelipadClass    = if (_hasConstantHelipadLight) then { "PortableHelipadLight_01_blue_constant" } else { "PortableHelipadLight_01_blue_F" };
+private _spawnChemClass       = "Chemlight_blue";
+
 // Logic group for Eden effect modules
 private _logicGrp = missionNamespace getVariable ["Logi_GroundVisuals_LogicGrp", grpNull];
 if (isNull _logicGrp) then {
@@ -301,6 +307,39 @@ private _zoneData = [];
 diag_log format ["[LOGISTICS GROUND VISUALS]: Configured %1 logistics visual zones.", count _zoneData];
 
 // -----------------------------------------------------------------------------
+// DISCOVER VEHICLE SPAWN PADS & HELIPADS
+// Warns players with Blue Smoke (Day) and Blue Lights (Night) to keep spawn pads clear.
+// -----------------------------------------------------------------------------
+private _helipadClasses = [
+    "Land_HelipadEmpty_F",
+    "Land_HelipadCircle_F",
+    "Land_HelipadSquare_F",
+    "Land_HelipadCivil_F",
+    "Land_HelipadRescue_F",
+    "Land_Destroyer_01_Boat_Rack_01_F",
+    "Land_Boat_Rack_01_F",
+    "Land_BoatRack_01_F"
+];
+
+private _spawnPadPositions = [];
+{
+    private _type = typeOf _x;
+    private _name = toLowerANSI (vehicleVarName _x);
+    if (!isNull _x && !(_x isKindOf "EmptyDetector")) then {
+        if (_type in _helipadClasses || { _name find "garage" != -1 || _name find "spawn" != -1 }) then {
+            private _pos = getPosATL _x;
+            if (surfaceIsWater _pos) then {
+                _spawnPadPositions pushBackUnique [getPosASL _x, true];
+            } else {
+                _spawnPadPositions pushBackUnique [_pos, false];
+            };
+        };
+    };
+} forEach (allMissionObjects "All");
+
+diag_log format ["[LOGISTICS GROUND VISUALS]: Configured %1 vehicle spawn pads for safety visual warnings.", count _spawnPadPositions];
+
+// -----------------------------------------------------------------------------
 // SPAWN PERMANENT RUNWAY EDGE LIGHTS ONCE AT STARTUP
 // Yellow for Service areas, Blue for Pickup & Dropoff zones.
 // These remain permanently on the map; the engine cycles their bulbs ("AUTO").
@@ -381,7 +420,14 @@ while { true } do {
                 } forEach _smokePositions;
             } forEach _zoneData;
 
-            diag_log format ["[LOGISTICS GROUND VISUALS]: Activated %1 centerline smoke modules.", count _activeCenterlineEntities];
+            // Deploy Blue Smoke Warning on all Vehicle Spawn Pads / Helipads
+            {
+                _x params ["_pos", "_isWater"];
+                private _smokeMod = [_spawnSmokeClass, _pos, "Blue", _spawnAmmoClass, _logicGrp] call logi_fnc_createSmokeModule;
+                _activeCenterlineEntities pushBack _smokeMod;
+            } forEach _spawnPadPositions;
+
+            diag_log format ["[LOGISTICS GROUND VISUALS]: Activated %1 daytime smoke modules (zones + spawn pads).", count _activeCenterlineEntities];
 
         } else {
             // -----------------------------------------------------------------
@@ -419,7 +465,19 @@ while { true } do {
 
             } forEach _zoneData;
 
-            diag_log format ["[LOGISTICS GROUND VISUALS]: Activated %1 centerline night lighting entities.", count _activeCenterlineEntities];
+            // Deploy Blue Helipad Light & Chemlight Warning on all Vehicle Spawn Pads / Helipads
+            {
+                _x params ["_pos", "_isWater"];
+                private _hLight = createVehicle [_spawnHelipadClass, _pos, [], 0, "CAN_COLLIDE"];
+                if (_isWater) then { _hLight setPosASL _pos; } else { _hLight setPosATL _pos; };
+                _activeCenterlineEntities pushBack _hLight;
+
+                private _chemObj = createVehicle [_spawnChemClass, _pos, [], 0, "CAN_COLLIDE"];
+                if (_isWater) then { _chemObj setPosASL _pos; } else { _chemObj setPosATL _pos; };
+                _activeCenterlineEntities pushBack _chemObj;
+            } forEach _spawnPadPositions;
+
+            diag_log format ["[LOGISTICS GROUND VISUALS]: Activated %1 nighttime lighting entities (zones + spawn pads).", count _activeCenterlineEntities];
         };
 
         _currentVisualMode = _newMode;
