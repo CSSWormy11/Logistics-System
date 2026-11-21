@@ -81,7 +81,7 @@ if (isNull _logicGrp) then {
 // -----------------------------------------------------------------------------
 // HELPER: MODULE ACTIVATOR
 // Activates dynamically spawned Eden Effect Modules across all clients.
-// Follows Bohemia module execution convention: ["init", [_logic, []], true]
+// Follows Bohemia module execution convention: ["init", [_logic, _units, _isCuratorPlaced], _isActivated]
 // -----------------------------------------------------------------------------
 logi_fnc_activateModule = {
     params ["_mod"];
@@ -91,8 +91,8 @@ logi_fnc_activateModule = {
     private _fncName = getText (configFile >> "CfgVehicles" >> typeOf _mod >> "function");
     if (_fncName == "") then { _fncName = "BIS_fnc_moduleGrenade"; };
 
-    // Broadcast standard module init parameters: ["init", [_logic, _units], _isActivated]
-    ["init", [_mod, []], true] remoteExec [_fncName, 0, true];
+    // Broadcast standard module init parameters: ["init", [_logic, _units, _isCuratorPlaced], _isActivated]
+    ["init", [_mod, [], false], true] remoteExec [_fncName, 0, true];
 };
 
 // Helper: Safely spawn and initialize a continuous smoke module
