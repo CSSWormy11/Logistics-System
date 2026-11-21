@@ -12,18 +12,18 @@ class EditorData
 	};
 	class ItemIDProvider
 	{
-		nextID=593;
+		nextID=594;
 	};
 	class LayerIndexProvider
 	{
-		nextID=206;
+		nextID=238;
 	};
 	class Camera
 	{
-		pos[]={5275.0571,222.33492,5418.2041};
-		dir[]={0.74216419,-0.38852638,0.54611313};
-		up[]={0.31293532,0.92143756,0.23026991};
-		aside[]={0.59267509,-1.4901161e-08,-0.80544162};
+		pos[]={1429.9094,403.43582,5550.6816};
+		dir[]={0.66716367,-0.74472517,0.017852325};
+		up[]={0.74461961,0.6671921,0.019924758};
+		aside[]={0.026748035,-3.0611182e-07,-0.99966651};
 	};
 };
 binarizationWanted=0;
@@ -369,11 +369,11 @@ class Mission
 					name="Main Supply Base";
 					class Entities
 					{
-						items=36;
+						items=37;
 						class Item0
 						{
 							dataType="Trigger";
-							position[]={1708.7841,5.5,5472.2202};
+							position[]={1773.6379,5.5,5718.9194};
 							angle=0.25672048;
 							class Attributes
 							{
@@ -381,8 +381,8 @@ class Mission
 								condition="this && ({typeOf _x in allowedLogisticsVehicles && speed _x == 0} count thisList > 0)";
 								onActivation="private _tElements = (vehicleVarName thisTrigger) splitString ""_""; " \n "_tElements deleteAt (count _tElements - 1); " \n "private _baseKey = _tElements joinString ""_""; " \n " " \n "[thisTrigger, _baseKey] execVM ""CargoDelivery3.sqf"";";
 								onDeactivation="thisTrigger setVariable [""isProcessingLogistics"", false];";
-								sizeA=33.702999;
-								sizeB=533.58301;
+								sizeA=30;
+								sizeB=245;
 								sizeC=8;
 								repeatable=1;
 								activationBy="ANYPLAYER";
@@ -919,8 +919,8 @@ class Mission
 							dataType="Logic";
 							class PositionInfo
 							{
-								position[]={2078.3052,6.73,5603.3462};
-								angles[]={0,0.2567282,0};
+								position[]={2078.3049,6.73,5603.3462};
+								angles[]={0,0.25672048,0};
 							};
 							id=493;
 							type="ModuleSmoke_F";
@@ -948,7 +948,7 @@ class Mission
 										class data
 										{
 											singleType="STRING";
-											value="SmokeShellGreen";
+											value="SmokeShellYellow";
 										};
 									};
 								};
@@ -989,7 +989,7 @@ class Mission
 										class data
 										{
 											singleType="STRING";
-											value="SmokeShellGreen";
+											value="SmokeShellPurple";
 										};
 									};
 								};
@@ -1001,8 +1001,8 @@ class Mission
 							dataType="Logic";
 							class PositionInfo
 							{
-								position[]={1773.4755,5.5,5718.0425};
-								angles[]={0,0.2567282,0};
+								position[]={1803.9189,5.5,5711.1216};
+								angles[]={-0,0.2567282,0};
 							};
 							id=495;
 							type="ModuleSmoke_F";
@@ -1071,7 +1071,7 @@ class Mission
 										class data
 										{
 											singleType="STRING";
-											value="SmokeShellYellow";
+											value="SmokeShellBlue";
 										};
 									};
 								};
@@ -1112,7 +1112,7 @@ class Mission
 										class data
 										{
 											singleType="STRING";
-											value="SmokeShellYellow";
+											value="SmokeShellBlue";
 										};
 									};
 								};
@@ -1153,7 +1153,7 @@ class Mission
 										class data
 										{
 											singleType="STRING";
-											value="SmokeShellYellow";
+											value="SmokeShellBlue";
 										};
 									};
 								};
@@ -1194,7 +1194,7 @@ class Mission
 										class data
 										{
 											singleType="STRING";
-											value="SmokeShellGreen";
+											value="SmokeShellPurple";
 										};
 									};
 								};
@@ -1269,7 +1269,7 @@ class Mission
 										class data
 										{
 											singleType="STRING";
-											value="SmokeShellYellow";
+											value="SmokeShellBlue";
 										};
 									};
 								};
@@ -1326,7 +1326,7 @@ class Mission
 										class data
 										{
 											singleType="STRING";
-											value="SmokeShellYellow";
+											value="SmokeShellBlue";
 										};
 									};
 								};
@@ -1383,7 +1383,7 @@ class Mission
 										class data
 										{
 											singleType="STRING";
-											value="SmokeShellYellow";
+											value="SmokeShellBlue";
 										};
 									};
 								};
@@ -1412,8 +1412,8 @@ class Mission
 							dataType="Logic";
 							class PositionInfo
 							{
-								position[]={1815.9204,5.5,5868.5317};
-								angles[]={0,0.2567282,0};
+								position[]={1845.3145,5.5,5865.3003};
+								angles[]={-0,0.2567282,0};
 							};
 							id=557;
 							type="ModuleSmoke_F";
@@ -1453,8 +1453,8 @@ class Mission
 							dataType="Logic";
 							class PositionInfo
 							{
-								position[]={1736.8557,5.5,5574.8179};
-								angles[]={0,0.2567282,0};
+								position[]={1762.4279,5.5,5559.605};
+								angles[]={-0,0.2567282,0};
 							};
 							id=558;
 							type="ModuleSmoke_F";
@@ -1494,8 +1494,8 @@ class Mission
 							dataType="Logic";
 							class PositionInfo
 							{
-								position[]={1680.2118,5.5,5356.8281};
-								angles[]={0,0.2567282,0};
+								position[]={1712.8872,5.5,5372.9702};
+								angles[]={-0,0.2567282,0};
 							};
 							id=559;
 							type="ModuleSmoke_F";
@@ -1535,8 +1535,8 @@ class Mission
 							dataType="Logic";
 							class PositionInfo
 							{
-								position[]={1622.9656,5.5,5136.4531};
-								angles[]={0,0.2567282,0};
+								position[]={1633.5527,5.5,5070.1631};
+								angles[]={-0,0.2567282,0};
 							};
 							id=560;
 							type="ModuleSmoke_F";
@@ -1591,7 +1591,7 @@ class Mission
 						class Item32
 						{
 							dataType="Trigger";
-							position[]={1883.736,9.0146351,5444.0708};
+							position[]={1883.736,5.5256348,5444.0708};
 							angle=0.26829195;
 							class Attributes
 							{
@@ -1602,7 +1602,6 @@ class Mission
 							};
 							id=567;
 							type="EmptyDetectorAreaR50";
-							atlOffset=3.4890003;
 						};
 						class Item33
 						{
@@ -1610,7 +1609,7 @@ class Mission
 							class PositionInfo
 							{
 								position[]={2155.1851,4.4294043,5839.2168};
-								angles[]={0.27532542,6.1245313,6.2731848};
+								angles[]={0.27532569,6.1245351,6.2731848};
 							};
 							id=514;
 							type="ModuleSmoke_F";
@@ -1638,7 +1637,7 @@ class Mission
 										class data
 										{
 											singleType="STRING";
-											value="SmokeShellGreen";
+											value="SmokeShellPurple";
 										};
 									};
 								};
@@ -1650,8 +1649,8 @@ class Mission
 							dataType="Logic";
 							class PositionInfo
 							{
-								position[]={2006.5884,3,5266.3496};
-								angles[]={0,0.2567282,0};
+								position[]={2006.588,3,5266.3501};
+								angles[]={0,0.25672048,0};
 							};
 							id=515;
 							type="ModuleSmoke_F";
@@ -1679,7 +1678,7 @@ class Mission
 										class data
 										{
 											singleType="STRING";
-											value="SmokeShellGreen";
+											value="SmokeShellPurple";
 										};
 									};
 								};
@@ -1697,9 +1696,31 @@ class Mission
 							id=573;
 							type="SideBLUFOR_F";
 						};
+						class Item36
+						{
+							dataType="Trigger";
+							position[]={1640.853,5.5,5213.3408};
+							angle=0.25672048;
+							class Attributes
+							{
+								name="dropoff_2";
+								condition="this && ({typeOf _x in allowedLogisticsVehicles && speed _x == 0} count thisList > 0)";
+								onActivation="private _tElements = (vehicleVarName thisTrigger) splitString ""_""; " \n "_tElements deleteAt (count _tElements - 1); " \n "private _baseKey = _tElements joinString ""_""; " \n " " \n "[thisTrigger, _baseKey] execVM ""CargoDelivery3.sqf"";";
+								onDeactivation="thisTrigger setVariable [""isProcessingLogistics"", false];";
+								sizeA=30;
+								sizeB=265;
+								sizeC=8;
+								repeatable=1;
+								activationBy="ANYPLAYER";
+								isRectangle=1;
+								triggerInterval=2;
+							};
+							id=593;
+							type="EmptyDetectorArea10x10";
+						};
 					};
 					id=30;
-					atlOffset=0.87477398;
+					atlOffset=1.1145868;
 				};
 				class Item1
 				{
@@ -2459,7 +2480,7 @@ class Mission
 						{
 							dataType="Trigger";
 							position[]={7841.6138,25.084213,372.64801};
-							angle=1.9942125;
+							angle=1.9942119;
 							class Attributes
 							{
 								name="dropoff_11";
@@ -2482,7 +2503,7 @@ class Mission
 						{
 							dataType="Trigger";
 							position[]={7799.6938,25.09832,262.177};
-							angle=1.977597;
+							angle=1.9775963;
 							class Attributes
 							{
 								name="pickup_11";
@@ -2503,7 +2524,7 @@ class Mission
 						{
 							dataType="Trigger";
 							position[]={7842.2202,25.084152,372.60999};
-							angle=1.9811051;
+							angle=1.9811045;
 							class Attributes
 							{
 								name="service_11";
@@ -2535,11 +2556,11 @@ class Mission
 						};
 					};
 					id=518;
-					atlOffset=135.43535;
+					atlOffset=135.74173;
 				};
 			};
 			id=6;
-			atlOffset=-7.1688251;
+			atlOffset=-23.400879;
 		};
 		class Item2
 		{
@@ -3098,7 +3119,7 @@ class Mission
 								};
 							};
 							id=60;
-							atlOffset=117.74567;
+							atlOffset=118.88013;
 						};
 						class Item1
 						{
@@ -3755,11 +3776,11 @@ class Mission
 								};
 							};
 							id=82;
-							atlOffset=121.44561;
+							atlOffset=121.18389;
 						};
 					};
 					id=59;
-					atlOffset=42.197079;
+					atlOffset=45.947792;
 				};
 				class Item1
 				{
@@ -4278,7 +4299,7 @@ class Mission
 						};
 					};
 					id=110;
-					atlOffset=-0.72434807;
+					atlOffset=-0.027601242;
 				};
 				class Item2
 				{
@@ -4850,7 +4871,7 @@ class Mission
 						};
 					};
 					id=118;
-					atlOffset=-1.1846008;
+					atlOffset=0.79203796;
 				};
 				class Item3
 				{
@@ -5309,7 +5330,7 @@ class Mission
 						{
 							dataType="Trigger";
 							position[]={5030.5698,208.8481,5918.1021};
-							angle=3.0597529;
+							angle=3.0597527;
 							class Attributes
 							{
 								name="dropoff_110";
@@ -5422,7 +5443,7 @@ class Mission
 						};
 					};
 					id=131;
-					atlOffset=0.12445068;
+					atlOffset=-0.039733887;
 				};
 				class Item4
 				{
@@ -5895,7 +5916,7 @@ class Mission
 						{
 							dataType="Trigger";
 							position[]={6479.2788,2.8922043,5440.2368};
-							angle=3.8698301;
+							angle=3.8698287;
 							class Attributes
 							{
 								name="dropoff_120";
@@ -6049,7 +6070,7 @@ class Mission
 						};
 					};
 					id=144;
-					atlOffset=1.8142886;
+					atlOffset=2.0151286;
 				};
 				class Item5
 				{
@@ -6626,7 +6647,7 @@ class Mission
 						};
 					};
 					id=547;
-					atlOffset=2.4944611;
+					atlOffset=1.7606659;
 				};
 				class Item6
 				{
@@ -7109,8 +7130,8 @@ class Mission
 							dataType="Logic";
 							class PositionInfo
 							{
-								position[]={1919.7484,2.5267274,3518.8679};
-								angles[]={6.2457032,4.753932,0.12189256};
+								position[]={1919.748,2.5266826,3518.8679};
+								angles[]={6.2456956,4.7539277,0.1218938};
 							};
 							id=531;
 							type="ModuleSmoke_F";
@@ -7217,11 +7238,11 @@ class Mission
 						};
 					};
 					id=548;
-					atlOffset=-1.0237792;
+					atlOffset=-0.81282711;
 				};
 			};
 			id=58;
-			atlOffset=-2.689415;
+			atlOffset=1.6166229;
 		};
 		class Item3
 		{
