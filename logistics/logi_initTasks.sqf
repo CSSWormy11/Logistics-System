@@ -9,6 +9,9 @@
 // Called By: init.sqf
 // ============================================================================
 
+waitUntil { !isNil "logisticsBases" && { count logisticsBases > 0 } };
+waitUntil { time > 0 };
+
 LOGI_fnc_handlePickupTrigger = {
     params [
         ["_vehicle", objNull, [objNull]],
@@ -48,7 +51,7 @@ LOGI_fnc_handlePickupTrigger = {
 
     // Instant pickup if this trigger has no countdown configured
     if (_duration <= 0) exitWith {
-        [_vehicle, _parentBase] execVM "fn_spawnLoadSupply.sqf";
+        [_vehicle, _parentBase] execVM "logistics\logi_spawnLoadSupply.sqf";
     };
 
     private _baseTriggers = missionNamespace getVariable [format ["LogiPickupTriggers_%1", _parentBase], []];
@@ -124,7 +127,7 @@ LOGI_fnc_handlePickupTrigger = {
             if (!isNull _drv && isPlayer _drv) then {
                 [format ["[%1 LOADING ZONE]\nSupply loading complete!", _displayName]] remoteExec ["hintSilent", _drv];
             };
-            [_veh, _baseKey] execVM "fn_spawnLoadSupply.sqf";
+            [_veh, _baseKey] execVM "logistics\logi_spawnLoadSupply.sqf";
         };
     };
 };
@@ -137,9 +140,9 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
     
     if (_triggerName != "") then {
         private _tLower = toLowerANSI _triggerName;
-        private _pickupIdx = _tLower find "_pickup";
-        private _dropoffIdx = _tLower find "_dropoff";
-        private _serviceIdx = _tLower find "_service";
+        private _pickupIdx = _tLower find "pickup";
+        private _dropoffIdx = _tLower find "dropoff";
+        private _serviceIdx = _tLower find "service";
         private _isPickup = (_pickupIdx != -1);
         private _isDropoff = (_dropoffIdx != -1);
         private _isService = (_serviceIdx != -1);
@@ -147,6 +150,46 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
         if (_isPickup || _isDropoff || _isService) then {
             private _cutIdx = if (_isPickup) then { _pickupIdx } else { if (_isDropoff) then { _dropoffIdx } else { _serviceIdx } };
             private _parentBase = _triggerName select [0, _cutIdx];
+            if (count _parentBase > 0 && { _parentBase select [count _parentBase - 1, 1] == "_" }) then {
+                _parentBase = _parentBase select [0, count _parentBase - 1];
+            };
+
+            // If trigger uses a short name (e.g. "Pickup_1", "Dropoff_1", "Service_1") or parentBase not found in logisticsBases:
+            if (_parentBase == "" || !(_parentBase in (missionNamespace getVariable ["logisticsBases", []]))) then {
+                private _syncedBaseObj = (synchronizedObjects _trigger) select { 
+                    private _bKey = vehicleVarName _x; 
+                    _bKey != "" && { _bKey in (missionNamespace getVariable ["logisticsBases", []]) } 
+                } param [0, objNull];
+                if (!isNull _syncedBaseObj) then {
+                    _parentBase = vehicleVarName _syncedBaseObj;
+                };
+            };
+
+            // Spatial Proximity Fallback: If trigger lacks base prefix and wasn't synced in Eden,
+            // automatically associate it with the closest registered logistics base within 2500m
+            if (_parentBase == "" || !(_parentBase in (missionNamespace getVariable ["logisticsBases", []]))) then {
+                private _allBases = missionNamespace getVariable ["logisticsBases", []];
+                private _trigPos = getPos _trigger;
+                private _closestBase = "";
+                private _minDist = 999999;
+                {
+                    private _bObj = missionNamespace getVariable [_x, objNull];
+                    private _bPos = if (!isNull _bObj) then { getPos _bObj } else { getMarkerPos _x };
+                    if (_bPos distance2D [0,0,0] > 10) then {
+                        private _d = _trigPos distance2D _bPos;
+                        if (_d < _minDist) then {
+                            _minDist = _d;
+                            _closestBase = _x;
+                        };
+                    };
+                } forEach _allBases;
+
+                if (_minDist <= 2500 && _closestBase != "") then {
+                    _parentBase = _closestBase;
+                };
+            };
+            if (_parentBase == "" || !(_parentBase in (missionNamespace getVariable ["logisticsBases", []]))) exitWith {};
+
             private _displayName = (_parentBase splitString "_") joinString " ";
 
             // One-time startup hook: preserve mission-maker trigger Condition, but update legacy script names in OnActivation
@@ -174,7 +217,7 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
                     _trigger setTriggerTimeout [0, 0, 0, false];
                 };
 
-                if (_act == "" || { "SpawnLoadSupply" in _act } || { "fn_spawnLoadSupply" in _act } || { "LOGI_fnc_handlePickupTrigger" in _act }) then {
+                if (_act == "" || { "SpawnLoadSupply" in _act } || { "fn_spawnLoadSupply" in _act } || { "logi_spawnLoadSupply" in _act } || { "LOGI_fnc_handlePickupTrigger" in _act }) then {
                     _act = format [
                         "private _veh = (thisList select {typeOf _x in allowedLogisticsVehicles}) param [0, objNull]; if (!isNull _veh) then { [_veh, %1, thisTrigger] call LOGI_fnc_handlePickupTrigger; };",
                         str _parentBase
@@ -193,7 +236,7 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
 
                 // Universal Dropoff: Allow any vehicle, aircraft, boat, or player on foot to trigger dropoff processing
                 _cond = "this";
-                _act = format ["[thisTrigger, %1] execVM 'fn_cargoDelivery.sqf';", str _parentBase];
+                _act = format ["[thisTrigger, %1] execVM 'logistics\logi_cargoDelivery.sqf';", str _parentBase];
                 if (_deact == "") then { _deact = "thisTrigger setVariable ['isProcessingLogistics', false];"; };
                 _trigger setTriggerStatements [_cond, _act, _deact];
             };
@@ -201,9 +244,15 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
             if (_isService) then {
                 // Allow LandVehicle, Air, and Ship driven by the local player to trigger R4-C Service Pads and pass vehicle player reliably
                 _cond = "(local player) && { private _v = vehicle player; (_v in thisList) && (_v isKindOf 'LandVehicle' || _v isKindOf 'Air' || _v isKindOf 'Ship') && (abs (speed _v) < 1) && (player == driver _v) }";
-                _act  = "[thisTrigger, vehicle player, 3] execVM 'fn_executeR4CService.sqf';";
+                _act  = "[thisTrigger, vehicle player, 3] execVM 'logistics\qm_executeR4CService.sqf';";
                 _trigger setTriggerStatements [_cond, _act, _deact];
             };
+
+            // Register into unified visual cue registry for Section 6.9 dynamic ground visuals
+            private _visType = if (_isPickup) then { "PICKUP" } else { if (_isDropoff) then { "DROPOFF" } else { "SERVICE" } };
+            private _allVis = missionNamespace getVariable ["Logi_AllVisualTriggers", []];
+            _allVis pushBackUnique [_trigger, _visType];
+            missionNamespace setVariable ["Logi_AllVisualTriggers", _allVis, true];
 
             // Server-only: Standardized map marker generation (Clean Icon without text + Exact Trigger Area Bounding Box)
             if (isServer) then {
@@ -211,8 +260,8 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
                 private _expectedMarkerID = format ["%1%2", _prefix, _parentBase]; 
                 private _triggerMarkerID = format ["%1%2", _prefix, _triggerName];
                 
-                // Color coding: Pickup = Blue (BLUFOR), Dropoff = Green, Service = Yellow
-                private _markerColor = if (_isPickup) then {"ColorBLUFOR"} else { if (_isDropoff) then {"ColorGreen"} else {"ColorYellow"} };
+                // Color coding: Pickup = Purple (ColorCivilian), Dropoff = Green (ColorGreen), Service = Yellow (ColorYellow)
+                private _markerColor = if (_isPickup) then {"ColorCivilian"} else { if (_isDropoff) then {"ColorGreen"} else {"ColorYellow"} };
                 private _markerType = if (_isPickup) then {"mil_pickup"} else { if (_isDropoff) then {"mil_end"} else {"b_maint"} };
 
                 // Primary base-level marker (used by spawning & routing scripts)
@@ -228,7 +277,7 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
                         createMarker [_triggerMarkerID, getPos _trigger];
                         _triggerMarkerID setMarkerColor _markerColor;
                         _triggerMarkerID setMarkerType _markerType;
-                        _triggerMarkerID setMarkerText ""; // Text removed: clean icon only
+                        _triggerMarkerID setMarkerText ""; // Clean icon only
                         _triggerMarkerID setMarkerAlpha 0; // Default global alpha 0 (Spotlight hierarchy controls local visibility)
                     };
                 };
@@ -243,7 +292,7 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
                         _areaMarkerID setMarkerSize [_sizeA, _sizeB];
                         _areaMarkerID setMarkerDir _angle;
                         _areaMarkerID setMarkerBrush "SolidBorder";
-                        _areaMarkerID setMarkerColor (if (_isPickup) then {"ColorBLUFOR"} else { if (_isDropoff) then {"ColorGreen"} else {"ColorYellow"} });
+                        _areaMarkerID setMarkerColor (if (_isPickup) then {"ColorCivilian"} else { if (_isDropoff) then {"ColorGreen"} else {"ColorYellow"} });
                         _areaMarkerID setMarkerAlpha 0; // Default global alpha 0 (Spotlight hierarchy controls local visibility)
                     };
                 };
@@ -252,206 +301,7 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
     };
 } forEach _allMissionTriggers;
 
-// =========================================================================
-// HELPER: CONTEXTUAL SPOTLIGHT MAP MARKER HIERARCHY (OPTION 3)
-// Dynamic local alpha manager for pickup, dropoff, service, and area pads.
-//
-// 1. INFANTRY ON FOOT (vehicle player == player):
-//    - All Pickup, Dropoff, Service, and Area markers: Alpha 0 (Clean map, 0 clutter).
-//
-// 2. ANY PLAYER IN A VEHICLE (Combat aircraft, Tanks, APCs, Boats, Cars, Transports):
-//    - Service Markers (Service_* & Area_*_service*):
-//      * Nominal Status: Alpha 0.50 (Area: 0.20) for global base repair/refuel awareness.
-//      * Distress / Damaged (>25% dmg, <50% fuel, or low ammo): Spotlighted at Alpha 1.0 (Area: 0.45).
-//    - Pickup & Dropoff Markers:
-//      * Non-logistics vehicles (Wipeout, Slammer, etc.): Alpha 0 (No cargo clutter).
-//
-// 3. LOGISTICS DRIVERS (Authorized Logistics Transport):
-//    - Overview Mode (no active route locked):
-//      * Pad Icons: Alpha 1.0, Area triggers: Alpha 0.25.
-//    - Active Route Mode (Route locked with origin & destination):
-//      * Active Assigned Route Pads (Origin Pickup & Dest Dropoff): Alpha 1.0 (Area: 0.45).
-//      * Secondary Alternative Pads (All other bases): Alpha 0.25 (Area: 0.10).
-//      * Service Pads: Alpha 1.0 on active bases, Alpha 0.50 on secondary bases (or 1.0 if damaged).
-//
-// 4. MASTER BASE MARKERS (SB_Main, FOB_*, MSR):
-//    - Always visible to all players at Alpha 1.0 with human-readable labels.
-// =========================================================================
-logi_fnc_updateMarkerSpotlight = {
-    params [
-        ["_isLogiDriver", false],
-        ["_activeFromBase", ""],
-        ["_activeTargetBase", ""],
-        ["_inAnyVehicleOverride", nil],
-        ["_needsServiceOverride", nil]
-    ];
-
-    if (!hasInterface) exitWith {};
-
-    private _localVeh = vehicle player;
-    private _inAnyVehicle = if (!isNil "_inAnyVehicleOverride") then {
-        _inAnyVehicleOverride
-    } else {
-        (_localVeh != player && alive _localVeh)
-    };
-
-    private _needsService = if (!isNil "_needsServiceOverride") then {
-        _needsServiceOverride
-    } else {
-        if (!_inAnyVehicle) then {
-            false
-        } else {
-            private _req = (damage _localVeh > 0.25) || (fuel _localVeh < 0.50);
-            if (!_req) then {
-                private _hitDmg = getAllHitPointsDamage _localVeh param [2, []];
-                if (_hitDmg findIf { _x > 0.25 } != -1) then { _req = true; };
-            };
-            if (!_req) then {
-                private _mags = magazinesAmmo _localVeh;
-                if (count _mags > 0) then {
-                    private _initMags = _localVeh getVariable ["QM_InitialMagTotal", -1];
-                    private _currentAmmoSum = 0;
-                    { _currentAmmoSum = _currentAmmoSum + (_x # 1); } forEach _mags;
-                    if (_initMags == -1) then {
-                        _localVeh setVariable ["QM_InitialMagTotal", _currentAmmoSum];
-                    } else {
-                        if (_initMags > 0 && { _currentAmmoSum <= (_initMags * 0.50) }) then {
-                            _req = true;
-                        };
-                    };
-                };
-            };
-            _req
-        }
-    };
-
-    private _hasActiveRoute = (_isLogiDriver && _activeFromBase != "" && _activeTargetBase != "");
-    private _fromBaseLower = toLowerANSI _activeFromBase;
-    private _targetBaseLower = toLowerANSI _activeTargetBase;
-
-    {
-        private _m = toLowerANSI _x;
-        private _isArea = (_m find "area_" == 0);
-        private _isPickup = (_m find "pickup_" == 0);
-        private _isDropoff = (_m find "dropoff_" == 0);
-        private _isService = (_m find "service_" == 0);
-
-        if (_isArea || _isPickup || _isDropoff || _isService) then {
-            private _isServiceArea = (_isArea && { "_service" in _m });
-            private _isServiceRelated = (_isService || _isServiceArea);
-
-            if (_isServiceRelated) then {
-                // =============================================================
-                // SERVICE PAD VISIBILITY RULES
-                // =============================================================
-                if (!_inAnyVehicle) then {
-                    // Infantry on foot: hidden
-                    _x setMarkerAlphaLocal 0;
-                } else {
-                    // In any vehicle (Combat plane, tank, boat, or logistics truck)
-                    if (_needsService) then {
-                        // Vehicle damaged >25%, fuel <50%, or low ammo: Spotlight at 100%
-                        if (_isServiceArea) then {
-                            _x setMarkerAlphaLocal 0.45;
-                        } else {
-                            _x setMarkerAlphaLocal 1.0;
-                        };
-                    } else {
-                        // Vehicle in nominal condition: Check if active logistics base
-                        private _basePart = if (_isArea) then { _m select [5] } else { _m select [8] };
-                        private _isActiveLogiBase = false;
-                        if (_hasActiveRoute) then {
-                            if (_fromBaseLower != "" && { (_basePart find _fromBaseLower) == 0 }) then {
-                                private _len = count _fromBaseLower;
-                                private _next = _basePart select [_len, 1];
-                                if (_next == "" || _next == "_") then { _isActiveLogiBase = true; };
-                            };
-                            if (_targetBaseLower != "" && { (_basePart find _targetBaseLower) == 0 }) then {
-                                private _len = count _targetBaseLower;
-                                private _next = _basePart select [_len, 1];
-                                if (_next == "" || _next == "_") then { _isActiveLogiBase = true; };
-                            };
-                        };
-
-                        if (_isActiveLogiBase) then {
-                            if (_isServiceArea) then { _x setMarkerAlphaLocal 0.45; } else { _x setMarkerAlphaLocal 1.0; };
-                        } else {
-                            // Baseline vehicle visibility (50% icon, 20% area boundary)
-                            if (_isServiceArea) then { _x setMarkerAlphaLocal 0.20; } else { _x setMarkerAlphaLocal 0.50; };
-                        };
-                    };
-                };
-            } else {
-                // =============================================================
-                // CARGO PICKUP & DROPOFF VISIBILITY RULES (Logistics Only)
-                // =============================================================
-                if (!_isLogiDriver) then {
-                    // Non-logistics players & combat vehicles: hidden
-                    _x setMarkerAlphaLocal 0;
-                } else {
-                    if (!_hasActiveRoute) then {
-                        // Logistics overview mode (all pads visible)
-                        if (_isArea) then {
-                            _x setMarkerAlphaLocal 0.25;
-                        } else {
-                            _x setMarkerAlphaLocal 1.0;
-                        };
-                    } else {
-                        // Active route mode: Identify if marker belongs to active pickup or dropoff base
-                        private _basePart = if (_isArea) then {
-                            _m select [5] // strip "area_"
-                        } else {
-                            if (_isPickup) then { _m select [7] } else { _m select [8] }
-                        };
-
-                        private _matchesFrom = false;
-                        if (_fromBaseLower != "") then {
-                            private _len = count _fromBaseLower;
-                            if ((_basePart find _fromBaseLower) == 0) then {
-                                private _nextChar = _basePart select [_len, 1];
-                                if (_nextChar == "" || _nextChar == "_") then { _matchesFrom = true; };
-                            };
-                        };
-
-                        private _matchesTarget = false;
-                        if (_targetBaseLower != "") then {
-                            private _len = count _targetBaseLower;
-                            if ((_basePart find _targetBaseLower) == 0) then {
-                                private _nextChar = _basePart select [_len, 1];
-                                if (_nextChar == "" || _nextChar == "_") then { _matchesTarget = true; };
-                            };
-                        };
-
-                        private _isActivePad = false;
-                        if (_isArea) then {
-                            if (_matchesFrom && ("_pickup" in _m)) then { _isActivePad = true; };
-                            if (_matchesTarget && ("_dropoff" in _m)) then { _isActivePad = true; };
-                        } else {
-                            if (_matchesFrom && _isPickup) then { _isActivePad = true; };
-                            if (_matchesTarget && _isDropoff) then { _isActivePad = true; };
-                        };
-
-                        if (_isActivePad) then {
-                            if (_isArea) then {
-                                _x setMarkerAlphaLocal 0.45;
-                            } else {
-                                _x setMarkerAlphaLocal 1.0;
-                            };
-                        } else {
-                            if (_isArea) then {
-                                _x setMarkerAlphaLocal 0.10;
-                            } else {
-                                _x setMarkerAlphaLocal 0.25;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    } forEach allMapMarkers;
-};
-
 // Initial pass on client startup: keep combat maps clean
-if (hasInterface) then {
-    [false] call logi_fnc_updateMarkerSpotlight;
+if (hasInterface && !isNil "logi_fnc_updateMarkerSpotlight") then {
+    [false, "", "", false, false] call logi_fnc_updateMarkerSpotlight;
 };

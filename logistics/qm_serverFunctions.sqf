@@ -48,14 +48,41 @@ QM_fnc_normalizePoolName = {
 
 QM_fnc_serverVehicleSale = {
     params [["_baseKey", "", [""]], ["_vehicle", objNull, [objNull]], ["_playerUnit", objNull, [objNull]]];
-    if (_baseKey == "" || isNull _vehicle || isNull _playerUnit) exitWith {};
+    if (_baseKey == "" || isNull _vehicle) exitWith {};
 
     private _class = typeOf _vehicle;
-    private _blueprintIdx = G_Procureable_Vehicles findIf { ((_x select 1) select 0) == _class };
+    private _displayName = getText (configFile >> "CfgVehicles" >> _class >> "displayName");
+    if (_displayName == "") then { _displayName = _class; };
+    private _cleanBase = _baseKey splitString "_" joinString " ";
+    private _costArray = _vehicle getVariable ["QM_Spawn_CostArray", []];
 
-    if (_blueprintIdx != -1) then {
-        private _costArray = (G_Procureable_Vehicles select _blueprintIdx) select 2;
-        
+    // If vehicle lacks runtime spawn cost tracking, fall back to supplyScores or template costs (excluding Troops/Cargo for empty drivable vehicles)
+    if (count _costArray == 0) then {
+        private _lowerClass = toLowerANSI _class;
+        private _scoreIndex = supplyScores findIf { toLowerANSI (_x # 0) == _lowerClass };
+        if (_scoreIndex != -1) then {
+            _costArray = (supplyScores # _scoreIndex) # 1;
+        } else {
+            private _blueprintIdx = G_Procureable_Vehicles findIf { ((_x select 1) select 0) == _class };
+            if (_blueprintIdx != -1) then {
+                private _rawCost = (G_Procureable_Vehicles select _blueprintIdx) select 2;
+                private _isSupply = !(_class isKindOf "Ship" || _class isKindOf "Plane" || _class isKindOf "Helicopter" || _class isKindOf "LandVehicle" || _class isKindOf "Air");
+                private _isDrone = getNumber(configFile >> "CfgVehicles" >> _class >> "isUav") == 1;
+
+                {
+                    _x params ["_rawPoolName", "_poolCost"];
+                    private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
+                    private _eff = _poolCost;
+                    if (!_isSupply && !_isDrone) then {
+                        if (_poolName in ["Troops", "Cargo"]) then { _eff = 0; };
+                    };
+                    if (_eff > 0 && _eff < 1000000) then { _costArray pushBack [_poolName, _eff]; };
+                } forEach _rawCost;
+            };
+        };
+    };
+
+    if (count _costArray > 0) then {
         {
             _x params ["_rawPoolName", "_poolCost"];
             private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
@@ -67,12 +94,23 @@ QM_fnc_serverVehicleSale = {
                 };
             };
         } forEach _costArray;
-        [format ["SALVAGEMAN: Asset recycled. 100%% of resources returned to %1 ledger.", _baseKey]] remoteExec ["systemChat", _playerUnit];
+        
+        private _receiptMsg = format ["LOGISTICS RECEIPT: %1 recycled. 100%% of resources returned to %2 ledger.", _displayName, _cleanBase];
+        if (!isNull _playerUnit) then {
+            [_receiptMsg] remoteExec ["systemChat", _playerUnit];
+        } else {
+            [_receiptMsg] remoteExec ["systemChat", 0];
+        };
     } else {
         private _vehVar = format ["LogiScore_%1_Vehicle", _baseKey];
         private _currentPool = missionNamespace getVariable [_vehVar, 0];
         if (_currentPool != -1) then { missionNamespace setVariable [_vehVar, _currentPool + 2000, true]; };
-        ["SALVAGEMAN: Unregistered vehicle recycled. 2000 Vehicle Material credited."] remoteExec ["systemChat", _playerUnit];
+        private _receiptMsg = format ["LOGISTICS RECEIPT: %1 recycled into %2 stores (2000 Vehicle Material credited).", _displayName, _cleanBase];
+        if (!isNull _playerUnit) then {
+            [_receiptMsg] remoteExec ["systemChat", _playerUnit];
+        } else {
+            [_receiptMsg] remoteExec ["systemChat", 0];
+        };
     };
 
     if (!isNil "QM_CAP_fnc_unregisterVehicleAsset") then { [_vehicle] call QM_CAP_fnc_unregisterVehicleAsset; };
@@ -312,11 +350,30 @@ QM_fnc_processGarageSpawn = {
     private _capData = [_classname] call QM_CAP_fnc_checkCurrentActiveCount;
     if !(_capData select 0) exitWith { [format ["PROCURMENT DENIED: Cap limit reached [%1/%2].", _capData select 1, _capData select 2]] remoteExec ["hint", _clientPlayer]; };
 
-    private _canAfford = true;
-    private _missingPool = "";
+    // Determine asset profile (supply container vs drone vs drivable vehicle)
+    private _isSupply = !(_classname isKindOf "Ship" || _classname isKindOf "Plane" || _classname isKindOf "Helicopter" || _classname isKindOf "LandVehicle" || _classname isKindOf "Air");
+    private _isDrone = getNumber (configFile >> "CfgVehicles" >> _classname >> "isUav") == 1;
+
+    // Filter effective cost array: empty drivable vehicles do not deduct Troops or unspawned Cargo
+    private _effectiveCostArray = [];
     {
         _x params ["_rawPoolName", "_poolCost"];
         private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
+        private _effectiveCost = _poolCost;
+
+        if (!_isSupply && !_isDrone) then {
+            if (_poolName in ["Troops", "Cargo"]) then { _effectiveCost = 0; };
+        };
+
+        if (_effectiveCost > 0 && _effectiveCost < 1000000) then {
+            _effectiveCostArray pushBack [_poolName, _effectiveCost];
+        };
+    } forEach _costArray;
+
+    private _canAfford = true;
+    private _missingPool = "";
+    {
+        _x params ["_poolName", "_poolCost"];
         if (_poolCost > 0 && _poolCost < 1000000) then {
             private _poolVar = format ["LogiScore_%1_%2", _baseKey, _poolName];
             private _currentPool = missionNamespace getVariable [_poolVar, 0];
@@ -325,43 +382,38 @@ QM_fnc_processGarageSpawn = {
                 _missingPool = _poolName;
             };
         };
-    } forEach _costArray;
+    } forEach _effectiveCostArray;
 
     if (!_canAfford) exitWith { [format ["MANAGEMENT: Insufficient %1 supply points.", _missingPool]] remoteExec ["systemChat", _clientPlayer]; };
 
-    private _typeSuffix = "GROUND";
-    if (_classname isKindOf "Ship") then { _typeSuffix = "BOAT"; }
-    else { if (_classname isKindOf "Plane") then { _typeSuffix = "PLANE"; }
-    else { if (_classname isKindOf "Helicopter") then { _typeSuffix = "HELICOPTER"; }; }; };
+    // Determine vehicle classification
+    private _isBoat = _classname isKindOf "Ship";
+    private _isPlane = _classname isKindOf "Plane";
+    private _isHeli = _classname isKindOf "Helicopter";
+    private _isGround = (!_isBoat && !_isPlane && !_isHeli);
 
-    private _validSizes = [];
-    switch (toUpper _vehSize) do {
-        case "XXS":  { _validSizes = ["XXS", "XS", "S", "M", "L", "XL", "OPEN"]; };
-        case "XS":   { _validSizes = ["XS", "S", "M", "L", "XL", "OPEN"]; };
-        case "S":    { _validSizes = ["S", "M", "L", "XL", "OPEN"]; };
-        case "M":    { _validSizes = ["M", "L", "XL", "OPEN"]; };
-        case "L":    { _validSizes = ["L", "XL", "OPEN"]; };
-        case "XL":   { _validSizes = ["XL", "OPEN"]; };
-        case "OPEN": { _validSizes = ["OPEN"]; };
-        default      { _validSizes = [_vehSize]; };
+    private _typeSuffix = if (_isBoat) then { "BOAT" } else {
+        if (_isPlane) then { "PLANE" } else {
+            if (_isHeli) then { "HELICOPTER" } else { "GROUND" }
+        }
     };
 
-    private _allowedSuffixes = [];
-    {
-        _allowedSuffixes pushBack format ["Garage_%1_%2", _typeSuffix, _x];
-        if (_typeSuffix == "HELICOPTER") then { _allowedSuffixes pushBack format ["Garage_HELI_%1", _x]; };
-        if (_typeSuffix in ["PLANE", "HELICOPTER"]) then { _allowedSuffixes pushBack format ["Garage_AIR_%1", _x]; };
-        _allowedSuffixes pushBack format ["Garage_%1", _x]; 
-    } forEach _validSizes;
-    
-    _allowedSuffixes pushBack format ["Garage_%1", _typeSuffix]; 
-    if (_typeSuffix == "HELICOPTER") then { _allowedSuffixes pushBack "Garage_HELI"; };
-    if (_typeSuffix in ["PLANE", "HELICOPTER"]) then { _allowedSuffixes pushBack "Garage_AIR"; };
-    _allowedSuffixes pushBack "Garage"; 
+    // Determine vehicle requested minimum pad size rank (0 = XXS ... 6 = OPEN)
+    private _reqSize = switch (toUpper _vehSize) do {
+        case "XXS":  { 0 };
+        case "XS":   { 1 };
+        case "S":    { 2 };
+        case "M":    { 3 };
+        case "L":    { 4 };
+        case "XL":   { 5 };
+        case "OPEN": { 6 };
+        default      { 0 };
+    };
 
     private _locations = [];
     private _allBaseGarages = [];
     private _searchStr = toUpper format ["%1_Garage", _baseKey];
+    private _prefixLen = count _searchStr;
 
     {
         if ((toUpper _x) find _searchStr == 0) then {
@@ -370,28 +422,87 @@ QM_fnc_processGarageSpawn = {
         };
     } forEach (allVariables missionNamespace);
 
+    // Also include garage pads synced in Eden Editor to the master base anchor/flagpole
+    private _baseObj = missionNamespace getVariable [_baseKey, objNull];
+    if (!isNull _baseObj) then {
+        {
+            if !(_x isKindOf "EmptyDetector") then {
+                private _cName = vehicleVarName _x;
+                private _cUpper = toUpper _cName;
+                if (_cUpper find "GARAGE" >= 0 || _cUpper find "BOAT" >= 0 || _cUpper find "GROUND" >= 0 || _cUpper find "AIR" >= 0 || _cUpper find "HELI" >= 0 || _cUpper find "PLANE" >= 0 || _cUpper find "PAD" >= 0) then {
+                    _allBaseGarages pushBackUnique _cName;
+                };
+            };
+        } forEach ([_baseObj] call QM_fnc_getSyncedObjects);
+    };
+
     {
         private _mName = _x;
         private _mUpper = toUpper _mName;
-        private _isValid = false;
-        
-        {
-            private _suffixUpper = toUpper format ["%1_%2", _baseKey, _x];
-            if (_mUpper == _suffixUpper) exitWith { _isValid = true; };
-            
-            for "_i" from 1 to 100 do {
-                if (_mUpper == toUpper format ["%1_%2_%3", _baseKey, _x, _i]) exitWith { _isValid = true; };
-            };
-            if (_isValid) exitWith {};
-        } forEach _allowedSuffixes;
 
-        if (_isValid) then {
-            private _rawVar = missionNamespace getVariable [_mName, objNull];
-            private _padObj = if (_rawVar isEqualType objNull) then { _rawVar } else { objNull };
-            if (!isNull _padObj) then {
-                private _posASL = getPosASL _padObj;
-                private _dir = getDir _padObj;
-                _locations pushBack [_padObj, _posASL, _dir, "OBJECT", _mName];
+        // Slice off base prefix and "GARAGE" token so base name (e.g. "SB_MAIN") never pollutes category or size tokens
+        private _remainder = if (_mUpper find _searchStr == 0) then {
+            _mUpper select [_prefixLen]
+        } else {
+            private _gIdx = _mUpper find "GARAGE";
+            if (_gIdx >= 0) then { _mUpper select [_gIdx + 6] } else { _mUpper };
+        };
+
+        // 1. Determine the pad's category from its remaining suffix
+        private _padHasGround = ("_GROUND" in _remainder || "GROUND" in _remainder || "_CAR" in _remainder || "CAR" in _remainder || "_TANK" in _remainder || "TANK" in _remainder);
+        private _padHasBoat = ("_BOAT" in _remainder || "BOAT" in _remainder);
+        private _padHasHeli = ("_HELI" in _remainder || "HELI" in _remainder || "_HELICOPTER" in _remainder || "HELICOPTER" in _remainder);
+        private _padHasPlane = ("_PLANE" in _remainder || "PLANE" in _remainder);
+        private _padHasAir = ("_AIR" in _remainder || "AIR" in _remainder);
+        private _isUniversalPad = (!_padHasGround && !_padHasBoat && !_padHasHeli && !_padHasPlane && !_padHasAir);
+
+        // 2. Strict Type Compatibility Gate
+        private _typeValid = false;
+        if (_isGround && (_padHasGround || _isUniversalPad)) then { _typeValid = true; };
+        if (_isBoat && (_padHasBoat || _isUniversalPad)) then { _typeValid = true; };
+        if (_isHeli && (_padHasHeli || _padHasAir || _isUniversalPad)) then { _typeValid = true; };
+        if (_isPlane && (_padHasPlane || _padHasAir || _isUniversalPad)) then { _typeValid = true; };
+
+        if (_typeValid) then {
+            // 3. Determine Pad Size Rank (0=XXS ... 6=OPEN/unspecified)
+            private _padSize = 6; // Default OPEN
+            if ("_XXS" in _remainder) then {
+                _padSize = 0;
+            } else {
+                if ("_XS" in _remainder) then {
+                    _padSize = 1;
+                } else {
+                    if ("_XL" in _remainder) then {
+                        _padSize = 5;
+                    } else {
+                        if ("_L" in _remainder) then {
+                            _padSize = 4;
+                        } else {
+                            if ("_M" in _remainder) then {
+                                _padSize = 3;
+                            } else {
+                                if ("_S" in _remainder) then {
+                                    _padSize = 2;
+                                } else {
+                                    if ("_OPEN" in _remainder) then {
+                                        _padSize = 6;
+                                    };
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+
+            // Pad size must be >= vehicle size
+            if (_padSize >= _reqSize) then {
+                private _rawVar = missionNamespace getVariable [_mName, objNull];
+                private _padObj = if (_rawVar isEqualType objNull) then { _rawVar } else { objNull };
+                if (!isNull _padObj) then {
+                    private _posASL = getPosASL _padObj;
+                    private _dir = getDir _padObj;
+                    _locations pushBack [_padObj, _posASL, _dir, "OBJECT", _mName];
+                };
             };
         };
     } forEach _allBaseGarages;
@@ -404,17 +515,35 @@ QM_fnc_processGarageSpawn = {
     _sortedLocations sort true;
     _locations = _sortedLocations apply { _x select 1 }; 
 
+    // --- SUPPLY DEPLETION PRE-VALIDATION GATING ---
+    private _canAfford = true;
+    private _missingPool = "";
     {
-        _x params ["_rawPoolName", "_poolCost"];
-        private _poolName = [_rawPoolName] call QM_fnc_normalizePoolName;
+        _x params ["_poolName", "_poolCost"];
+        if (_poolCost > 0 && _poolCost < 1000000) then {
+            private _poolVar = format ["LogiScore_%1_%2", _baseKey, _poolName];
+            private _currentPool = missionNamespace getVariable [_poolVar, 0];
+            if (_currentPool != -1 && { _currentPool < _poolCost }) exitWith {
+                _canAfford = false;
+                _missingPool = format ["%1 (Required: %2, Available: %3)", _poolName, _poolCost, _currentPool];
+            };
+        };
+    } forEach _effectiveCostArray;
+
+    if (!_canAfford) exitWith {
+        [format ["MECHANIC: Deployment rejected. Insufficient base resources: %1.", _missingPool]] remoteExec ["systemChat", _clientPlayer];
+    };
+
+    {
+        _x params ["_poolName", "_poolCost"];
         if (_poolCost > 0 && _poolCost < 1000000) then {
             private _poolVar = format ["LogiScore_%1_%2", _baseKey, _poolName];
             private _currentPool = missionNamespace getVariable [_poolVar, 0];
             if (_currentPool != -1) then { missionNamespace setVariable [_poolVar, (_currentPool - _poolCost) max 0, true]; };
         };
-    } forEach _costArray;
+    } forEach _effectiveCostArray;
 
-    [_locations, _classname, _clientPlayer, _baseKey, _costArray, _typeSuffix] spawn {
+    [_locations, _classname, _clientPlayer, _baseKey, _effectiveCostArray, _typeSuffix] spawn {
         params ["_locations", "_class", "_player", "_bKey", "_costArray", "_typeSuffix"];
     
         private _spawned = false;
@@ -615,4 +744,30 @@ QM_fnc_serverR4CCreateVehicleCrew = {
         _newCrew joinSilent (group _playerUnit);
     };
     [format ["R4-C CREW: %1 personnel deployed.", _missingSeatCount]] remoteExec ["systemChat", _playerUnit];
+};
+
+// =========================================================================
+// TROOP CARGO DELIVERY HANDLER
+// Credits disembarked reinforcement troops to the base ledger and removes them
+// =========================================================================
+QM_fnc_serverProcessTroopDelivery = {
+    params [["_baseKey", "", [""]], ["_count", 0, [0]], ["_units", [], [[]]]];
+    if (!isServer || _baseKey == "" || _count <= 0) exitWith {};
+
+    private _troopVar = format ["LogiScore_%1_Troops", _baseKey];
+    private _currentPool = missionNamespace getVariable [_troopVar, 0];
+    if (_currentPool != -1) then {
+        missionNamespace setVariable [_troopVar, _currentPool + _count, true];
+    };
+
+    diag_log format ["[LOGISTICS TROOPS]: %1 reinforcement troops delivered and garrisoned at %2.", _count, _baseKey];
+
+    // Safely delete units after disembark animation
+    [_units] spawn {
+        params ["_uList"];
+        sleep 6;
+        {
+            if (alive _x) then { deleteVehicle _x; };
+        } forEach _uList;
+    };
 };

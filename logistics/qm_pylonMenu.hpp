@@ -2,7 +2,7 @@
     ============================================================================
     LOGISTICS SYSTEM: DYNAMIC PYLON INTERFACE (PART 3C)
     File: qm_pylonMenu.hpp
-    Note: Requires #include "qm_pylonMenu.hpp" in description.ext
+    Note: Requires #include "logistics\qm_pylonMenu.hpp" in description.ext
     ============================================================================
 */
 

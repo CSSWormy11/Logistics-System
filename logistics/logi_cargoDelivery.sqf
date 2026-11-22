@@ -1,19 +1,42 @@
 // ============================================================================
 // LOGISTICS SYSTEM: CARGO OFFLOAD & DELIVERY ENGINE (PART 1)
-// File: fn_cargoDelivery.sqf
+// File: logi_cargoDelivery.sqf
 // Description: Scans the delivery pad for dropped logistics containers, 
 //              calculates their point value, deletes the container, and 
 //              credits the target base's global economy pool.
 // Called By: Eden Editor "EmptyDetector" Trigger (On Activation) at Dropoff Pads
-//            e.g., [thisTrigger, "SB"] execVM "fn_cargoDelivery.sqf";
+//            e.g., [thisTrigger, "SB"] execVM "logistics\logi_cargoDelivery.sqf";
 // ============================================================================
 
 params ["_triggerArea", "_baseKey"];
+if (!isServer) exitWith {};
 
 // Strip any trailing "_dropoff" (and optional index) if passed a raw trigger name like "FOB1_dropoff" or "SB_Carrier_dropoff_1"
 private _dropoffIdx = (toLowerANSI _baseKey) find "_dropoff";
 if (_dropoffIdx != -1) then {
     _baseKey = _baseKey select [0, _dropoffIdx];
+};
+
+// If baseKey is empty or not in logisticsBases, resolve via closest registered base
+if (!(_baseKey in (missionNamespace getVariable ["logisticsBases", []]))) then {
+    private _allBases = missionNamespace getVariable ["logisticsBases", []];
+    private _trigPos = getPos _triggerArea;
+    private _closestBase = "";
+    private _minDist = 999999;
+    {
+        private _bObj = missionNamespace getVariable [_x, objNull];
+        private _bPos = if (!isNull _bObj) then { getPos _bObj } else { getMarkerPos _x };
+        if (_bPos distance2D [0,0,0] > 10) then {
+            private _d = _trigPos distance2D _bPos;
+            if (_d < _minDist) then {
+                _minDist = _d;
+                _closestBase = _x;
+            };
+        };
+    } forEach _allBases;
+    if (_closestBase != "") then {
+        _baseKey = _closestBase;
+    };
 };
 
 if (_triggerArea getVariable ["isProcessingLogistics", false]) exitWith {};
@@ -60,24 +83,43 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
             };
             _hasGreetedDriver = true;
         };
+
+        // --- TROOP CARGO AUTOMATIC DISEMBARKATION ---
+        if (_currentLoadedType == "Troops" || { ({ alive _x && { _x getVariable ["QM_IsLogisticsPassenger", false] } } count (crew _activeTruck)) > 0 }) then {
+            if (abs (speed _activeTruck) < 2) then {
+                [_activeTruck, _baseKey] call QM_fnc_disembarkLogisticsTroops;
+                _anyDeliveryRecorded = true;
+                _hasGreetedDriver = true;
+            };
+        };
     };
 
-    // --- IMMEDIATE CRATE DETECTION, CREDITING & ANTI-COLLISION DELETION ---
-    // Scans the tarmac every tick and instantly deletes/credits each unloaded crate,
-    // completely eliminating Arma physics crate-on-crate collisions.
+    // --- IMMEDIATE CRATE & DELIVERED VEHICLE DETECTION, CREDITING & ANTI-COLLISION DELETION ---
+    // Scans the tarmac every tick and instantly deletes/credits each unloaded crate or delivered vehicle,
+    // completely eliminating Arma physics crate-on-crate collisions and vehicle pile-ups at dropoff pads.
     private _triggerPos = getPos _triggerArea;
     private _tArea = triggerArea _triggerArea;
     private _triggerScale = (((_tArea # 0) max (_tArea # 1)) max 15) + 5; 
-    private _nearbyObjects = nearestObjects [_triggerPos, ["Strategic", "ReammoBox_F", "Cargo_base_F", "AllVehicles", "ThingX", "Air"], _triggerScale];
+    private _nearbyObjects = nearestObjects [_triggerPos, ["Strategic", "ReammoBox_F", "Cargo_base_F", "AllVehicles", "ThingX", "Air", "LandVehicle", "Ship"], _triggerScale];
+
+    // Proactively tag any active slingload on an aircraft/carrier in or above the dropoff zone
+    {
+        private _sling = getSlingLoad _x;
+        if (!isNull _sling) then {
+            _sling setVariable ["QM_WasSlingLoaded", true, true];
+            _sling setVariable ["QM_SlingCarrier", _x, true];
+            _sling setVariable ["QM_DrivenByPlayer", false, true];
+        };
+    } forEach (vehicles select { _x inArea _triggerArea && (_x isKindOf "Air" || _x isKindOf "LandVehicle") });
 
     private _activeCratesFound = 0;
 
     {
         private _object = _x;
         private _type = typeOf _object;
-        private _isWithinUnloadZone = (_object inArea _triggerArea) || { (_object distance2D _triggerPos) <= 15 };
+        private _isWithinUnloadZone = (_object inArea [_triggerArea, _tArea # 0, _tArea # 1, _tArea # 2, _tArea # 3]) || { (_object distance2D _triggerPos) <= _triggerScale };
         
-        // STRICT SAFETY CHECK 1: Drivable vehicles (LandVehicle, Air, Ship) are NEVER deleted by the cargo offload scanner!
+        // STRICT SAFETY CHECK 1: Drivable vehicles vs freight crates
         private _isDrivableVehicle = (_object isKindOf "LandVehicle" || _object isKindOf "Air" || _object isKindOf "Ship");
 
         // STRICT SAFETY CHECK 2: Never delete base infrastructure, Arsenals, Terminals, or player assets
@@ -119,6 +161,50 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
                 };
             };
         };
+
+        // --- AUTOMATIC FREIGHT VEHICLE SALVAGE (SLINGLOAD OR VIV UNLOAD) ---
+        // Despawns hauled cargo vehicles automatically without requiring pilot disembark.
+        // DRIVEN VEHICLES ARE STRICTLY EXCLUDED: A vehicle that was driven by a player must ALWAYS
+        // be handled via the driver disembark confirmation prompt or direct look-at salvage action!
+        if (_isDrivableVehicle && _isWithinUnloadZone && !_isBaseInfrastructure) then {
+            private _wasDrivenByPlayer = _object getVariable ["QM_DrivenByPlayer", false];
+            if (_wasDrivenByPlayer) exitWith {}; // Player-driven vehicles MUST prompt the driver! Never auto-despawn.
+
+            private _hasPlayerCrew = ({ isPlayer _x } count (crew _object)) > 0;
+            private _isSlingAttached = !isNull (ropeAttachedTo _object) || { ({ getSlingLoad _x == _object } count vehicles) > 0 };
+            private _isAttachedCargo = !isNull (attachedTo _object) || !isNull (isVehicleCargo _object);
+            private _isPlayerOperating = (vehicle player == _object);
+            private _declinedSalvage = _object getVariable ["QM_PlayerDeclinedSalvage", false];
+            private _recentlySpawned = (diag_tickTime - (_object getVariable ["QM_Spawn_Time", 0])) < 10;
+            private _speedSafe = abs (speed _object) < 3;
+            private _heightSafe = (getPosATL _object # 2) < 2.5;
+
+            private _isDeliveredCargoVehicle = (
+                !_hasPlayerCrew &&
+                !_isSlingAttached &&
+                !_isAttachedCargo &&
+                !_isPlayerOperating &&
+                !_declinedSalvage &&
+                !_recentlySpawned &&
+                _speedSafe &&
+                _heightSafe &&
+                (
+                    (_object getVariable ["QM_WasSlingLoaded", false]) ||
+                    (_object getVariable ["QM_DroppedFromSling", false]) ||
+                    (_object getVariable ["QM_UnloadedFromViV", false])
+                )
+            );
+
+            if (_isDeliveredCargoVehicle) then {
+                _activeCratesFound = _activeCratesFound + 1;
+                _anyDeliveryRecorded = true;
+
+                private _carrier = _object getVariable ["QM_SlingCarrier", _object getVariable ["QM_CarrierVehicle", objNull]];
+                private _pilotUnit = if (!isNull _carrier) then { driver _carrier } else { objNull };
+
+                [_baseKey, _object, _pilotUnit] call QM_fnc_serverVehicleSale;
+            };
+        };
     } forEach _nearbyObjects;
 
     // --- CHECK UNLOAD / COMPLETION STATUS ---
@@ -150,9 +236,27 @@ while { _triggerArea getVariable ["isProcessingLogistics", false] } do {
         };
     };
 
-    // If no cargo remains on the tarmac and no truck with cargo is in the zone, exit the loop
-    private _truckStillHasCargo = !isNull _activeTruck && { count (getVehicleCargo _activeTruck) > 0 || !isNull (getSlingLoad _activeTruck) };
-    if (_activeCratesFound == 0 && !_truckStillHasCargo) exitWith {
+    // If no cargo remains on the tarmac and no truck with cargo or troops is in the zone, exit after checking for pending loose items
+    private _truckStillHasCargo = !isNull _activeTruck && { 
+        count (getVehicleCargo _activeTruck) > 0 || 
+        !isNull (getSlingLoad _activeTruck) ||
+        (_activeTruck getVariable ["logistics_loaded_type", ""] == "Troops") ||
+        ({ alive _x && { _x getVariable ["QM_IsLogisticsPassenger", false] } } count (crew _activeTruck) > 0)
+    };
+
+    // Check if any loose logistics cargo or delivered vehicles are currently on the ground in the zone waiting to settle
+    private _pendingCargoInZone = {
+        alive _x && 
+        { isNull (attachedTo _x) } &&
+        { isNull (isVehicleCargo _x) } &&
+        { 
+            (_x getVariable ["isLogisticsCargo", false]) || 
+            (_x getVariable ["QM_SystemLoaded", false]) ||
+            (_x getVariable ["QM_UnloadedFromViV", false])
+        }
+    } count _nearbyObjects;
+
+    if (_activeCratesFound == 0 && !_truckStillHasCargo && _pendingCargoInZone == 0) exitWith {
         _triggerArea setVariable ["isProcessingLogistics", false];
     };
 

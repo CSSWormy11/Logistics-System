@@ -28,13 +28,13 @@ private _val = _listBoxGround lbValue _selIdx;
 
 if (_val < 0 || _val >= count _groundObjects) exitWith {
     hint "Selection index invalid. Please refresh the manifest.";
-    [] execVM "fn_manifestMenuPopulate.sqf";
+    [] execVM "logistics\qm_manifestMenuPopulate.sqf";
 };
 
 private _cargoObj = _groundObjects select _val;
 if (isNull _cargoObj || !alive _cargoObj) exitWith {
     hint "The selected cargo is no longer present or has been moved.";
-    [] execVM "fn_manifestMenuPopulate.sqf";
+    [] execVM "logistics\qm_manifestMenuPopulate.sqf";
 };
 
 // --- STEP 1: PHYSICAL FIT & SPACE VALIDATION ---
@@ -110,7 +110,7 @@ if (_loaded) then {
     systemChat format ["[MANIFEST LOADED]: %1 secured into %2.", _cargoName, _vehName];
 
     // Refresh UI to reflect updated space and bay contents
-    [] execVM "fn_manifestMenuPopulate.sqf";
+    [] execVM "logistics\qm_manifestMenuPopulate.sqf";
 } else {
     hint "LOAD FAILED: Vehicle cargo bay rejected the item. The bay may be obstructed or at maximum weight limit.";
 };

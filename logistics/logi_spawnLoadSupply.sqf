@@ -1,11 +1,11 @@
 // ============================================================================
 // LOGISTICS SYSTEM: PHYSICAL DEPLOYMENT ENGINE (PART 1)
-// File: fn_spawnLoadSupply.sqf
+// File: logi_spawnLoadSupply.sqf
 // Description: Spawns the requested cargo, calculates its mass via SupplyScores,
 //              deducts points from the source base, and loads it into the transport.
 //              Also handles specific spawn routing for troops, planes, and helis.
 // Called By: Eden Editor Trigger (On Activation) at Loading Pads
-//            e.g., [vehicle player, "MSR"] execVM "fn_spawnLoadSupply.sqf";
+//            e.g., [vehicle player, "MSR"] execVM "logistics\logi_spawnLoadSupply.sqf";
 // ============================================================================
 
 params [
@@ -45,9 +45,19 @@ if (count _cargoList > 0 && { (_cargoList # 0) isEqualType [] }) then {
     private _activeRoute = if ("MSR" in toUpper _pickupBaseKey) then { "Strategic" } else { "Tactical" };
     private _realTask = currentTask player;
     if (!isNull _realTask) then {
-        if (["Logi_Strategic_Task"] call BIS_fnc_taskExists && { _realTask isEqualTo (["Logi_Strategic_Task", player] call BIS_fnc_taskReal) }) then { _activeRoute = "Strategic"; };
-        if (["Logi_Tactical_Task"] call BIS_fnc_taskExists && { _realTask isEqualTo (["Logi_Tactical_Task", player] call BIS_fnc_taskReal) }) then { _activeRoute = "Tactical"; };
-        if (["Logi_CLT_Task"] call BIS_fnc_taskExists && { _realTask isEqualTo (["Logi_CLT_Task", player] call BIS_fnc_taskReal) }) then { _activeRoute = "CLT"; };
+        {
+            private _rName = _x;
+            private _pTask = format ["Logi_%1_Task", _rName];
+            if ([_pTask] call BIS_fnc_taskExists && { _realTask isEqualTo ([_pTask, player] call BIS_fnc_taskReal) }) exitWith {
+                _activeRoute = _rName;
+            };
+            {
+                private _sTask = format ["Logi_%1_%2", _rName, _x];
+                if ([_sTask] call BIS_fnc_taskExists && { _realTask isEqualTo ([_sTask, player] call BIS_fnc_taskReal) }) exitWith {
+                    _activeRoute = _rName;
+                };
+            } forEach ["Pickup", "Manifest", "Delivery"];
+        } forEach ["Strategic", "Tactical", "CLT"];
     };
     private _routeIdx = _cargoList findIf { toUpper (_x # 0) == toUpper _activeRoute };
     if (_routeIdx != -1) then {
@@ -112,9 +122,17 @@ if (count _cargoList > 0) then {
 private _allSBs = (missionNamespace getVariable ["logisticsBases", []]) select { "SB" in toUpper _x };
 private _defaultSB = _allSBs param [0, "SB"];
 private _targetDeliveryBase = _vehicle getVariable ["logistics_intended_fob", _defaultSB];
-private _deliveryMarker = format ["Dropoff_%1", _targetDeliveryBase];
-if (getMarkerColor _deliveryMarker == "" && _targetDeliveryBase == "SB") then { _deliveryMarker = "Dropoff_SB"; };
-private _deliveryPos = if (getMarkerColor _deliveryMarker != "") then { getMarkerPos _deliveryMarker } else { getMarkerPos _targetDeliveryBase };
+
+// Resolve the destination dropoff trigger geometry (prioritizing 3D Trigger Area over 2D point marker)
+private _destTrigList = missionNamespace getVariable [format ["LogiDropoffTriggers_%1", _targetDeliveryBase], []];
+private _destTrigger = _destTrigList param [0, objNull];
+private _deliveryPos = if (!isNull _destTrigger) then {
+    getPos _destTrigger
+} else {
+    private _m = format ["Dropoff_%1", _targetDeliveryBase];
+    if (getMarkerColor _m == "" && _targetDeliveryBase == "SB") then { _m = "Dropoff_SB"; };
+    if (getMarkerColor _m != "") then { getMarkerPos _m } else { getMarkerPos _targetDeliveryBase }
+};
 
 // =========================================================================
 // UNLOADED EXECUTION PROFILES
@@ -123,43 +141,85 @@ if (_supplyType == "Troops") exitWith {
     systemChat format ["LOGISTICS COMMAND: Manifest compiled. Boarding [%1] reinforcement squad...", _displayAssetName];
     
     private _grp = createGroup [playerSide, true];
+    private _troopUnits = [];
     {
         private _unit = _grp createUnit [_x, [0,0,0], [], 0, "NONE"];
+        _unit setVariable ["QM_IsLogisticsPassenger", true, true];
+        _unit setVariable ["QM_PassengerDestination", _targetDeliveryBase, true];
         _unit moveInCargo _vehicle;
+        _troopUnits pushBack _unit;
     } forEach _cargoList;
 
-    // Give the group a physical moving waypoint to the delivery zone marker location
+    // Track state on the vehicle
+    _vehicle setVariable ["logistics_is_loaded", true, true];
+    _vehicle setVariable ["logistics_loaded_type", "Troops", true];
+    _vehicle setVariable ["logistics_loaded_weight", _totalCargoPointWeight, true];
+    _vehicle setVariable ["QM_LogisticsTroopsGroup", _grp, true];
+    _vehicle setVariable ["QM_LogisticsTroopsUnits", _troopUnits, true];
+
+    // Give squad an initial movement waypoint to the destination dropoff zone trigger center
     private _wp = _grp addWaypoint [_deliveryPos, 0];
     _wp setWaypointType "MOVE";
-    _wp setWaypointBehaviour "SAFE";
-    _wp setWaypointSpeed "FULL";
+    _wp setWaypointBehaviour "AWARE";
+    _wp setWaypointCombatMode "YELLOW";
+    _wp setWaypointSpeed "NORMAL";
 
-    // Launch independent tracking loop locked strictly to these infantry units
-    [_grp, _deliveryPos, _targetDeliveryBase] spawn {
-        params ["_group", "_targetPos2D", "_destinationKey"];
-        private _processingActive = true;
+    // Launch independent guardian thread: handles both vehicle dropoff disembarkation and foot arrival (if vehicle destroyed)
+    [_grp, _vehicle, _destTrigger, _deliveryPos, _targetDeliveryBase] spawn {
+        params ["_group", "_veh", "_destTrig", "_destCenterPos", "_destinationKey"];
+        private _cleanBase = _destinationKey splitString "_" joinString " ";
+        private _delivered = false;
 
-        while { _processingActive && {count (units _group) > 0} } do {
-            {
-                private _unit = _x;
-                if (alive _unit && {(_unit distance2D _targetPos2D) < 35}) then {
-                    private _scoreVarName = format ["LogiScore_%1_Troops", _destinationKey];
-                    missionNamespace setVariable [_scoreVarName, (missionNamespace getVariable [_scoreVarName, 0]) + 1, true];
-                    
-                    systemChat format ["[LOGISTICS]: Reinforcement unit arrived and garrisoned at %1.", _destinationKey splitString "_" joinString " "];
-                    deleteVehicle _unit;
+        while { count (units _group) > 0 && !_delivered } do {
+            sleep 1.5;
+            private _aliveUnits = (units _group) select { alive _x };
+            if (count _aliveUnits == 0) exitWith {};
+
+            // Check 1: Vehicle arrived in dropoff zone and stopped
+            if (!isNull _veh && { alive _veh } && { abs (speed _veh) < 2 }) then {
+                private _isInZone = if (!isNull _destTrig) then {
+                    private _tArea = triggerArea _destTrig;
+                    _veh inArea [_destTrig, _tArea # 0, _tArea # 1, _tArea # 2, _tArea # 3]
+                } else {
+                    (_veh distance2D _destCenterPos) < 50
                 };
-            } forEach (units _group);
 
-            if (count (units _group) == 0) then { _processingActive = false; };
-            sleep 2;
+                if (_isInZone) then {
+                    _delivered = true;
+                    // Move waypoint to the vehicle position and set to GETOUT
+                    private _curWP = [_group, currentWaypoint _group];
+                    _curWP setWaypointPosition [getPosATL _veh, 0];
+                    _curWP setWaypointType "GETOUT";
+                    
+                    // Execute disembarkation
+                    [_veh, _destinationKey] call QM_fnc_disembarkLogisticsTroops;
+                };
+            };
+
+            // Check 2: Foot arrival (if transport vehicle was destroyed or abandoned)
+            if (!_delivered) then {
+                private _footUnitsInZone = _aliveUnits select {
+                    isNull (objectParent _x) && {
+                        if (!isNull _destTrig) then {
+                            private _tArea = triggerArea _destTrig;
+                            _x inArea [_destTrig, _tArea # 0, _tArea # 1, _tArea # 2, _tArea # 3]
+                        } else {
+                            (_x distance2D _destCenterPos) < 50
+                        }
+                    }
+                };
+
+                if (count _footUnitsInZone > 0) then {
+                    private _fCount = count _footUnitsInZone;
+                    [_destinationKey, _fCount, _footUnitsInZone] remoteExec ["QM_fnc_serverProcessTroopDelivery", 2];
+                    systemChat format ["[LOGISTICS]: %1 reinforcement troops arrived on foot and garrisoned at %2.", _fCount, _cleanBase];
+                };
+            };
         };
         deleteGroup _group;
     };
 
-    _vehicle setVariable ["logistics_is_loaded", false, true];
-    _vehicle setVariable ["logistics_loaded_type", "", true];
-    _vehicle setVariable ["logistics_loaded_weight", 0, true];
+    systemChat format ["[LOGISTICS]: %1 troops secured in passenger bay. Transport them to %2 Dropoff Zone.", count _troopUnits, _targetDeliveryBase splitString "_" joinString " "];
 };
 
 // --- STANDARD FREIGHT CARGO AND VEHICLE SLINGLOAD / VIV PACKING PROFILE ---
@@ -169,6 +229,8 @@ if (_isPlane && !_isHelicopter && _heightAboveSurface > 30) exitWith {
         private _cargoObj = _x createVehicle [0,0,0]; 
         _cargoObj setVariable ["isLogisticsCargo", true, true];
         _cargoObj setVariable ["QM_SystemLoaded", true, true];
+        _cargoObj setVariable ["QM_CarrierVehicle", _vehicle, true];
+        _cargoObj setVariable ["QM_DrivenByPlayer", false, true];
         _vehicle setVariable ["QM_SystemLoading", true];
         _vehicle setVehicleCargo _cargoObj; 
         _vehicle setVariable ["QM_SystemLoading", false];
@@ -197,6 +259,9 @@ if (_isHelicopter) exitWith {
         private _pod = createVehicle [_x, [0, 0, 500], [], 0, "CAN_COLLIDE"];
         _pod setVariable ["isLogisticsCargo", true, true];
         _pod setVariable ["QM_SystemLoaded", true, true];
+        _pod setVariable ["QM_WasSlingLoaded", true, true];
+        _pod setVariable ["QM_SlingCarrier", _vehicle, true];
+        _pod setVariable ["QM_DrivenByPlayer", false, true];
         private _rayStart = [_basePadPos2D # 0, _basePadPos2D # 1, (_vehPosASL # 2) + 50];
         private _rayEnd   = [_basePadPos2D # 0, _basePadPos2D # 1, -20];
         private _podHits  = lineIntersectsSurfaces [_rayStart, _rayEnd, _pod, _vehicle, true, 1, "GEOM", "NONE"];
@@ -218,6 +283,8 @@ systemChat format ["LOGISTICS COMMAND: Surface cargo grid storage locked down: [
     private _cargoObj = _x createVehicle [0,0,0];
     _cargoObj setVariable ["isLogisticsCargo", true, true];
     _cargoObj setVariable ["QM_SystemLoaded", true, true];
+    _cargoObj setVariable ["QM_CarrierVehicle", _vehicle, true];
+    _cargoObj setVariable ["QM_DrivenByPlayer", false, true];
     _vehicle setVariable ["QM_SystemLoading", true];
     private _loadedViV = _vehicle setVehicleCargo _cargoObj;
     _vehicle setVariable ["QM_SystemLoading", false];
@@ -226,6 +293,29 @@ systemChat format ["LOGISTICS COMMAND: Surface cargo grid storage locked down: [
         diag_log format ["[LOGISTICS ERROR]: setVehicleCargo failed to load %1 into %2", _x, typeOf _vehicle];
     };
 } forEach _cargoList;
+
+// Auto-salvage/delivery hook for ViV cargo offloaded in Dropoff Zones
+if (isNil { _vehicle getVariable "QM_ViVUnloadEH" }) then {
+    private _eh = _vehicle addEventHandler ["CargoUnloaded", {
+        params ["_carrier", "_cargo"];
+        _cargo setVariable ["QM_UnloadedFromViV", true, true];
+        _cargo setVariable ["QM_CarrierVehicle", _carrier, true];
+        _cargo setVariable ["QM_DrivenByPlayer", false, true];
+
+        private _bKey = [_cargo] call QM_fnc_getVehicleDropoffBase;
+        if (_bKey == "") then { _bKey = [_carrier] call QM_fnc_getVehicleDropoffBase; };
+        if (_bKey != "") then {
+            [_cargo, _bKey, driver _carrier] spawn {
+                params ["_cObj", "_base", "_drv"];
+                sleep 0.5;
+                if (alive _cObj) then {
+                    [_base, _cObj, _drv] remoteExec ["QM_fnc_serverVehicleSale", 2];
+                };
+            };
+        };
+    }];
+    _vehicle setVariable ["QM_ViVUnloadEH", _eh];
+};
 
 _vehicle setVariable ["logistics_is_loaded", true, true];
 _vehicle setVariable ["logistics_loaded_type", _supplyType, true];

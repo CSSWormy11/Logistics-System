@@ -81,6 +81,16 @@ QM_fnc_clientRegisterBarracksActions = {
             [missionNamespace, ["%ALL"], false, false] call BIS_fnc_removeVirtualBackpackCargo;
 
             // ------------------------------------------------------------------------
+            // 1B. SUPPLY DEPLETION GATING
+            // If base Cargo and Ammo pools are completely drained (0), lock the armory.
+            // ------------------------------------------------------------------------
+            private _cargoPts = missionNamespace getVariable [format ["LogiScore_%1_Cargo", _bKey], 0];
+            private _ammoPts  = missionNamespace getVariable [format ["LogiScore_%1_Ammo", _bKey], 0];
+            if (_cargoPts != -1 && _ammoPts != -1 && { _cargoPts <= 0 && _ammoPts <= 0 }) exitWith {
+                systemChat format ["LOGISTICS ALERT: %1 armory depleted (0 Cargo / 0 Ammo). Deliver supply crates to restore weapons and gear.", _bKey];
+            };
+
+            // ------------------------------------------------------------------------
             // 2. ESTABLISH DYNAMIC FILTERS
             // ------------------------------------------------------------------------
             // Fetch the caller's specific side and terrain to evaluate the gear template
@@ -171,6 +181,54 @@ QM_fnc_clientRegisterBarracksActions = {
         "",
         "alive _target && {player distance _target < 5}",
         5
+    ];
+};
+
+// --- MODULE 4: PHYSICAL MEDICAL CONTAINER / FACILITY INTERACTION ---
+QM_fnc_clientRegisterMedicalActions = {
+    params [["_container", objNull, [objNull]], ["_baseKey", "", [""]]];
+    if (isNull _container || _baseKey == "") exitWith {};
+
+    _container setVariable ["QM_Crate_OwningBase", _baseKey, true];
+
+    // Action: Treat Injuries & Restore Health at Medical Container (e.g. Huron Medical Pod)
+    _container addAction [
+        "<t color='#00FF88' font='RobotoCondensedBold'>[MEDICAL FACILITY] Receive Medical Treatment</t>",
+        {
+            params ["_target", "_caller", "_actionId", "_arguments"];
+            _arguments params ["_bKey"];
+
+            private _dmg = damage _caller;
+            if (_dmg <= 0.01) exitWith {
+                hint "MEDICAL: You are currently at full health (0% damage).";
+            };
+
+            private _poolVar = format ["LogiScore_%1_Medical", _bKey];
+            private _availMed = missionNamespace getVariable [_poolVar, 0];
+            private _healCost = ceil (_dmg * 20); // Scaled proportionally to injury extent
+
+            if (_availMed != -1 && { _availMed < _healCost }) exitWith {
+                hint format ["MEDICAL FAILED: Insufficient base Medical supplies.\nRequired: %1 points | Available: %2 points.", _healCost, _availMed];
+            };
+
+            // Administer field treatment
+            _caller playActionNow "Medic";
+            _caller setDamage 0;
+
+            if (_availMed != -1) then {
+                private _newPool = (_availMed - _healCost) max 0;
+                missionNamespace setVariable [_poolVar, _newPool, true];
+            };
+
+            systemChat format ["MEDICAL: Field treatment finalized. Fully restored (-%1 Medical points from %2).", _healCost, _bKey];
+        },
+        [_baseKey],
+        6,
+        true,
+        true,
+        "",
+        "alive _target && { player distance _target < 6 } && { damage player > 0.01 } && { _target getVariable ['QM_MedicalSupplied', true] }",
+        6
     ];
 };
 

@@ -22,9 +22,12 @@ _display setVariable ["QM_Vehicle_Active_Tab", _tabIndex];
 private _baseKey = player getVariable ["QM_Current_Terminal_Base", ""];
 private _bkUpper = toUpper _baseKey;
 
-// Base Type Booleans (Strict string matching via native find)
-private _isSB = (_bkUpper find "SB" >= 0);
-private _isFOB = (_bkUpper find "FOB" >= 0);
+// Base Type & Operational Role Evaluation
+private _baseType = if (!isNil "logi_fnc_getBaseType") then { [_baseKey] call logi_fnc_getBaseType } else { "FOB" };
+private _baseRole = if (!isNil "logi_fnc_getBaseRole") then { [_baseKey] call logi_fnc_getBaseRole } else { "TACTICAL" };
+
+private _isSB = (_baseRole == "STRATEGIC");
+private _isFOB = (_baseRole in ["TACTICAL", "CLT"]);
 
 private _playerFaction = toUpper (str playerSide);
 private _currentTerrain = toUpper (call fn_G_getTerrain);
@@ -50,11 +53,30 @@ private _allGarages = [];
     };
 } forEach (allVariables missionNamespace);
 
+// Also include garage pads synced in Eden Editor to the master base anchor/flagpole
+private _baseObj = missionNamespace getVariable [_baseKey, objNull];
+if (!isNull _baseObj) then {
+    {
+        if !(_x isKindOf "EmptyDetector") then {
+            private _cName = vehicleVarName _x;
+            private _cUpper = toUpper _cName;
+            if (_cUpper find "GARAGE" >= 0 || _cUpper find "BOAT" >= 0 || _cUpper find "GROUND" >= 0 || _cUpper find "AIR" >= 0 || _cUpper find "HELI" >= 0 || _cUpper find "PLANE" >= 0 || _cUpper find "PAD" >= 0) then {
+                _allGarages pushBackUnique _cName;
+            };
+        };
+    } forEach ([_baseObj] call QM_fnc_getSyncedObjects);
+};
+
 {
     private _mUpper = toUpper _x;
     
-    // Slice off the known prefix length (e.g., "SB_CARRIER_GARAGE_AIR_L_1" -> "_AIR_L_1")
-    private _remainder = _mUpper select [_prefixLen]; 
+    // Slice off prefix length (if full name like SB_Main_Garage_Air_1) or local garage token (if synced short name like _garage_air_1)
+    private _remainder = if (_mUpper find _prefixUpper == 0) then {
+        _mUpper select [_prefixLen]
+    } else {
+        private _gIdx = _mUpper find "GARAGE";
+        if (_gIdx >= 0) then { _mUpper select [_gIdx + 6] } else { _mUpper };
+    }; 
     
     // 1. Determine size limit index (0 = XXS ... 6 = OPEN)
     private _sz = 6; 
@@ -66,11 +88,11 @@ private _allGarages = [];
     else { if (_remainder find "_XL" >= 0) then { _sz = 5; }; }; }; }; }; };
     
     // 2. Identify Pad Engine Type exclusively from the remaining string modifiers
-    private _isPadBoat = (_remainder find "_BOAT" >= 0);
-    private _isPadHeli = (_remainder find "_HELI" >= 0);
-    private _isPadPlane = (_remainder find "_PLANE" >= 0);
-    private _isPadAir = (_remainder find "_AIR" >= 0);
-    private _isPadGround = (_remainder find "_GROUND" >= 0) || (_remainder find "_CAR" >= 0) || (_remainder find "_TANK" >= 0);
+    private _isPadBoat = (_remainder find "BOAT" >= 0);
+    private _isPadHeli = (_remainder find "HELI" >= 0) || (_remainder find "HELICOPTER" >= 0);
+    private _isPadPlane = (_remainder find "PLANE" >= 0);
+    private _isPadAir = (_remainder find "AIR" >= 0);
+    private _isPadGround = (_remainder find "GROUND" >= 0) || (_remainder find "CAR" >= 0) || (_remainder find "TANK" >= 0);
     
     // _AIR acts as a catch-all for both planes (hangars) and helicopters (open pads)
     if (_isPadAir) then { _isPadHeli = true; _isPadPlane = true; };
@@ -151,20 +173,20 @@ private _allGarages = [];
         private _terrainUpper = _terrainArray apply { toUpper _x };
         private _validTerrain = ("ALL" in _terrainUpper || _currentTerrain in _terrainUpper);
         
-        // Base Restriction ("ALL"/"BOTH" = SB or FOB, "SB" = SB only, "FOB" = FOB only, or Array of allowed tiers/base names)
+        // Base Restriction ("ALL"/"BOTH" = Strategic or Tactical, "SB" = Strategic, "FOB" = Tactical, or Specific Base Type / Base Name)
         private _validBaseRestriction = false;
         if (_restrictionType isEqualType []) then {
             private _restList = _restrictionType apply { toUpper _x };
             if ("ALL" in _restList || "BOTH" in _restList) then { _validBaseRestriction = (_isSB || _isFOB); };
             if ("SB" in _restList && _isSB) then { _validBaseRestriction = true; };
             if ("FOB" in _restList && _isFOB) then { _validBaseRestriction = true; };
-            if (_bkUpper in _restList) then { _validBaseRestriction = true; };
+            if (_baseType in _restList || _bkUpper in _restList) then { _validBaseRestriction = true; };
         } else {
             private _restUpper = toUpper _restrictionType;
             if (_restUpper in ["ALL", "BOTH"]) then { _validBaseRestriction = (_isSB || _isFOB); };
             if (_restUpper == "SB" && _isSB) then { _validBaseRestriction = true; };
             if (_restUpper == "FOB" && _isFOB) then { _validBaseRestriction = true; };
-            if (_restUpper == _bkUpper) then { _validBaseRestriction = true; };
+            if (_restUpper == _baseType || _restUpper == _bkUpper) then { _validBaseRestriction = true; };
         };
         
         // --- Infrastructure Fit Check ---
@@ -209,7 +231,9 @@ private _allGarages = [];
                 private _costStringArray = [];
                 {
                     _x params ["_poolName", "_poolVal"];
-                    if (_poolVal > 0 && _poolVal < 1000000) then { 
+                    // If drivable vehicle, ignore Troops and Cargo costs since vehicle spawns empty
+                    private _isIgnored = (!_isSupply && !_isDrone && (_poolName in ["Troops", "Cargo"]));
+                    if (!_isIgnored && _poolVal > 0 && _poolVal < 1000000) then { 
                         private _shortName = switch (_poolName) do {
                             case "Vehicle": { "Veh" }; case "Cargo": { "Crg" }; case "Ammo": { "Ammo" };
                             case "Fuel": { "Fuel" }; case "Medical": { "Med" }; case "Repair": { "Rep" };
