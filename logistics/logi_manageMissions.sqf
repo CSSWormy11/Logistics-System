@@ -875,7 +875,14 @@ createClientLogiTasks = {
                     _dropoffPos = _pos;
                 };
 
-                private _isNearDropoff = (_dropoffPos distance2D [0,0,0] > 10) && { (_vehicle distance2D _dropoffPos) <= 150 };
+                // Multi-pad dropoff zone check: inside ANY dropoff trigger or within 150m
+                private _targetTrigs = missionNamespace getVariable [format ["LogiDropoffTriggers_%1", _targetBase], []];
+                private _isNearDropoff = false;
+                if (count _targetTrigs > 0) then {
+                    _isNearDropoff = ({ (_vehicle inArea _x) || ((_vehicle distance2D _x) <= 150) } count _targetTrigs) > 0;
+                } else {
+                    _isNearDropoff = (_dropoffPos distance2D [0,0,0] > 10) && { (_vehicle distance2D _dropoffPos) <= 150 };
+                };
 
                 // Alternate-Base Delivery Recognition: Check if unloaded at intended dropoff OR any other friendly base dropoff pad
                 private _deliveredBase = "";
@@ -884,8 +891,15 @@ createClientLogiTasks = {
                 } else {
                     {
                         private _baseName = _x;
-                        ([_vehicle, _baseName] call logi_fnc_getDropoffLocation) params ["", "_bPos"];
-                        if (_bPos distance2D [0,0,0] > 10 && { (_vehicle distance2D _bPos) <= 150 }) exitWith {
+                        private _bTrigs = missionNamespace getVariable [format ["LogiDropoffTriggers_%1", _baseName], []];
+                        private _nearThisBase = false;
+                        if (count _bTrigs > 0) then {
+                            _nearThisBase = ({ (_vehicle inArea _x) || ((_vehicle distance2D _x) <= 150) } count _bTrigs) > 0;
+                        } else {
+                            ([_vehicle, _baseName] call logi_fnc_getDropoffLocation) params ["", "_bPos"];
+                            _nearThisBase = (_bPos distance2D [0,0,0] > 10) && { (_vehicle distance2D _bPos) <= 150 };
+                        };
+                        if (_nearThisBase) exitWith {
                             _deliveredBase = _baseName;
                         };
                     } forEach (missionNamespace getVariable ["logisticsBases", []]);

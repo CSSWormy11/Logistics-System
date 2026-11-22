@@ -1,29 +1,31 @@
 // ============================================================================
-// LOGISTICS SYSTEM: DYNAMIC GROUND VISUAL MARKERS (SECTION 6.9)
+// LOGISTICS SYSTEM: DYNAMIC GROUND VISUAL MARKERS (SECTION 6.9 & 7.6)
 // File: logi_groundVisuals.sqf
 // Description: Automated day/night visual cue manager for logistics triggers.
 //
 //              - Edge Lights (PERMANENT AIRFIELD FIXTURES):
 //                * Service Areas: Yellow (Land_runway_edgelight_yellow_F)
 //                * Pickup & Dropoff Zones: Blue (Land_runway_edgelight_blue_F)
-//                * Spawned ONCE at mission startup and remain permanently on the map.
+//                * Spawned ONCE by the server at startup and remain permanently.
 //                * Engine automatically illuminates them at dusk and turns them off at dawn ("AUTO").
 //
 //              - Centerline Visual Cues (DAY / NIGHT ADAPTIVE):
-//                * Day: Eden Smoke Modules (ModuleSmoke*_F) spawned once and activated
-//                  via BIS_fnc_moduleEffectsSmoke. Billow continuous smoke all day without loops.
+//                * Day: Native Engine Particle Sources (#particlesource)
+//                  Direct RV Engine C++ emitters with zero module framework overhead.
+//                  100% crash immune, zero network synchronization burden.
 //                * Night: Centerline Helipad Lights + Chemlights for approach and touchdown.
 //                * Centerline objects cleanly swap only when day transitions to night (or vice versa).
 //
 //              - Standard Color Scheme:
-//                * Service Areas: Yellow
-//                * Dropoff Zones: Green (BLUFOR friendly LZ / delivery target)
-//                * Pickup Zones:  Purple (Loading & staging pad)
+//                * Service Areas: Yellow (RGBA: [0.85, 0.85, 0.15, 1])
+//                * Dropoff Zones: Green  (RGBA: [0.15, 0.75, 0.25, 1])
+//                * Pickup Zones:  Purple (RGBA: [0.65, 0.20, 0.75, 1])
+//                * Vehicle Spawn Pads: Blue (RGBA: [0.15, 0.40, 0.95, 1])
 //
 //              - Manual Testing Override:
 //                missionNamespace getVariable ["Logi_GroundVisuals_ForceMode", -1]
 //                (-1 = Auto sunOrMoon, 0 = Force Night, 1 = Force Day)
-// Called By: init.sqf (Server only)
+// Called By: init.sqf
 // ============================================================================
 
 if (!isServer) exitWith {};
@@ -33,7 +35,7 @@ waitUntil { !isNil "logisticsBases" && { count logisticsBases > 0 } };
 waitUntil { time > 0 };
 sleep 2; // Allow logi_initTasks.sqf to complete initial trigger passes
 
-diag_log "[LOGISTICS GROUND VISUALS]: Initializing dynamic visual cues manager (Section 6.9)...";
+diag_log "[LOGISTICS GROUND VISUALS]: Initializing dynamic visual cues manager (Section 6.9 & 7.6 #particlesource)...";
 
 // -----------------------------------------------------------------------------
 // HELPER: CLASSNAME SELECTOR WITH FALLBACK & MOD AUTO-DETECTION
@@ -50,79 +52,80 @@ private _fnc_safeClass = {
 private _serviceRunwayClass = ["Land_runway_edgelight_yellow_F", "Land_runway_edgelight"] call _fnc_safeClass;
 private _edgeRunwayClass    = ["Land_runway_edgelight_blue_F", "Land_runway_edgelight"] call _fnc_safeClass;
 
-// 2. CENTERLINE DAYTIME SMOKE MODULES
-private _serviceSmokeClass  = "ModuleSmokeYellow_F";
-private _dropoffSmokeClass  = "ModuleSmokeGreen_F";
-private _pickupSmokeClass   = "ModuleSmokePurple_F";
+// 2. CENTERLINE DAYTIME SMOKE COLORS (RGBA) FOR NATIVE #particlesource
+private _serviceSmokeColor = [0.85, 0.85, 0.15, 1]; // Yellow
+private _dropoffSmokeColor = [0.15, 0.75, 0.25, 1]; // Green
+private _pickupSmokeColor  = [0.65, 0.20, 0.75, 1]; // Purple
+private _spawnSmokeColor   = [0.15, 0.40, 0.95, 1]; // Blue
 
 // 3. CENTERLINE NIGHTTIME HELIPAD LIGHTS & CHEMLIGHTS
-private _serviceHelipadClass  = if (_hasConstantHelipadLight) then { "PortableHelipadLight_01_yellow_constant" } else { "PortableHelipadLight_01_yellow_F" };
-private _serviceChemClass     = "Chemlight_yellow";
+private _serviceHelipadClass = if (_hasConstantHelipadLight) then { "PortableHelipadLight_01_yellow_constant" } else { "PortableHelipadLight_01_yellow_F" };
+private _serviceChemClass    = "Chemlight_yellow";
 
-private _dropoffHelipadClass  = if (_hasConstantHelipadLight) then { "PortableHelipadLight_01_green_constant" } else { "PortableHelipadLight_01_green_F" };
-private _dropoffChemClass     = "Chemlight_green";
+private _dropoffHelipadClass = if (_hasConstantHelipadLight) then { "PortableHelipadLight_01_green_constant" } else { "PortableHelipadLight_01_green_F" };
+private _dropoffChemClass    = "Chemlight_green";
 
-private _pickupHelipadClass   = if (_hasConstantHelipadLight) then { "PortableHelipadLight_01_blue_constant" } else { "PortableHelipadLight_01_blue_F" };
-private _pickupChemClass      = "Chemlight_blue";
+private _pickupHelipadClass  = if (_hasConstantHelipadLight) then { "PortableHelipadLight_01_blue_constant" } else { "PortableHelipadLight_01_blue_F" };
+private _pickupChemClass     = "Chemlight_blue";
 
 // 4. VEHICLE SPAWN PADS / FACTORY HELIPADS (BLUE SAFETY WARNING)
-private _spawnSmokeClass      = "ModuleSmokeBlue_F";
-private _spawnAmmoClass       = "SmokeShellBlue";
-private _spawnHelipadClass    = if (_hasConstantHelipadLight) then { "PortableHelipadLight_01_blue_constant" } else { "PortableHelipadLight_01_blue_F" };
-private _spawnChemClass       = "Chemlight_blue";
-
-// Logic group for Eden effect modules
-private _logicGrp = missionNamespace getVariable ["Logi_GroundVisuals_LogicGrp", grpNull];
-if (isNull _logicGrp) then {
-    _logicGrp = createGroup [sideLogic, true];
-    missionNamespace setVariable ["Logi_GroundVisuals_LogicGrp", _logicGrp];
-};
+private _spawnHelipadClass   = if (_hasConstantHelipadLight) then { "PortableHelipadLight_01_blue_constant" } else { "PortableHelipadLight_01_blue_F" };
+private _spawnChemClass      = "Chemlight_blue";
 
 // -----------------------------------------------------------------------------
-// HELPER: MODULE ACTIVATOR
-// Activates dynamically spawned Eden Effect Modules across all clients.
-// Follows Bohemia module execution convention: ["init", [_logic, _isActivated, _isCuratorPlaced], _isActivated]
+// HELPER: NATIVE ENGINE PARTICLE SOURCE EMITTER (SECTION 7.6)
+// Spawns a local #particlesource using vanilla universal smoke cloudlets.
+// Bypasses Bohemia's fn_moduleGrenade.sqf entirely: zero parameter crashes,
+// zero Zeus logic units, and instant atomic deletion via deleteVehicle.
 // -----------------------------------------------------------------------------
-logi_fnc_activateModule = {
-    params ["_mod"];
-    if (isNull _mod) exitWith {};
+logi_fnc_createSmokeEmitter = {
+    params ["_pos", "_colorRGBA"];
     
-    // Read the registered function from CfgVehicles
-    private _fncName = getText (configFile >> "CfgVehicles" >> typeOf _mod >> "function");
-    if (_fncName == "") then { _fncName = "BIS_fnc_moduleGrenade"; };
-
-    // Broadcast standard module init parameters: ["init", [_logic, _isActivated, _isCuratorPlaced], _isActivated]
-    ["init", [_mod, true, false], true] remoteExec [_fncName, 0, true];
-};
-
-// Helper: Safely spawn and initialize a continuous smoke module
-logi_fnc_createSmokeModule = {
-    params ["_class", "_pos", "_colorName", "_ammoClass", "_logicGroup"];
-    
-    private _mod = _logicGroup createUnit [_class, _pos, [], 0, "CAN_COLLIDE"];
-    if (isNull _mod) then {
-        // Fallback to base ModuleSmoke_F with color attribute
-        _mod = _logicGroup createUnit ["ModuleSmoke_F", _pos, [], 0, "CAN_COLLIDE"];
-    };
-    
-    // Set attributes read by BIS_fnc_moduleGrenade / ModuleSmoke
-    _mod setVariable ["Type", _ammoClass, true];
-    _mod setVariable ["type", _ammoClass, true];
-    _mod setVariable ["Color", _colorName, true];
-    _mod setVariable ["color", _colorName, true];
-    _mod setVariable ["Repeat", 1, true];
-    _mod setVariable ["repeat", 1, true];
-    _mod setVariable ["Timeout", 0, true];
-    _mod setVariable ["timeout", 0, true];
-    
+    private _source = "#particlesource" createVehicleLocal _pos;
     if (surfaceIsWater _pos) then {
-        _mod setPosASL _pos;
+        _source setPosASL _pos;
     } else {
-        _mod setPosATL _pos;
+        _source setPosATL _pos;
     };
 
-    [_mod] call logi_fnc_activateModule;
-    _mod
+    // Standard Arma 3 smoke particle parameters using universal texture sheet
+    _source setParticleParams [
+        ["\A3\data_f\ParticleEffects\Universal\Universal", 16, 7, 48, 1],
+        "",
+        "Billboard",
+        1,
+        16,                   // Particle lifetime (seconds)
+        [0, 0, 0],            // Position offset
+        [0, 0, 1.3],          // Initial upward velocity
+        0, 1.27, 1, 0.05,     // Rotation, weight, volume, friction
+        [0.8, 5, 9.5],        // Size expansion over lifetime
+        [
+            [_colorRGBA select 0, _colorRGBA select 1, _colorRGBA select 2, 0.2],
+            [_colorRGBA select 0, _colorRGBA select 1, _colorRGBA select 2, 0.7],
+            [_colorRGBA select 0, _colorRGBA select 1, _colorRGBA select 2, 0.5],
+            [_colorRGBA select 0, _colorRGBA select 1, _colorRGBA select 2, 0]
+        ],
+        [0.2],                // Animation speed
+        0.3,                  // Random direction change
+        0.1,                  // Random velocity
+        "",
+        "",
+        _source
+    ];
+
+    _source setParticleRandom [
+        0.5,
+        [0.3, 0.3, 0.4],
+        [0.2, 0.2, 0.3],
+        0.2,
+        0.2,
+        [0, 0, 0, 0],
+        0.1,
+        0
+    ];
+
+    _source setDropInterval 0.12;
+    _source
 };
 
 // -----------------------------------------------------------------------------
@@ -165,7 +168,7 @@ logi_fnc_calculatePadGeometry = {
     if (!_isLarge) then {
         // ---------------------------------------------------------------------
         // SMALL PAD (<= 100m):
-        // Day:   1 single center smoke module
+        // Day:   1 single center smoke emitter
         // Night: 1 center helipad light + 1 center chemlight; 4 corner runway lights
         // ---------------------------------------------------------------------
         _centerSmokePositions pushBack _trgPos;
@@ -230,28 +233,32 @@ logi_fnc_calculatePadGeometry = {
 
 // -----------------------------------------------------------------------------
 // DISCOVER LOGISTICS TRIGGERS & PRECOMPUTE GEOMETRY
+// Automatically integrates all triggers registered by logi_initTasks, plus any
+// standalone triggers named pickup*, dropoff*, or service* across the map.
 // -----------------------------------------------------------------------------
 private _registeredTriggers = missionNamespace getVariable ["Logi_AllVisualTriggers", []];
 
-// If not pre-registered by logi_initTasks, scan all mission triggers directly
-if (count _registeredTriggers == 0) then {
-    {
-        private _tName = toLowerANSI (vehicleVarName _x);
-        if (_tName != "") then {
+// Scan all mission triggers to ensure no dropoff_1, dropoff_2, or secondary pads are missed
+{
+    private _trig = _x;
+    private _tName = toLowerANSI (vehicleVarName _trig);
+    if (_tName != "") then {
+        private _isKnown = ({ (_x # 0) == _trig } count _registeredTriggers) > 0;
+        if (!_isKnown) then {
             if (_tName find "pickup" != -1) then {
-                _registeredTriggers pushBack [_x, "PICKUP"];
+                _registeredTriggers pushBack [_trig, "PICKUP"];
             } else {
                 if (_tName find "dropoff" != -1) then {
-                    _registeredTriggers pushBack [_x, "DROPOFF"];
+                    _registeredTriggers pushBack [_trig, "DROPOFF"];
                 } else {
                     if (_tName find "service" != -1) then {
-                        _registeredTriggers pushBack [_x, "SERVICE"];
+                        _registeredTriggers pushBack [_trig, "SERVICE"];
                     };
                 };
             };
         };
-    } forEach (allMissionObjects "EmptyDetector");
-};
+    };
+} forEach (allMissionObjects "EmptyDetector");
 
 // Precompute zone records so geometry calculations run only once on startup
 private _zoneData = [];
@@ -261,21 +268,11 @@ private _zoneData = [];
         private _geom = [_trigger] call logi_fnc_calculatePadGeometry;
         _geom params ["_isLarge", "_smokePositions", "_centerLightPositions", "_perimeterLightPositions", "_dirLen"];
 
-        // Select classes based on pad role
-        private _smokeClass = switch (_padType) do {
-            case "DROPOFF": { _dropoffSmokeClass };
-            case "PICKUP":  { _pickupSmokeClass };
-            default         { _serviceSmokeClass };
-        };
-        private _colorName = switch (_padType) do {
-            case "DROPOFF": { "Green" };
-            case "PICKUP":  { "Purple" };
-            default         { "Yellow" };
-        };
-        private _ammoClass = switch (_padType) do {
-            case "DROPOFF": { "SmokeShellGreen" };
-            case "PICKUP":  { "SmokeShellPurple" };
-            default         { "SmokeShellYellow" };
+        // Select smoke color and night light classes based on pad role
+        private _smokeColor = switch (_padType) do {
+            case "DROPOFF": { _dropoffSmokeColor };
+            case "PICKUP":  { _pickupSmokeColor };
+            default         { _serviceSmokeColor };
         };
         private _helipadClass = switch (_padType) do {
             case "DROPOFF": { _dropoffHelipadClass };
@@ -291,9 +288,7 @@ private _zoneData = [];
         _zoneData pushBack [
             vehicleVarName _trigger,
             _padType,
-            _smokeClass,
-            _colorName,
-            _ammoClass,
+            _smokeColor,
             _helipadClass,
             _chemClass,
             _smokePositions,
@@ -347,7 +342,7 @@ diag_log format ["[LOGISTICS GROUND VISUALS]: Configured %1 vehicle spawn pads f
 private _permanentEdgeLights = [];
 {
     _x params [
-        "_trgName", "_padType", "_smokeClass", "_colorName", "_ammoClass",
+        "_trgName", "_padType", "_smokeColor",
         "_helipadClass", "_chemClass", "_smokePositions",
         "_centerLightPositions", "_perimeterLightPositions", "_dirLen"
     ];
@@ -373,7 +368,7 @@ diag_log format ["[LOGISTICS GROUND VISUALS]: Spawned %1 permanent runway edge l
 // DAY / NIGHT STATE MACHINE DAEMON (CENTERLINE ONLY)
 // - Checks illumination (sunOrMoon > 0.25 = Day, <= 0.25 = Night)
 // - Manual override: Logi_GroundVisuals_ForceMode (0 = Night, 1 = Day, -1 = Auto)
-// - Cleanly swaps centerline smoke modules (day) and centerline lights (night)
+// - Cleanly swaps centerline #particlesource emitters (day) and lights (night)
 //   ONLY when day transitions to night (or vice versa).
 // -----------------------------------------------------------------------------
 private _currentVisualMode = -1; // -1 = uninitialized, 0 = Night, 1 = Day
@@ -390,11 +385,9 @@ while { true } do {
 
     // Mode Transition (Day -> Night or Night -> Day)
     if (_newMode != _currentVisualMode) then {
-        // 1. Cleanly delete all previous centerline visual cue objects
+        // 1. Cleanly delete all previous centerline visual cue entities
         {
             if (!isNull _x) then {
-                private _emitter = _x getVariable ["effectEmitter", objNull];
-                if (!isNull _emitter) then { deleteVehicle _emitter; };
                 deleteVehicle _x;
             };
         } forEach _activeCenterlineEntities;
@@ -402,32 +395,32 @@ while { true } do {
 
         if (_newMode == 1) then {
             // -----------------------------------------------------------------
-            // DAYTIME MODE: Continuous Centerline Smoke Modules
-            // Spawned once, activated via BIS_fnc_moduleGrenade / ModuleSmoke.
+            // DAYTIME MODE: Native #particlesource Centerline Smoke Emitters
+            // Direct C++ RV engine particle generation. Zero module overhead.
             // -----------------------------------------------------------------
-            diag_log "[LOGISTICS GROUND VISUALS]: Transitioning to DAYTIME (Activating centerline smoke modules)...";
+            diag_log "[LOGISTICS GROUND VISUALS]: Transitioning to DAYTIME (Activating native #particlesource smoke emitters)...";
 
             {
                 _x params [
-                    "_trgName", "_padType", "_smokeClass", "_colorName", "_ammoClass",
+                    "_trgName", "_padType", "_smokeColor",
                     "_helipadClass", "_chemClass", "_smokePositions",
                     "_centerLightPositions", "_perimeterLightPositions", "_dirLen"
                 ];
 
                 {
-                    private _smokeMod = [_smokeClass, _x, _colorName, _ammoClass, _logicGrp] call logi_fnc_createSmokeModule;
-                    _activeCenterlineEntities pushBack _smokeMod;
+                    private _emitter = [_x, _smokeColor] call logi_fnc_createSmokeEmitter;
+                    _activeCenterlineEntities pushBack _emitter;
                 } forEach _smokePositions;
             } forEach _zoneData;
 
             // Deploy Blue Smoke Warning on all Vehicle Spawn Pads / Helipads
             {
                 _x params ["_pos", "_isWater"];
-                private _smokeMod = [_spawnSmokeClass, _pos, "Blue", _spawnAmmoClass, _logicGrp] call logi_fnc_createSmokeModule;
-                _activeCenterlineEntities pushBack _smokeMod;
+                private _emitter = [_pos, _spawnSmokeColor] call logi_fnc_createSmokeEmitter;
+                _activeCenterlineEntities pushBack _emitter;
             } forEach _spawnPadPositions;
 
-            diag_log format ["[LOGISTICS GROUND VISUALS]: Activated %1 daytime smoke modules (zones + spawn pads).", count _activeCenterlineEntities];
+            diag_log format ["[LOGISTICS GROUND VISUALS]: Activated %1 daytime #particlesource emitters (zones + spawn pads).", count _activeCenterlineEntities];
 
         } else {
             // -----------------------------------------------------------------
@@ -437,7 +430,7 @@ while { true } do {
 
             {
                 _x params [
-                    "_trgName", "_padType", "_smokeClass", "_colorName", "_ammoClass",
+                    "_trgName", "_padType", "_smokeColor",
                     "_helipadClass", "_chemClass", "_smokePositions",
                     "_centerLightPositions", "_perimeterLightPositions", "_dirLen"
                 ];

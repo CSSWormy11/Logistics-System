@@ -17,6 +17,28 @@ if (_dropoffIdx != -1) then {
     _baseKey = _baseKey select [0, _dropoffIdx];
 };
 
+// If baseKey is empty or not in logisticsBases, resolve via closest registered base
+if (!(_baseKey in (missionNamespace getVariable ["logisticsBases", []]))) then {
+    private _allBases = missionNamespace getVariable ["logisticsBases", []];
+    private _trigPos = getPos _triggerArea;
+    private _closestBase = "";
+    private _minDist = 999999;
+    {
+        private _bObj = missionNamespace getVariable [_x, objNull];
+        private _bPos = if (!isNull _bObj) then { getPos _bObj } else { getMarkerPos _x };
+        if (_bPos distance2D [0,0,0] > 10) then {
+            private _d = _trigPos distance2D _bPos;
+            if (_d < _minDist) then {
+                _minDist = _d;
+                _closestBase = _x;
+            };
+        };
+    } forEach _allBases;
+    if (_closestBase != "") then {
+        _baseKey = _closestBase;
+    };
+};
+
 if (_triggerArea getVariable ["isProcessingLogistics", false]) exitWith {};
 _triggerArea setVariable ["isProcessingLogistics", true];
 

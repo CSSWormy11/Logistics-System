@@ -1412,7 +1412,7 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 - **3. Status:** **Documented as Design Foundation (Section 7.5)**.
 
-### [ ] 7.6 Direct Engine Particle Source (`#particlesource`) Overhaul for Dynamic Ground Visuals
+### [x] 7.6 Direct Engine Particle Source (`#particlesource`) Overhaul for Dynamic Ground Visuals
 
 > [!NOTE]
 > **Operational Scope & Architectural Boundary:** This proposal establishes the technical specification for transitioning the dynamic ground visual markers (Section 6.9) from Bohemia's editor/curator module framework (`ModuleSmoke_F` / `fn_moduleGrenade.sqf`) to native client-side `#particlesource` engine emitters. This architecture provides 100% immunity to internal module parameter deprecation, zero network sync overhead, and instant script-driven lifecycle cleanup.
@@ -1455,8 +1455,7 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
     - **Night State:** Local `#particlesource` emitters are immediately deleted via `deleteVehicle`. Centerline helipad lights and chemlights are spawned.
 
 - **4. Migration Trigger & Current Status:**
-  - **Current Status:** **Documented as Design Foundation (Section 7.6)**.
-  - **Trigger Condition:** Framework commit `9779ca1` resolved Bohemia's `_activated` boolean array signature (`["init", [_mod, true, false], true]`). If active user testing of `9779ca1` encounters any further module-layer friction or unhandled internal states, the visual system in `logistics/logi_groundVisuals.sqf` will immediately swap its smoke backend to `#particlesource` under this specification.
+  - **Current Status:** **Implemented & Fully Operational (Section 7.6)**. All legacy Bohemia `ModuleSmoke_F` and `fn_moduleGrenade.sqf` logic removed from `logistics/logi_groundVisuals.sqf` in favor of native `#particlesource` emitters. Historical module activation solution archived in `archive_features.md`. Multiple drop-off zone resolution across bases fully enabled.
 
 ---
 

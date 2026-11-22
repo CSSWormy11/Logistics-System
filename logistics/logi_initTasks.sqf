@@ -164,6 +164,30 @@ private _allMissionTriggers = allMissionObjects "EmptyDetector";
                     _parentBase = vehicleVarName _syncedBaseObj;
                 };
             };
+
+            // Spatial Proximity Fallback: If trigger lacks base prefix and wasn't synced in Eden,
+            // automatically associate it with the closest registered logistics base within 2500m
+            if (_parentBase == "" || !(_parentBase in (missionNamespace getVariable ["logisticsBases", []]))) then {
+                private _allBases = missionNamespace getVariable ["logisticsBases", []];
+                private _trigPos = getPos _trigger;
+                private _closestBase = "";
+                private _minDist = 999999;
+                {
+                    private _bObj = missionNamespace getVariable [_x, objNull];
+                    private _bPos = if (!isNull _bObj) then { getPos _bObj } else { getMarkerPos _x };
+                    if (_bPos distance2D [0,0,0] > 10) then {
+                        private _d = _trigPos distance2D _bPos;
+                        if (_d < _minDist) then {
+                            _minDist = _d;
+                            _closestBase = _x;
+                        };
+                    };
+                } forEach _allBases;
+
+                if (_minDist <= 2500 && _closestBase != "") then {
+                    _parentBase = _closestBase;
+                };
+            };
             if (_parentBase == "" || !(_parentBase in (missionNamespace getVariable ["logisticsBases", []]))) exitWith {};
 
             private _displayName = (_parentBase splitString "_") joinString " ";
