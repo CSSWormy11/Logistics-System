@@ -16,14 +16,14 @@ class EditorData
 	};
 	class LayerIndexProvider
 	{
-		nextID=238;
+		nextID=270;
 	};
 	class Camera
 	{
-		pos[]={1429.9094,403.43582,5550.6816};
-		dir[]={0.66716367,-0.74472517,0.017852325};
-		up[]={0.74461961,0.6671921,0.019924758};
-		aside[]={0.026748035,-3.0611182e-07,-0.99966651};
+		pos[]={1829.0024,42.721493,5449.9736};
+		dir[]={-0.6156736,-0.42693031,-0.66232663};
+		up[]={-0.29067147,0.9042846,-0.31269729};
+		aside[]={-0.73243177,1.4901161e-08,0.68084061};
 	};
 };
 binarizationWanted=0;
@@ -42,7 +42,6 @@ addons[]=
 	"A3_Weapons_F_Items",
 	"A3_Structures_F_Mil_Helipads",
 	"A3_Soft_F_Exp_LSV_01",
-	"A3_Modules_F_Effects",
 	"A3_Characters_F_Jets",
 	"A3_Boat_F_Jets_Carrier_01",
 	"A3_Static_F_Destroyer_Boat_Rack_01",
@@ -207,7 +206,7 @@ class Mission
 		year=2035;
 		month=7;
 		day=6;
-		hour=12;
+		hour=21;
 		minute=0;
 		startFogDecay=0.014;
 		forecastFogDecay=0.014;
@@ -369,7 +368,7 @@ class Mission
 					name="Main Supply Base";
 					class Entities
 					{
-						items=37;
+						items=21;
 						class Item0
 						{
 							dataType="Trigger";
@@ -900,8 +899,8 @@ class Mission
 							dataType="Object";
 							class PositionInfo
 							{
-								position[]={2016.8467,7.8761511,5678.2422};
-								angles[]={0,2.0964234,0};
+								position[]={2098.7007,8.456152,5658.0405};
+								angles[]={-0,2.0964234,0};
 							};
 							side="Empty";
 							flags=4;
@@ -913,295 +912,9 @@ class Mission
 							};
 							id=334;
 							type="B_LSV_01_armed_F";
+							atlOffset=4.7683716e-07;
 						};
 						class Item12
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={2078.3049,6.73,5603.3462};
-								angles[]={0,0.25672048,0};
-							};
-							id=493;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellYellow";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item13
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={2177.4692,5.9625378,5758.2271};
-								angles[]={0.0049914722,0.2567282,0.0024897563};
-							};
-							id=494;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellPurple";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item14
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={1803.9189,5.5,5711.1216};
-								angles[]={-0,0.2567282,0};
-							};
-							id=495;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellGreen";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item15
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={1894.7096,5.6900001,5758.4951};
-								angles[]={0,1.8422257,0};
-							};
-							id=503;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellBlue";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item16
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={1835.0398,5.5,5571.73};
-								angles[]={0,4.958427,0};
-							};
-							id=504;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellBlue";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item17
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={1713.7535,5.5,5096.8667};
-								angles[]={0,0.24704136,0};
-							};
-							id=505;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellBlue";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item18
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={2091.6909,6.2059789,5709.877};
-								angles[]={0.0049914722,0.2567282,0.014998405};
-							};
-							id=517;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellPurple";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item19
 						{
 							dataType="Object";
 							class PositionInfo
@@ -1219,7 +932,7 @@ class Mission
 							type="VirtualReammoBox_camonet_F";
 							atlOffset=-0.0039997101;
 						};
-						class Item20
+						class Item13
 						{
 							dataType="Object";
 							class PositionInfo
@@ -1235,48 +948,7 @@ class Mission
 							id=550;
 							type="Land_HelipadEmpty_F";
 						};
-						class Item21
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={2228.8462,6.3052454,5578.5796};
-								angles[]={6.2631893,0.2567282,6.2756844};
-							};
-							id=551;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellBlue";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item22
+						class Item14
 						{
 							dataType="Object";
 							class PositionInfo
@@ -1292,48 +964,7 @@ class Mission
 							id=552;
 							type="Land_HelipadEmpty_F";
 						};
-						class Item23
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={1886.0662,5.5504975,5729.0664};
-								angles[]={6.278194,1.7848649,0.0024897563};
-							};
-							id=553;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellBlue";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item24
+						class Item15
 						{
 							dataType="Object";
 							class PositionInfo
@@ -1349,48 +980,7 @@ class Mission
 							id=554;
 							type="Land_HelipadEmpty_F";
 						};
-						class Item25
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={1815.6682,5.5,5418.998};
-								angles[]={0,5.6777744,0};
-							};
-							id=555;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellBlue";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item26
+						class Item16
 						{
 							dataType="Object";
 							class PositionInfo
@@ -1407,171 +997,7 @@ class Mission
 							id=556;
 							type="VirtualReammoBox_camonet_F";
 						};
-						class Item27
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={1845.3145,5.5,5865.3003};
-								angles[]={-0,0.2567282,0};
-							};
-							id=557;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellGreen";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item28
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={1762.4279,5.5,5559.605};
-								angles[]={-0,0.2567282,0};
-							};
-							id=558;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellGreen";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item29
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={1712.8872,5.5,5372.9702};
-								angles[]={-0,0.2567282,0};
-							};
-							id=559;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellGreen";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item30
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={1633.5527,5.5,5070.1631};
-								angles[]={-0,0.2567282,0};
-							};
-							id=560;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellGreen";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item31
+						class Item17
 						{
 							dataType="Object";
 							class PositionInfo
@@ -1588,7 +1014,7 @@ class Mission
 							id=561;
 							type="VirtualReammoBox_camonet_F";
 						};
-						class Item32
+						class Item18
 						{
 							dataType="Trigger";
 							position[]={1883.736,5.5256348,5444.0708};
@@ -1603,89 +1029,7 @@ class Mission
 							id=567;
 							type="EmptyDetectorAreaR50";
 						};
-						class Item33
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={2155.1851,4.4294043,5839.2168};
-								angles[]={0.27532569,6.1245351,6.2731848};
-							};
-							id=514;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellPurple";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item34
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={2006.588,3,5266.3501};
-								angles[]={0,0.25672048,0};
-							};
-							id=515;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellPurple";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item35
+						class Item19
 						{
 							dataType="Logic";
 							class PositionInfo
@@ -1696,7 +1040,7 @@ class Mission
 							id=573;
 							type="SideBLUFOR_F";
 						};
-						class Item36
+						class Item20
 						{
 							dataType="Trigger";
 							position[]={1640.853,5.5,5213.3408};
@@ -1720,7 +1064,7 @@ class Mission
 						};
 					};
 					id=30;
-					atlOffset=1.1145868;
+					atlOffset=4.2533693;
 				};
 				class Item1
 				{
@@ -2480,7 +1824,7 @@ class Mission
 						{
 							dataType="Trigger";
 							position[]={7841.6138,25.084213,372.64801};
-							angle=1.9942119;
+							angle=1.9942112;
 							class Attributes
 							{
 								name="dropoff_11";
@@ -2503,7 +1847,7 @@ class Mission
 						{
 							dataType="Trigger";
 							position[]={7799.6938,25.09832,262.177};
-							angle=1.9775963;
+							angle=1.9775957;
 							class Attributes
 							{
 								name="pickup_11";
@@ -2524,7 +1868,7 @@ class Mission
 						{
 							dataType="Trigger";
 							position[]={7842.2202,25.084152,372.60999};
-							angle=1.9811045;
+							angle=1.9811038;
 							class Attributes
 							{
 								name="service_11";
@@ -2560,7 +1904,7 @@ class Mission
 				};
 			};
 			id=6;
-			atlOffset=-23.400879;
+			atlOffset=-24.072708;
 		};
 		class Item2
 		{
@@ -3127,7 +2471,7 @@ class Mission
 							name="011";
 							class Entities
 							{
-								items=18;
+								items=14;
 								class Item0
 								{
 									dataType="Object";
@@ -3603,83 +2947,6 @@ class Mission
 									dataType="Object";
 									class PositionInfo
 									{
-										position[]={8025.3584,1.3729382,7968.6733};
-										angles[]={0,3.0350192,0};
-									};
-									side="Empty";
-									class Attributes
-									{
-									};
-									id=97;
-									type="Land_Destroyer_01_base_F";
-									atlOffset=121.40651;
-									class CustomAttributes
-									{
-										class Attribute0
-										{
-											property="ShipHangarDoorState";
-											expression="[([_this, 'Land_Destroyer_01_hull_04_F'] call bis_fnc_destroyer01GetShipPart), _value, true] spawn bis_fnc_destroyer01AnimateHangarDoors;";
-											class Value
-											{
-												class data
-												{
-													singleType="SCALAR";
-													value=1;
-												};
-											};
-										};
-										class Attribute1
-										{
-											property="CustomShipNumber2";
-											expression="[([_this, 'Land_Destroyer_01_hull_01_F'] call bis_fnc_destroyer01GetShipPart), _value, 1] spawn bis_fnc_destroyer01InitHullNumbers;";
-											class Value
-											{
-												class data
-												{
-													singleType="SCALAR";
-													value=9;
-												};
-											};
-										};
-										class Attribute2
-										{
-											property="CustomShipNumber3";
-											expression="[([_this, 'Land_Destroyer_01_hull_01_F'] call bis_fnc_destroyer01GetShipPart), _value, 2] spawn bis_fnc_destroyer01InitHullNumbers;";
-											class Value
-											{
-												class data
-												{
-													singleType="SCALAR";
-													value=9;
-												};
-											};
-										};
-										nAttributes=3;
-									};
-								};
-								class Item11
-								{
-									dataType="Object";
-									class PositionInfo
-									{
-										position[]={8025.4819,11.535156,7913.6421};
-										angles[]={0,6.1766157,0};
-									};
-									side="Empty";
-									flags=4;
-									class Attributes
-									{
-										name="ammo_51";
-									};
-									id=100;
-									type="B_Slingload_01_Ammo_F";
-									atlOffset=0.0033798218;
-								};
-								class Item12
-								{
-									dataType="Object";
-									class PositionInfo
-									{
 										position[]={7938.6689,8.8683929,7884.8618};
 										angles[]={0,6.206059,0};
 									};
@@ -3692,43 +2959,7 @@ class Mission
 									type="Land_HelipadEmpty_F";
 									atlOffset=0.0032653809;
 								};
-								class Item13
-								{
-									dataType="Object";
-									class PositionInfo
-									{
-										position[]={8031.2422,11.536201,7914.0562};
-										angles[]={0,3.0260692,0};
-									};
-									side="Empty";
-									flags=4;
-									class Attributes
-									{
-										name="fuel_50";
-									};
-									id=102;
-									type="B_Slingload_01_Fuel_F";
-									atlOffset=0.0040121078;
-								};
-								class Item14
-								{
-									dataType="Object";
-									class PositionInfo
-									{
-										position[]={8036.6646,11.534271,7914.6821};
-										angles[]={0,3.0232418,0};
-									};
-									side="Empty";
-									flags=4;
-									class Attributes
-									{
-										name="repair_50";
-									};
-									id=103;
-									type="B_Slingload_01_Repair_F";
-									atlOffset=0.0040130615;
-								};
-								class Item15
+								class Item11
 								{
 									dataType="Object";
 									class PositionInfo
@@ -3745,7 +2976,7 @@ class Mission
 									type="VirtualReammoBox_camonet_F";
 									atlOffset=0.87687683;
 								};
-								class Item16
+								class Item12
 								{
 									dataType="Object";
 									class PositionInfo
@@ -3762,7 +2993,7 @@ class Mission
 									type="Land_HelipadEmpty_F";
 									atlOffset=125.519;
 								};
-								class Item17
+								class Item13
 								{
 									dataType="Logic";
 									class PositionInfo
@@ -3776,11 +3007,11 @@ class Mission
 								};
 							};
 							id=82;
-							atlOffset=121.18389;
+							atlOffset=120.9223;
 						};
 					};
 					id=59;
-					atlOffset=45.947792;
+					atlOffset=45.503483;
 				};
 				class Item1
 				{
@@ -3788,7 +3019,7 @@ class Mission
 					name="Agia Marina Vehicle Range";
 					class Entities
 					{
-						items=8;
+						items=6;
 						class Item0
 						{
 							dataType="Trigger";
@@ -4208,88 +3439,6 @@ class Mission
 							dataType="Logic";
 							class PositionInfo
 							{
-								position[]={3280.7856,5.2360291,5788.8188};
-								angles[]={0.017500184,5.3652229,6.2581892};
-							};
-							id=496;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellGreen";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item6
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={3235.3733,4.8410358,5826.8174};
-								angles[]={0.0075011365,5.8472285,0.012496647};
-							};
-							id=509;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellYellow";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item7
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
 								position[]={3249.1826,4.9629784,5811.4521};
 								angles[]={0.0075011365,0,0.0075011365};
 							};
@@ -4299,7 +3448,7 @@ class Mission
 						};
 					};
 					id=110;
-					atlOffset=-0.027601242;
+					atlOffset=-0.14002085;
 				};
 				class Item2
 				{
@@ -4307,7 +3456,7 @@ class Mission
 					name="Camp Maxwell";
 					class Entities
 					{
-						items=11;
+						items=9;
 						class Item0
 						{
 							dataType="Trigger";
@@ -4780,88 +3929,6 @@ class Mission
 							dataType="Logic";
 							class PositionInfo
 							{
-								position[]={3352.4211,234.48,2907.7375};
-								angles[]={0,0.0044434965,0};
-							};
-							id=499;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellGreen";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item9
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={3293.0679,229.09909,2937.6179};
-								angles[]={0.049956869,3.9743512,0};
-							};
-							id=506;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellYellow";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item10
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
 								position[]={3305.3975,229.00954,2932.8296};
 								angles[]={0.057436496,0,6.188468};
 							};
@@ -4871,7 +3938,7 @@ class Mission
 						};
 					};
 					id=118;
-					atlOffset=0.79203796;
+					atlOffset=-0.14096069;
 				};
 				class Item3
 				{
@@ -4879,7 +3946,7 @@ class Mission
 					name="Camp Rogain";
 					class Entities
 					{
-						items=11;
+						items=9;
 						class Item0
 						{
 							dataType="Object";
@@ -5359,91 +4426,9 @@ class Mission
 							id=569;
 							type="SideBLUFOR_F";
 						};
-						class Item9
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={5027.3169,208.6328,5904.6558};
-								angles[]={6.2606897,3.0597599,0.017500184};
-							};
-							id=498;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellGreen";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item10
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={5005.3916,208.22743,5902.6675};
-								angles[]={6.230732,2.0318878,0.012501417};
-							};
-							id=507;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellYellow";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
 					};
 					id=131;
-					atlOffset=-0.039733887;
+					atlOffset=-0.011703491;
 				};
 				class Item4
 				{
@@ -5451,7 +4436,7 @@ class Mission
 					name="Kamino";
 					class Entities
 					{
-						items=13;
+						items=10;
 						class Item0
 						{
 							dataType="Object";
@@ -5916,7 +4901,7 @@ class Mission
 						{
 							dataType="Trigger";
 							position[]={6479.2788,2.8922043,5440.2368};
-							angle=3.8698287;
+							angle=3.8698277;
 							class Attributes
 							{
 								name="dropoff_120";
@@ -5939,129 +4924,6 @@ class Mission
 							dataType="Logic";
 							class PositionInfo
 							{
-								position[]={6477.3042,3.955215,5434.2651};
-								angles[]={0.052451372,3.8698215,6.255693};
-							};
-							id=497;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellGreen";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item10
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={6585.7979,24.186972,5325.7998};
-								angles[]={6.2806959,4.2625532,0.012496647};
-							};
-							id=508;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellYellow";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item11
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={6476.9087,7.4242373,5397.6289};
-								angles[]={0.019996032,3.8698215,0.0075011365};
-							};
-							id=533;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellGreen";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item12
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
 								position[]={6464.6982,7.9765844,5370.167};
 							};
 							name="FOB_Kamino";
@@ -6070,7 +4932,7 @@ class Mission
 						};
 					};
 					id=144;
-					atlOffset=2.0151286;
+					atlOffset=1.3344622;
 				};
 				class Item5
 				{
@@ -6078,7 +4940,7 @@ class Mission
 					name="Mike-26";
 					class Entities
 					{
-						items=11;
+						items=9;
 						class Item0
 						{
 							dataType="Trigger";
@@ -6554,90 +5416,6 @@ class Mission
 							dataType="Logic";
 							class PositionInfo
 							{
-								position[]={4365.2236,227.04683,3827.9243};
-								angles[]={6.2631893,3.964992,0.014998405};
-							};
-							id=545;
-							type="ModuleSmoke_F";
-							atlOffset=-1.5258789e-05;
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellGreen";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item9
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={4377.6709,228.52679,3711.4338};
-								angles[]={0.2496801,0.035667907,6.2606897};
-							};
-							id=546;
-							type="ModuleSmoke_F";
-							atlOffset=1.5258789e-05;
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellYellow";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item10
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
 								position[]={4371.6631,226.05228,3787.0449};
 							};
 							name="FOB_Mike26";
@@ -6647,7 +5425,7 @@ class Mission
 						};
 					};
 					id=547;
-					atlOffset=1.7606659;
+					atlOffset=0.88137817;
 				};
 				class Item6
 				{
@@ -6655,7 +5433,7 @@ class Mission
 					name="Camp Tempest";
 					class Entities
 					{
-						items=12;
+						items=10;
 						class Item0
 						{
 							dataType="Trigger";
@@ -7127,89 +5905,6 @@ class Mission
 						};
 						class Item8
 						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={1919.748,2.5266826,3518.8679};
-								angles[]={6.2456956,4.7539277,0.1218938};
-							};
-							id=531;
-							type="ModuleSmoke_F";
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellGreen";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item9
-						{
-							dataType="Logic";
-							class PositionInfo
-							{
-								position[]={1974.693,2.6426752,3526.2573};
-								angles[]={6.268187,4.6280961,6.2382159};
-							};
-							id=532;
-							type="ModuleSmoke_F";
-							atlOffset=2.3841858e-07;
-							class CustomAttributes
-							{
-								class Attribute0
-								{
-									property="ModuleSmoke_F_Repeat";
-									expression="_this setVariable ['Repeat',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="SCALAR";
-											value=1;
-										};
-									};
-								};
-								class Attribute1
-								{
-									property="ModuleSmoke_F_Type";
-									expression="_this setVariable ['Type',_value,true];";
-									class Value
-									{
-										class data
-										{
-											singleType="STRING";
-											value="SmokeShellYellow";
-										};
-									};
-								};
-								nAttributes=2;
-							};
-						};
-						class Item10
-						{
 							dataType="Object";
 							class PositionInfo
 							{
@@ -7225,7 +5920,7 @@ class Mission
 							type="Land_HelipadEmpty_F";
 							atlOffset=2.891;
 						};
-						class Item11
+						class Item9
 						{
 							dataType="Logic";
 							class PositionInfo
@@ -7238,11 +5933,11 @@ class Mission
 						};
 					};
 					id=548;
-					atlOffset=-0.81282711;
+					atlOffset=-0.74486494;
 				};
 			};
 			id=58;
-			atlOffset=1.6166229;
+			atlOffset=1.0702286;
 		};
 		class Item3
 		{
@@ -7422,11 +6117,11 @@ class Mission
 	{
 		class LinkIDProvider
 		{
-			nextID=110;
+			nextID=107;
 		};
 		class Links
 		{
-			items=110;
+			items=107;
 			class Item0
 			{
 				linkID=0;
@@ -8210,7 +6905,7 @@ class Mission
 			class Item78
 			{
 				linkID=78;
-				item0=97;
+				item0=101;
 				item1=582;
 				class CustomData
 				{
@@ -8220,7 +6915,7 @@ class Mission
 			class Item79
 			{
 				linkID=79;
-				item0=101;
+				item0=105;
 				item1=582;
 				class CustomData
 				{
@@ -8230,7 +6925,7 @@ class Mission
 			class Item80
 			{
 				linkID=80;
-				item0=105;
+				item0=96;
 				item1=582;
 				class CustomData
 				{
@@ -8240,7 +6935,7 @@ class Mission
 			class Item81
 			{
 				linkID=81;
-				item0=96;
+				item0=89;
 				item1=582;
 				class CustomData
 				{
@@ -8250,7 +6945,7 @@ class Mission
 			class Item82
 			{
 				linkID=82;
-				item0=100;
+				item0=90;
 				item1=582;
 				class CustomData
 				{
@@ -8260,8 +6955,8 @@ class Mission
 			class Item83
 			{
 				linkID=83;
-				item0=102;
-				item1=582;
+				item0=76;
+				item1=583;
 				class CustomData
 				{
 					type="Sync";
@@ -8270,8 +6965,8 @@ class Mission
 			class Item84
 			{
 				linkID=84;
-				item0=103;
-				item1=582;
+				item0=64;
+				item1=583;
 				class CustomData
 				{
 					type="Sync";
@@ -8280,8 +6975,8 @@ class Mission
 			class Item85
 			{
 				linkID=85;
-				item0=89;
-				item1=582;
+				item0=65;
+				item1=583;
 				class CustomData
 				{
 					type="Sync";
@@ -8290,8 +6985,8 @@ class Mission
 			class Item86
 			{
 				linkID=86;
-				item0=90;
-				item1=582;
+				item0=66;
+				item1=583;
 				class CustomData
 				{
 					type="Sync";
@@ -8300,7 +6995,7 @@ class Mission
 			class Item87
 			{
 				linkID=87;
-				item0=76;
+				item0=67;
 				item1=583;
 				class CustomData
 				{
@@ -8310,7 +7005,7 @@ class Mission
 			class Item88
 			{
 				linkID=88;
-				item0=64;
+				item0=68;
 				item1=583;
 				class CustomData
 				{
@@ -8320,7 +7015,7 @@ class Mission
 			class Item89
 			{
 				linkID=89;
-				item0=65;
+				item0=69;
 				item1=583;
 				class CustomData
 				{
@@ -8330,7 +7025,7 @@ class Mission
 			class Item90
 			{
 				linkID=90;
-				item0=66;
+				item0=75;
 				item1=583;
 				class CustomData
 				{
@@ -8340,7 +7035,7 @@ class Mission
 			class Item91
 			{
 				linkID=91;
-				item0=67;
+				item0=77;
 				item1=583;
 				class CustomData
 				{
@@ -8350,7 +7045,7 @@ class Mission
 			class Item92
 			{
 				linkID=92;
-				item0=68;
+				item0=74;
 				item1=583;
 				class CustomData
 				{
@@ -8360,7 +7055,7 @@ class Mission
 			class Item93
 			{
 				linkID=93;
-				item0=69;
+				item0=62;
 				item1=583;
 				class CustomData
 				{
@@ -8370,7 +7065,7 @@ class Mission
 			class Item94
 			{
 				linkID=94;
-				item0=75;
+				item0=63;
 				item1=583;
 				class CustomData
 				{
@@ -8380,8 +7075,8 @@ class Mission
 			class Item95
 			{
 				linkID=95;
-				item0=77;
-				item1=583;
+				item0=1;
+				item1=584;
 				class CustomData
 				{
 					type="Sync";
@@ -8390,8 +7085,8 @@ class Mission
 			class Item96
 			{
 				linkID=96;
-				item0=74;
-				item1=583;
+				item0=3;
+				item1=584;
 				class CustomData
 				{
 					type="Sync";
@@ -8400,8 +7095,8 @@ class Mission
 			class Item97
 			{
 				linkID=97;
-				item0=62;
-				item1=583;
+				item0=2;
+				item1=584;
 				class CustomData
 				{
 					type="Sync";
@@ -8410,8 +7105,8 @@ class Mission
 			class Item98
 			{
 				linkID=98;
-				item0=63;
-				item1=583;
+				item0=4;
+				item1=585;
 				class CustomData
 				{
 					type="Sync";
@@ -8420,8 +7115,8 @@ class Mission
 			class Item99
 			{
 				linkID=99;
-				item0=1;
-				item1=584;
+				item0=5;
+				item1=585;
 				class CustomData
 				{
 					type="Sync";
@@ -8430,8 +7125,8 @@ class Mission
 			class Item100
 			{
 				linkID=100;
-				item0=3;
-				item1=584;
+				item0=587;
+				item1=586;
 				class CustomData
 				{
 					type="Sync";
@@ -8440,8 +7135,8 @@ class Mission
 			class Item101
 			{
 				linkID=101;
-				item0=2;
-				item1=584;
+				item0=588;
+				item1=586;
 				class CustomData
 				{
 					type="Sync";
@@ -8450,8 +7145,8 @@ class Mission
 			class Item102
 			{
 				linkID=102;
-				item0=4;
-				item1=585;
+				item0=589;
+				item1=586;
 				class CustomData
 				{
 					type="Sync";
@@ -8460,8 +7155,8 @@ class Mission
 			class Item103
 			{
 				linkID=103;
-				item0=5;
-				item1=585;
+				item0=590;
+				item1=586;
 				class CustomData
 				{
 					type="Sync";
@@ -8470,7 +7165,7 @@ class Mission
 			class Item104
 			{
 				linkID=104;
-				item0=587;
+				item0=591;
 				item1=586;
 				class CustomData
 				{
@@ -8480,7 +7175,7 @@ class Mission
 			class Item105
 			{
 				linkID=105;
-				item0=588;
+				item0=592;
 				item1=586;
 				class CustomData
 				{
@@ -8490,38 +7185,8 @@ class Mission
 			class Item106
 			{
 				linkID=106;
-				item0=589;
-				item1=586;
-				class CustomData
-				{
-					type="Sync";
-				};
-			};
-			class Item107
-			{
-				linkID=107;
-				item0=590;
-				item1=586;
-				class CustomData
-				{
-					type="Sync";
-				};
-			};
-			class Item108
-			{
-				linkID=108;
-				item0=591;
-				item1=586;
-				class CustomData
-				{
-					type="Sync";
-				};
-			};
-			class Item109
-			{
-				linkID=109;
-				item0=592;
-				item1=586;
+				item0=593;
+				item1=573;
 				class CustomData
 				{
 					type="Sync";
