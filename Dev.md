@@ -1510,6 +1510,39 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
+### [ ] 7.7 Automated Trigger-Bound Physical Dimension Discovery & Dynamic Pad Classification Engine
+- **1. Context & Architectural Dilemma:**
+  - Currently, garage and assembly pad size classifications (`_XXS`, `_XS`, `_S`, `_M`, `_L`, `_XL`, `_OPEN`) are manually encoded as text tokens in pad variable names (e.g. `Garage_Helicopter_M_1`) or inferred via fallbacks.
+  - While reliable, this requires mission makers to manually cross-reference vehicle dimensions against Eden's 10-meter Virtual Reality grid to determine appropriate sizing tokens for every placed spawn pad.
+  - Furthermore, 3D invisible helipads (`Land_HelipadEmpty_F`) do not visually display physical boundary rectangles in the Eden Editor, requiring mission makers to imagine or estimate the physical footprint bounds.
+  - In contrast, Eden Editor **Triggers** (`EmptyDetector`) allow mission makers to visually shape and resize colored bounding boxes or ellipses (`triggerArea`), directly matching physical asphalt footprints, concrete pads, or hangar floor spaces.
+
+- **2. Proposed Overhaul: Hybrid Trigger-Area Dimension Scanner + 3D Spawn Anchor:**
+  - **The Hybrid Architecture:**
+    - **Visual Footprint (Trigger):** The mission maker places an Eden trigger over the physical pad, scaling its width ($A$) and length ($B$) to match the ground surface.
+    - **Exact 3D Spawn Anchor (Synced Helipad):** A `Land_HelipadEmpty_F` placed inside or synchronized to the trigger provides the exact spawn position, heading arrow, and carrier/ship deck pitch.
+  - **Automated Boot-Time Pad Dimension Classification:**
+    - At mission initialization, the engine reads the geometric properties of all placed triggers via `triggerArea _trig` (yielding `[_a, _b, _angle, _isRectangle]`):
+      - `_maxDim = (2 * _a) max (2 * _b);` (Total span in meters)
+    - Automatically maps the measured physical span to the standard 10m VR grid tier:
+      - $\le 10\text{ m} \rightarrow$ **`S`** (Small: Quads, Hummingbirds, Pawnees)
+      - $\le 20\text{ m} \rightarrow$ **`M`** (Medium: Hunters, Prowlers, Ghost Hawks, Blackfoots)
+      - $\le 30\text{ m} \rightarrow$ **`L`** (Large: HEMTTs, Tanks, Hurons, Kajmans)
+      - $> 30\text{ m} \rightarrow$ **`XL`** (Extra Large: Blackfish, large strategic transports)
+  - **Dynamic `sizeOf` Vehicle Validation:**
+    - Vehicles in `G_Procureable_Vehicles` can also have their dimensions cross-referenced automatically against Bohemia's native `sizeOf _classname` (bounding sphere diameter) or `boundingBoxReal` to mathematically verify clearance.
+  - **Seamless Fallback:**
+    - Legacy naming conventions (`_S`, `_M`, `_L`, `_OPEN` on 3D helipads without triggers) remain 100% supported as an override or standalone configuration.
+
+- **3. Operational Value:**
+  - Zero manual size token guesswork for mission makers: simply draw a trigger over the pad in Eden, and the engine handles all vehicle size filtering automatically.
+  - Retains the exact 3D orientation, deck height, and heading of the synced helipad.
+  - Eliminates pad sizing conflicts between helicopters and ground vehicles permanently.
+
+- **4. Status:** **Proposed & Logged as Section 7 Overhaul** (Concept established; preserves existing Section 6.11 multi-category pad architecture while opening path for automated geometric Eden discovery).
+
+---
+
 **Ongoing Development Tracking**
 
 Maintain this checklist as part of the V8 development process. These goals are not necessarily sequential and may be addressed independently as opportunities arise during debugging, refactoring, and feature development.
