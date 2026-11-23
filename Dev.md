@@ -1018,11 +1018,14 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
-### [ ] 6.7 Unified Dual-Purpose (Pickup & Dropoff) Pads & Naval Lateral Transfers
-- **1. Context & The Physical Footprint Dilemma:**
-  - On large mainland supply depots or land bases, mission makers have ample geographic space to place separate pickup (`<BaseKey>_pickup`) and dropoff (`<BaseKey>_dropoff`) triggers across distinct logistics yards.
-  - On naval surface combatants (such as Destroyers `FOB_DDG_086` / `DDG_Liberty`), physical deck space is strictly constrained: there is only **one** aft helicopter flight deck.
-  - Mission makers currently must either squeeze two overlapping triggers onto the same physical pad or choose one over the other. Placing a single, dual-purpose pad that dynamically senses whether an inbound aircraft is arriving to *deliver* supplies or arriving to *load* supplies solves this physical space limitation.
+### [ ] 6.7 Unified Dual-Purpose (Cargo Pickup & Dropoff) Logistics Pads & Naval Lateral Transfers
+- **1. Context & Standard Military Doctrine vs. Physical Footprint Dilemma:**
+  - **Standard Military Doctrine (Dedicated Shipping & Receiving):**
+    - In first-world, large-scale military logistics operations, **Shipping (Pickup)** and **Receiving (Dropoff)** yards are deliberately and strictly segregated into separate physical facilities. This prevents dangerous vehicle cross-traffic, cargo bottleneck collisions, and administrative inventory confusion between outbound shipments and inbound deliveries.
+    - Mainland depots (`SB_Main`, `MSR`, large land FOBs) must always adhere to this standard by employing distinct `<BaseKey>_pickup` and `<BaseKey>_dropoff` zones.
+  - **The Space-Constrained Naval Footprint Exception:**
+    - On naval surface combatants (such as Destroyers `FOB_DDG_086` / `DDG_Liberty`), physical deck space is strictly constrained: there is only **one** aft helicopter flight deck.
+    - On such ships, mission makers currently must either squeeze two overlapping triggers onto the same physical pad or choose one over the other. Placing a single, dual-purpose cargo pad that dynamically senses whether an inbound aircraft is arriving to *deliver* supplies or arriving to *load* supplies solves this physical space limitation.
 
 - **2. Dual-Purpose Pad Engine Concept (Context-Sensitive Detection):**
   - **Single Physical Pad Identifier:** e.g., `<BaseKey>_pad` or `<BaseKey>_logi_pad` (or overlapping pickup/dropoff on the same footprint).
@@ -1045,7 +1048,7 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
       - A player simply ignores automated task waypoints, flies to the Destroyer, drops supplies to credit the Destroyer's ledger, and another pilot spawns supplies from the Destroyer to ferry forward.
       - The framework's dropoff triggers, salvage systems, and physical ledgers already naturally support this sandbox freedom!
 
-- **4. Status:** **Logged as Section 6 Optional Alternative** (Architecture fully evaluated; core routing kept simple and robust while dual-purpose pad logic is preserved for future naval flight deck optimization).
+- **4. Status:** **Logged as Architectural Concept for Future Exploration** (Doctrine prioritizes separate shipping and receiving yards; unified pickup/dropoff logic is preserved for future exploration specifically on constrained maritime flight decks).
 
 ---
 
@@ -1180,6 +1183,41 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
     - **CUP:** `CUP_B_UH60M_US`, `CUP_B_MH60S_USMC`, `CUP_B_AH1Z_Dynamic_USMC`, `CUP_B_CH53E_USMC`, `CUP_B_MV22_USMC`.
 
 - **4. Status:** **Under Development & Documented** (Engine `isClass` gating and template expansion).
+
+---
+
+### [x] 6.11 Multi-Category Garage Pad Support (Combined Tokens: Ground, Helicopter, Boat, Plane)
+- **1. Context & Operational Need:**
+  - Standard physical garage pads traditionally lock to single vehicle categories via variable suffixes:
+    - `Garage_Ground_*` $\rightarrow$ Ground vehicles only (`LandVehicle`).
+    - `Garage_Helicopter_*` $\rightarrow$ Helicopters only (`Helicopter`).
+    - `Garage_Plane_*` $\rightarrow$ Fixed-wing aircraft only (`Plane`).
+    - `Garage_Boat_*` $\rightarrow$ Naval surface craft only (`Ship`).
+    - `Garage_*` (without category keywords) $\rightarrow$ Universal pad (allows all categories).
+  - On forward operating locations, expeditionary airfields, or naval flight decks, mission makers frequently require a single physical pad to service **multiple specific categories** (e.g. Ground vehicles and Helicopters), while still strictly prohibiting unauthorized categories (e.g. Planes or Boats), without resorting to an unrestricted Universal pad.
+
+- **2. Implemented Architecture (Sequential Token Decomposition & Per-Category Size Parsing):**
+  - **Namespace Isolation:**
+    - Both `qm_vehicleTabs.sqf` and `qm_serverFunctions.sqf` strip off the base prefix (`format ["%1_Garage", _baseKey]`) using `_mUpper select [_prefixLen]` (or `_mUpper select [_gIdx + 6]` for synced objects).
+    - This ensures base names (e.g., `FOB_Ground_Holding`) can never bleed into or pollute pad category parsing.
+  - **Multi-Category Token Parser:**
+    - The pad suffix is tokenized by delimiter (`_remainder splitString "_"`).
+    - Multiple category keywords are detected independently:
+      - `GROUND`, `CAR`, `TANK` $\rightarrow$ Enables Ground category.
+      - `HELI`, `HELICOPTER` $\rightarrow$ Enables Helicopter category.
+      - `PLANE` $\rightarrow$ Enables Fixed-Wing category.
+      - `AIR` $\rightarrow$ Enables both Helicopter and Plane categories.
+      - `BOAT` $\rightarrow$ Enables Naval Boat category.
+  - **Granular Per-Category Size Assignment:**
+    - If size keywords (`XXS`, `XS`, `S`, `M`, `L`, `XL`, `OPEN`) follow a category keyword, that specific category receives that size limit:
+      - e.g., `Garage_Ground_M_Helicopter_OPEN_1` $\rightarrow$ Ground max size is `M` (3), Helicopter max size is `OPEN` (6).
+      - e.g., `Garage_Ground_M_Helicopter_1` $\rightarrow$ Ground is `M` (3), Helicopter defaults to `OPEN` (6).
+      - e.g., `Garage_Ground_Helicopter_60` $\rightarrow$ Both Ground and Helicopter default to `OPEN` (6).
+    - If only a global size is specified (e.g. `Garage_Ground_Helicopter_M_1`), all enabled categories on that pad inherit size `M`.
+  - **Server-Authoritative Enforcement:**
+    - `QM_fnc_processGarageSpawn` on the server uses the exact same token parser, guaranteeing that vehicle spawns are validated against the specific pad's category whitelist and size limit before execution.
+
+- **3. Status:** **Verified Resolved & Implemented** via `logistics/qm_vehicleTabs.sqf` and `logistics/qm_serverFunctions.sqf`.
 
 ---
 
