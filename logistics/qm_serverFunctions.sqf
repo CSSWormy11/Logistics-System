@@ -345,7 +345,9 @@ QM_fnc_processGarageSpawn = {
         };
     };
 
-    if (_classname == "") exitWith { ["MECHANIC: Factory canceled."] remoteExec ["systemChat", _clientPlayer]; };
+    if (_classname == "" || { !isClass (configFile >> "CfgVehicles" >> _classname) }) exitWith {
+        [format ["MECHANIC: Vehicle blueprint '%1' is not available in current configuration.", _classname]] remoteExec ["systemChat", _clientPlayer];
+    };
 
     private _capData = [_classname] call QM_CAP_fnc_checkCurrentActiveCount;
     if !(_capData select 0) exitWith { [format ["PROCURMENT DENIED: Cap limit reached [%1/%2].", _capData select 1, _capData select 2]] remoteExec ["hint", _clientPlayer]; };

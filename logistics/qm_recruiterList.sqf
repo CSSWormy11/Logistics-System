@@ -68,6 +68,7 @@ private _isFOB = (_bkUpper find "FOB" >= 0);
     private _validFaction = (_factionUpper == "ALL" || _factionUpper == _playerFaction);
     private _validTerrain = ("ALL" in _terrainUpper || _currentTerrain in _terrainUpper);
     private _validSystem  = ("ALL" in _systemsUpper || "QUARTERMASTER" in _systemsUpper);
+    private _validClasses = (count _classArray > 0 && { _classArray findIf { !isClass (configFile >> "CfgVehicles" >> _x) } == -1 });
     
     // Evaluate if base has appropriate tier ("ALL"/"BOTH" = SB or FOB, "SB" = SB only, "FOB" = FOB only, or Array of allowed tiers/base names)
     private _validBaseTier = false;
@@ -85,7 +86,7 @@ private _isFOB = (_bkUpper find "FOB" >= 0);
         if (_restUpper == _bkUpper) then { _validBaseTier = true; };
     };
 
-    if (_validFaction && _validTerrain && _validSystem && _validBaseTier) then {
+    if (_validFaction && _validTerrain && _validSystem && _validBaseTier && _validClasses) then {
         
         // --- MULTI-RESOURCE UI FORMATTER ---
         // How: Loops through the V8 2D cost array to build the UI display label

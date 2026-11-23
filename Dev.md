@@ -1148,6 +1148,41 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
+### [ ] 6.10 Unified Vanilla & Modded Asset Expansion (Fail-Safe `isClass` Dynamic Filtering)
+- **1. Context & User Requirement:**
+  - Mission makers wish to expand the available asset rosters in `templates/tp_spawnableVehicles.sqf` (focusing primarily on rotary wing / helicopters, with future extension to ground and fixed-wing platforms) by incorporating:
+    1. **Additional Vanilla Platforms:** Under-utilized vanilla Arma 3 airframes (e.g., additional camouflage patterns, armed/unarmed variants, and specialized variants).
+    2. **Modded Community Platforms:** Modded rotary-wing airframes (e.g., RHS USAF, CUP, 3CB, or naval aviation airframes such as MH-60R/S Seahawks, CH-53E/K King Stallions, AH-1Z Vipers, UH-1Y Venoms, and MV-22 Ospreys).
+  - **Zero-Dependency Mandate (Vanilla Compatibility Guarantee):**
+    - The mission must remain 100% playable on pure **Vanilla Arma 3** without requiring external mods or throwing missing-addon popup errors.
+    - All assets (both vanilla and modded) must reside within the **single unified template file** (`templates/tp_spawnableVehicles.sqf`).
+    - The engine must dynamically sanitize the configuration matrix: if a mod is not loaded on the server or client, its assets must be silently ignored and excluded from all UI menus, AI spawners, and garage systems without causing script breaks or RPT errors.
+
+- **2. Architectural Implementation Strategy:**
+  - **Pillar A: Fail-Safe Config Class Presence Gatekeeper (`isClass`):**
+    - In `logistics/qm_vehicleTabs.sqf` and `logistics/qm_serverFunctions.sqf`, every candidate vehicle classname is verified against Bohemia's core config engine before registration or spawning:
+      ```sqf
+      isClass (configFile >> "CfgVehicles" >> _classname)
+      ```
+    - When an unmodded client or vanilla server runs the mission, `isClass` evaluates to `false` for modded classnames. The motorpool UI silently omits the item, and the list populates with zero errors or UI artifacts.
+  - **Pillar B: Unified Template Co-Location (`tp_spawnableVehicles.sqf`):**
+    - Modded assets are co-located in `G_Procureable_Vehicles` alongside vanilla assets under distinct, organized sub-blocks (e.g., `// MODDED: RHS USAF ROTARY`, `// MODDED: CUP HELICOPTERS`).
+    - Standard base tier restrictions (`["SB", "FOB"]` for maritime/medium helicopters, `["SB"]` for heavy-lift/attack) and physical pad sizing tokens (`"OPEN"`, `"L"`, `"M"`) are applied identically.
+  - **Pillar C: Optional Mod System Tagging (`_allowedSystems`):**
+    - The 6th column (`_allowedSystems`) or template flags can optionally denote mod families (e.g., `["Quartermaster", "RHS"]`, `["Quartermaster", "CUP"]`), providing an optional master switch in `init.sqf` (e.g., `QM_Enable_Modded_Assets = true;`) to toggle mod integration on or off globally.
+
+- **3. Candidate Helicopter Roster Expansion:**
+  - **Vanilla Additions:**
+    - `CH-67 Huron (Black / Armed)` (`B_Heli_Transport_03_black_F`) & `(Black / Unarmed)` (`B_Heli_Transport_03_unarmed_black_F`)
+    - Additional maritime utility and surveillance rotary variants.
+  - **Modded Additions (Filtered Dynamically via `isClass`):**
+    - **RHS USAF:** `RHS_UH60M`, `RHS_UH60M_d`, `RHS_UH60M_MEV`, `RHS_MELB_MH6M`, `RHS_MELB_AH6M`, `rhsusf_CH53E_USMC`, `RHS_CH_47F`, `rhsusf_v22_navy`.
+    - **CUP:** `CUP_B_UH60M_US`, `CUP_B_MH60S_USMC`, `CUP_B_AH1Z_Dynamic_USMC`, `CUP_B_CH53E_USMC`, `CUP_B_MV22_USMC`.
+
+- **4. Status:** **Under Development & Documented** (Engine `isClass` gating and template expansion).
+
+---
+
 ## 7. Major Feature Requests & System Overhauls
 
 ### [ ] 7.1 Multi-Side (PvP / TvT / Multi-Faction) Logistics Engine

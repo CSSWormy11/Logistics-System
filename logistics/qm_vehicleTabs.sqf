@@ -134,7 +134,7 @@ if (!isNull _baseObj) then {
         if (_classArray isEqualType "") then { _classname = _classArray; };
     };
     
-    if (_classname != "") then {
+    if (_classname != "" && { isClass (configFile >> "CfgVehicles" >> _classname) }) then {
         
         // --- Auto-Size detection if missing from template ---
         if (_vehSize == "") then {
