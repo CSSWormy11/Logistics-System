@@ -122,11 +122,25 @@ if (!isNull _baseObj) then {
         };
     } forEach _tokens;
 
+    // Vertical clearance raycast: verify unobstructed sky overhead (25m) for rotary/VTOL
+    private _rawVar = missionNamespace getVariable [_x, objNull];
+    private _padObj = if (_rawVar isEqualType objNull) then { _rawVar } else { objNull };
+    private _hasRoof = false;
+    if (!isNull _padObj) then {
+        _hasRoof = _padObj getVariable "QM_Pad_HasRoof";
+        if (isNil "_hasRoof") then {
+            private _posASL = getPosASL _padObj;
+            private _hits = lineIntersectsSurfaces [_posASL vectorAdd [0, 0, 1], _posASL vectorAdd [0, 0, 25], _padObj, objNull, true, 1];
+            _hasRoof = (count _hits > 0);
+            _padObj setVariable ["QM_Pad_HasRoof", _hasRoof];
+        };
+    };
+
     // Universal pad fallback: If no specific category was appended, it handles all categories with _defaultPadSize
     private _isUniversalPad = (!_hasGround && !_hasHeli && !_hasPlane && !_hasBoat);
     if (_isUniversalPad) then {
         _maxGroundSize = _maxGroundSize max _defaultPadSize;
-        _maxHeliSize = _maxHeliSize max _defaultPadSize;
+        if (!_hasRoof) then { _maxHeliSize = _maxHeliSize max _defaultPadSize; };
         _maxPlaneSize = _maxPlaneSize max _defaultPadSize;
         _maxBoatSize = _maxBoatSize max _defaultPadSize;
     } else {
@@ -134,7 +148,7 @@ if (!isNull _baseObj) then {
             private _effGround = if (_padGroundSize != -1) then { _padGroundSize } else { _defaultPadSize };
             _maxGroundSize = _maxGroundSize max _effGround;
         };
-        if (_hasHeli) then {
+        if (_hasHeli && !_hasRoof) then {
             private _effHeli = if (_padHeliSize != -1) then { _padHeliSize } else { _defaultPadSize };
             _maxHeliSize = _maxHeliSize max _effHeli;
         };
@@ -180,13 +194,17 @@ if (!isNull _baseObj) then {
             if (_isDrone) then {
                 _vehSize = "XXS"; 
             } else {
-                if (_classname isKindOf "Helicopter" || _classname isKindOf "VTOL_Base_F") then {
-                    _vehSize = "OPEN";
+                if (_classname isKindOf "Helicopter") then {
+                    _vehSize = "M"; 
                 } else {
-                    if (_classname isKindOf "Plane") then { _vehSize = "L"; } 
-                    else {
-                        if (_classname isKindOf "Quadbike_01_base_F" || _classname isKindOf "Motorcycle") then { _vehSize = "S"; } 
-                        else { _vehSize = "M"; };
+                    if (_classname isKindOf "VTOL_Base_F") then {
+                        _vehSize = "XL";
+                    } else {
+                        if (_classname isKindOf "Plane") then { _vehSize = "L"; } 
+                        else {
+                            if (_classname isKindOf "Quadbike_01_base_F" || _classname isKindOf "Motorcycle") then { _vehSize = "S"; } 
+                            else { _vehSize = "M"; };
+                        };
                     };
                 };
             };
@@ -228,37 +246,32 @@ if (!isNull _baseObj) then {
         };
         
         // --- Infrastructure Fit Check ---
+        private _isVTOL    = _classname isKindOf "VTOL_Base_F";
+        private _isHeli    = _classname isKindOf "Helicopter";
+        private _isBoat    = _classname isKindOf "Ship";
+        private _isPlane   = (_classname isKindOf "Plane" && !_isHeli && !_isVTOL);
+        private _isGround  = (!_isBoat && !_isPlane && !_isHeli && !_isVTOL);
+
         private _canFit = false;
-        if (_classname isKindOf "Ship") then {
-            if (_maxBoatSize >= _reqSz) then { _canFit = true; };
-        };
-        if (_classname isKindOf "Plane" && !(_classname isKindOf "Helicopter")) then {
-            if (_maxPlaneSize >= _reqSz) then { _canFit = true; };
-        };
-        if (_classname isKindOf "Helicopter") then {
-            if (_maxHeliSize >= _reqSz) then { _canFit = true; };
-        };
-        if (!(_classname isKindOf "Ship") && !(_classname isKindOf "Plane") && !(_classname isKindOf "Helicopter")) then {
-            if (_maxGroundSize >= _reqSz) then { _canFit = true; };
-        };
+        if (_isBoat) then { if (_maxBoatSize >= _reqSz) then { _canFit = true; }; };
+        if (_isPlane) then { if (_maxPlaneSize >= _reqSz) then { _canFit = true; }; };
+        if (_isHeli || _isVTOL) then { if (_maxHeliSize >= _reqSz) then { _canFit = true; }; };
+        if (_isGround) then { if (_maxGroundSize >= _reqSz) then { _canFit = true; }; };
 
         // Build the UI if the vehicle passes all tests
         if (_validSystem && _validFaction && _validTerrain && _validBaseRestriction && _canFit) then {
             
-            private _isDrone = getNumber (configFile >> "CfgVehicles" >> _classname >> "isUav") == 1;
-            private _isBoat    = _classname isKindOf "Ship";
-            private _isPlane   = _classname isKindOf "Plane";
-            private _isHeli    = _classname isKindOf "Helicopter";
+            private _isDrone   = getNumber (configFile >> "CfgVehicles" >> _classname >> "isUav") == 1;
             private _isTracked = _classname isKindOf "Tank";
             private _isWheeled = _classname isKindOf "Car" || _classname isKindOf "Motorcycle"; 
-            private _isSupply  = !(_isBoat || _isPlane || _isHeli || _isTracked || _isWheeled || _isDrone);
+            private _isSupply  = !(_isBoat || _isPlane || _isHeli || _isVTOL || _isTracked || _isWheeled || _isDrone);
             
             // Filter array logic into current clicked UI Tab
             private _tabMatch = false;
             switch (_tabIndex) do {
                 case 0: { _tabMatch = _isWheeled && !_isDrone; };
                 case 1: { _tabMatch = _isTracked && !_isDrone; };
-                case 2: { _tabMatch = _isHeli && !_isDrone; };
+                case 2: { _tabMatch = (_isHeli || _isVTOL) && !_isDrone; };
                 case 3: { _tabMatch = _isPlane && !_isDrone; };
                 case 4: { _tabMatch = _isBoat && !_isDrone; };
                 case 5: { _tabMatch = _isDrone; };

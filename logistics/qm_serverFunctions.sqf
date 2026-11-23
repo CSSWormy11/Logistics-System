@@ -330,16 +330,20 @@ QM_fnc_processGarageSpawn = {
     
     if (_vehSize == "") then {
         private _isDrone = getNumber(configFile >> "CfgVehicles" >> _classname >> "isUav") == 1;
-        if (_classname isKindOf "Helicopter" || _classname isKindOf "VTOL_Base_F" || _isDrone) then {
-            _vehSize = "OPEN";
+        if (_classname isKindOf "Helicopter") then {
+            _vehSize = "M";
         } else {
-            if (_classname isKindOf "Plane") then {
-                _vehSize = "L";
+            if (_classname isKindOf "VTOL_Base_F") then {
+                _vehSize = "XL";
             } else {
-                if (_classname isKindOf "Quadbike_01_base_F" || _classname isKindOf "Motorcycle") then {
-                    _vehSize = "S";
+                if (_classname isKindOf "Plane") then {
+                    _vehSize = "L";
                 } else {
-                    _vehSize = "M"; // Standard ground vehicle fallback
+                    if (_classname isKindOf "Quadbike_01_base_F" || _classname isKindOf "Motorcycle") then {
+                        _vehSize = "S";
+                    } else {
+                        _vehSize = "M"; // Standard ground vehicle fallback
+                    };
                 };
             };
         };
@@ -390,13 +394,14 @@ QM_fnc_processGarageSpawn = {
 
     // Determine vehicle classification
     private _isBoat = _classname isKindOf "Ship";
-    private _isPlane = _classname isKindOf "Plane";
+    private _isVTOL = _classname isKindOf "VTOL_Base_F";
     private _isHeli = _classname isKindOf "Helicopter";
-    private _isGround = (!_isBoat && !_isPlane && !_isHeli);
+    private _isPlane = (_classname isKindOf "Plane" && !_isHeli && !_isVTOL);
+    private _isGround = (!_isBoat && !_isPlane && !_isHeli && !_isVTOL);
 
     private _typeSuffix = if (_isBoat) then { "BOAT" } else {
         if (_isPlane) then { "PLANE" } else {
-            if (_isHeli) then { "HELICOPTER" } else { "GROUND" }
+            if (_isHeli || _isVTOL) then { "HELICOPTER" } else { "GROUND" }
         }
     };
 
@@ -500,6 +505,20 @@ QM_fnc_processGarageSpawn = {
         private _typeValid = false;
         private _padSize = -1;
 
+        // Vertical clearance check on server
+        private _rawVar = missionNamespace getVariable [_mName, objNull];
+        private _padObj = if (_rawVar isEqualType objNull) then { _rawVar } else { objNull };
+        private _hasRoof = false;
+        if (!isNull _padObj) then {
+            _hasRoof = _padObj getVariable "QM_Pad_HasRoof";
+            if (isNil "_hasRoof") then {
+                private _posASL = getPosASL _padObj;
+                private _hits = lineIntersectsSurfaces [_posASL vectorAdd [0, 0, 1], _posASL vectorAdd [0, 0, 25], _padObj, objNull, true, 1];
+                _hasRoof = (count _hits > 0);
+                _padObj setVariable ["QM_Pad_HasRoof", _hasRoof];
+            };
+        };
+
         if (_isGround && (_hasGround || _isUniversalPad)) then {
             _typeValid = true;
             _padSize = if (_padGroundSize != -1) then { _padGroundSize } else { _defaultPadSize };
@@ -508,7 +527,7 @@ QM_fnc_processGarageSpawn = {
             _typeValid = true;
             _padSize = if (_padBoatSize != -1) then { _padBoatSize } else { _defaultPadSize };
         };
-        if (_isHeli && (_hasHeli || _isUniversalPad)) then {
+        if ((_isHeli || _isVTOL) && (_hasHeli || _isUniversalPad) && !_hasRoof) then {
             _typeValid = true;
             _padSize = if (_padHeliSize != -1) then { _padHeliSize } else { _defaultPadSize };
         };
@@ -518,8 +537,6 @@ QM_fnc_processGarageSpawn = {
         };
 
         if (_typeValid && (_padSize >= _reqSize)) then {
-            private _rawVar = missionNamespace getVariable [_mName, objNull];
-            private _padObj = if (_rawVar isEqualType objNull) then { _rawVar } else { objNull };
             if (!isNull _padObj) then {
                 private _posASL = getPosASL _padObj;
                 private _dir = getDir _padObj;

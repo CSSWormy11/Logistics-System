@@ -1186,7 +1186,7 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
-### [x] 6.11 Multi-Category Garage Pad Support (Combined Tokens: Ground, Helicopter, Boat, Plane)
+### [x] 6.11 Multi-Category Garage Pad Support, Footprint Sizing & Dynamic Raycast Ceiling Filter
 - **1. Context & Operational Need:**
   - Standard physical garage pads traditionally lock to single vehicle categories via variable suffixes:
     - `Garage_Ground_*` $\rightarrow$ Ground vehicles only (`LandVehicle`).
@@ -1195,29 +1195,38 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
     - `Garage_Boat_*` $\rightarrow$ Naval surface craft only (`Ship`).
     - `Garage_*` (without category keywords) $\rightarrow$ Universal pad (allows all categories).
   - On forward operating locations, expeditionary airfields, or naval flight decks, mission makers frequently require a single physical pad to service **multiple specific categories** (e.g. Ground vehicles and Helicopters), while still strictly prohibiting unauthorized categories (e.g. Planes or Boats), without resorting to an unrestricted Universal pad.
+  - **The Size vs. Ceiling Dilemma:**
+    - Previously, helicopters were assigned size `"OPEN"`, treating overhead clearance as a numeric size rank (`Rank 6`).
+    - This caused a severe design conflict: a mission maker who named an outdoor pad `Garage_Helicopter_M_1` (to allow Light/Medium helicopters like the Hummingbird or Ghost Hawk while blocking massive heavy-lift Hurons) inadvertently blocked **all** helicopters, because `OPEN (6) > M (3)`.
+    - Furthermore, if a pad was inside a covered hangar or shelter, helicopters could clip rotor blades through the ceiling upon spawning.
+    - **UX Principle:** Players must **never see an option in the motorpool menu that cannot be spawned**. If a pad has a ceiling, rotary/VTOL aircraft must be filtered out at menu construction time, rather than presenting a frustrating post-click spawn error.
 
-- **2. Implemented Architecture (Sequential Token Decomposition & Per-Category Size Parsing):**
-  - **Namespace Isolation:**
-    - Both `qm_vehicleTabs.sqf` and `qm_serverFunctions.sqf` strip off the base prefix (`format ["%1_Garage", _baseKey]`) using `_mUpper select [_prefixLen]` (or `_mUpper select [_gIdx + 6]` for synced objects).
-    - This ensures base names (e.g., `FOB_Ground_Holding`) can never bleed into or pollute pad category parsing.
-  - **Multi-Category Token Parser:**
-    - The pad suffix is tokenized by delimiter (`_remainder splitString "_"`).
-    - Multiple category keywords are detected independently:
+- **2. Implemented Architecture (Decoupled Footprint Sizing + Dynamic Raycast Ceiling Detection):**
+  - **Pillar A: True Physical Footprint Sizing (`tp_spawnableVehicles.sqf`):**
+    - Helicopters and VTOLs are sized by their true spatial dimensions, completely decoupled from ceiling clearance:
+      - `S` (Small): `MH-9 Hummingbird`, `AH-9 Pawnee`, `MQ-12 Falcon`
+      - `M` (Medium): `UH-80 Ghost Hawk`, `AH-99 Blackfoot`, `PO-30 Orca`, `AW159 Hellcat`
+      - `L` (Large): `CH-67 Huron`, `Mi-48 Kajman`
+      - `XL` (Extra Large): `V-44 X Blackfish` (VTOL)
+  - **Pillar B: Dynamic Native Raycast Ceiling Detection (`qm_vehicleTabs.sqf` & `qm_serverFunctions.sqf`):**
+    - Open-ceiling clearance is inherently required for all rotary and VTOL assets (`_classname isKindOf "Helicopter" || _classname isKindOf "VTOL_Base_F"`).
+    - When evaluating base pads, the engine fires a 25m vertical raycast straight up from each pad object (`lineIntersectsSurfaces`):
+      - If an overhead obstacle (hangar roof, vehicle bay ceiling, bridge, building structure) is detected, `_hasRoof` evaluates to `true`.
+      - **UI-Level Exclusion:** The roofed pad does **not** contribute to `_maxHeliSize`. If a base has only covered pads or indoor hangars, `_maxHeliSize` remains `-1`, and helicopters/VTOLs are **completely omitted from the player's motorpool menu**.
+      - **Cached Performance:** Raycast results are cached on the pad object (`QM_Pad_HasRoof`), executing once per pad and delivering instant subsequent lookups.
+  - **Pillar C: Granular Multi-Category Pad Gating:**
+    - The pad suffix is tokenized by delimiter (`_remainder splitString "_"`):
       - `GROUND`, `CAR`, `TANK` $\rightarrow$ Enables Ground category.
-      - `HELI`, `HELICOPTER` $\rightarrow$ Enables Helicopter category.
+      - `HELI`, `HELICOPTER` $\rightarrow$ Enables Helicopter category (gated by `!_hasRoof`).
       - `PLANE` $\rightarrow$ Enables Fixed-Wing category.
       - `AIR` $\rightarrow$ Enables both Helicopter and Plane categories.
       - `BOAT` $\rightarrow$ Enables Naval Boat category.
-  - **Granular Per-Category Size Assignment:**
-    - If size keywords (`XXS`, `XS`, `S`, `M`, `L`, `XL`, `OPEN`) follow a category keyword, that specific category receives that size limit:
-      - e.g., `Garage_Ground_M_Helicopter_OPEN_1` $\rightarrow$ Ground max size is `M` (3), Helicopter max size is `OPEN` (6).
-      - e.g., `Garage_Ground_M_Helicopter_1` $\rightarrow$ Ground is `M` (3), Helicopter defaults to `OPEN` (6).
-      - e.g., `Garage_Ground_Helicopter_60` $\rightarrow$ Both Ground and Helicopter default to `OPEN` (6).
-    - If only a global size is specified (e.g. `Garage_Ground_Helicopter_M_1`), all enabled categories on that pad inherit size `M`.
-  - **Server-Authoritative Enforcement:**
-    - `QM_fnc_processGarageSpawn` on the server uses the exact same token parser, guaranteeing that vehicle spawns are validated against the specific pad's category whitelist and size limit before execution.
+    - **Size Inheritance:**
+      - `Garage_Ground_M_Helicopter_1` $\rightarrow$ Ground is `M`, Helicopter is `OPEN` (unlimited, provided sky is clear).
+      - `Garage_Ground_M_Helicopter_M_1` $\rightarrow$ Ground is `M`, Helicopter is `M` (Hummingbird and Ghost Hawk can spawn; Huron is blocked).
+      - `Garage_Ground_Helicopter_60` $\rightarrow$ Both Ground and Helicopter default to `OPEN`.
 
-- **3. Status:** **Verified Resolved & Implemented** via `logistics/qm_vehicleTabs.sqf` and `logistics/qm_serverFunctions.sqf`.
+- **3. Status:** **Verified Resolved & Implemented** via `templates/tp_spawnableVehicles.sqf`, `logistics/qm_vehicleTabs.sqf`, and `logistics/qm_serverFunctions.sqf`.
 
 ---
 
