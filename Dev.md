@@ -828,15 +828,15 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
   - Operationally, Destroyers should deploy Medium and Light maritime helicopters that realistically fit their flight deck and hangar footprint:
     - **Authorized Assets:** `UH-80 Ghost Hawk` (standard, stub-wing armed, sand, and tropic variants), `MH-9 Hummingbird` (`B_Heli_Light_01_F`), and `AH-9 Pawnee` (`B_Heli_Light_01_dynamicLoadout_F`).
     - **Strictly Prohibited Assets:** Heavy-lift helicopters such as `CH-67 Huron` (`B_Heli_Transport_03_F`, `B_Heli_Transport_03_unarmed_F`), Super/King Stallions, or large transport aircraft, which physically exceed destroyer deck dimensions and should only be operated from large amphibious assault ships (LHAs) or fleet aircraft carriers (`SB_Carrier`).
-  - **The Dilemma & Mission Maker Architecture:** Destroyers are classified as **FOBs** (`FOB_DDG_*` / `FOB_Destroyer_*`). Previously, all Western helicopters in `templates\tp_spawnableVehicles.sqf` were locked to `"SB"` (Supply Base only). The mission maker established that the **naming convention on the physical pad** (`_helicopter` vs. `_ground`) should be the authoritative gatekeeper, while the template grants `"ALL"` base tier access to the light/medium maritime helicopter airframes.
+  - **The Dilemma & Mission Maker Architecture:** Destroyers are classified as **FOBs** (`FOB_DDG_*` / `FOB_Destroyer_*`). Previously, all Western helicopters in `templates\tp_spawnableVehicles.sqf` were locked to `"SB"` (Supply Base only). The mission maker established that the **naming convention on the physical pad** (`_helicopter` vs. `_ground`) should be the authoritative gatekeeper, while the template grants explicit `["SB", "FOB"]` base tier access to the light/medium maritime helicopter airframes (or `["SB"]` for heavy-lift and attack airframes).
 
 - **2. Implemented Architecture (Template Whitelist + Pad-Level Gatekeeper):**
   - **Pillar A: Template Authorization in `templates/tp_spawnableVehicles.sqf`:**
-    - The restriction column for light/medium maritime helicopters was updated from `"SB"` to `"ALL"`:
-      - `MH-9 Hummingbird` $\rightarrow$ `"ALL"`
-      - `AH-9 Pawnee` $\rightarrow$ `"ALL"`
-      - `UH-80 Ghost Hawk` (all 4 variants: Standard, Stub Wings, Sand, Tropic) $\rightarrow$ `"ALL"`
-    - Heavy-lift rotary (`CH-67 Huron`) and heavy attack (`AH-99 Blackfoot`), as well as fixed-wing strike fighters (`A-164 Wipeout`, `F/A-181 Black Wasp II`), remain strictly locked to `"SB"`. They can never spawn at Destroyers or FOBs.
+    - The restriction column for light/medium maritime helicopters was updated to the explicit array format `["SB", "FOB"]`:
+      - `MH-9 Hummingbird` $\rightarrow$ `["SB", "FOB"]`
+      - `AH-9 Pawnee` $\rightarrow$ `["SB", "FOB"]`
+      - `UH-80 Ghost Hawk` (all 4 variants: Standard, Stub Wings, Sand, Tropic) $\rightarrow$ `["SB", "FOB"]`
+    - Heavy-lift rotary (`CH-67 Huron`) and heavy attack (`AH-99 Blackfoot`), as well as fixed-wing strike fighters (`A-164 Wipeout`, `F/A-181 Black Wasp II`), remain strictly locked to `["SB"]`. They can never spawn at Destroyers or FOBs.
   - **Pillar B: Pad-Level Naming Convention Gatekeeper:**
     - **Land FOBs (Helicopter Blocked):** Mission makers name garage pads with the `_ground` token (e.g. `Garage_Ground_100`, `Garage_Ground_120`, `Garage_Ground_150`). In `qm_vehicleTabs.sqf`, `_maxHeliSize` remains `-1`, so helicopters are completely hidden from the requisition menu. In `qm_serverFunctions.sqf`, `QM_fnc_processGarageSpawn` strictly rejects helicopter spawns on `_ground` pads.
     - **Destroyers (Naval Aviation Flight Decks):** The aft helipads are named with the `_helicopter` token (e.g. `Garage_Helicopter_60`, `Garage_Helicopter_50`). In `qm_vehicleTabs.sqf`, `_maxHeliSize` evaluates to `6` (`OPEN`), making Ghost Hawks, Hummingbirds, and Pawnees available for deployment directly onto the destroyer's flight deck.
