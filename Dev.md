@@ -951,7 +951,7 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
-### [ ] 6.3 Map Marker True-North Normalization & Scope Boundaries
+### [x] 6.3 Map Marker True-North Normalization & Scope Boundaries
 - **1. Context & Eden Editor Observations:**
   - When mission makers place or duplicate markers in the Eden Editor, slight inadvertent rotations often leave markers with non-zero angles (e.g., $14.7^\circ$, $282.4^\circ$, $0.25^\circ$). This causes base installation icons (NATO symbols, flags, HQ icons) to appear tilted or crooked on the player map and GPS.
   - The mission maker recently audited `mission.sqm` and manually zeroed all base marker angles (`SB_Main`, `FOB_AgiaMarinaBase`, `FOB_CampMaxwell`, `FOB_CampRogain`, `FOB_Kamino`, `FOB_Mike26`, `FOB_CampTempest`, `Contested_Stadium`). In Eden Editor SQM format, $0^\circ$ (True North) is represented by omitting the `angle` property entirely.
@@ -964,25 +964,23 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
     - Infantry/Barracks recruitment: `_spawnDir = getDir _padObj;`
   - The only script call to `setMarkerDir` in the entire project is in `logi_initTasks.sqf` (Line 244), where the dynamically generated visual bounding box (`Area_%1`) for rectangular triggers is rotated to match the physical trigger footprint (`(triggerArea _trigger) params [..., "_angle", ...];`).
 
-- **3. Normalization Scope: Targeted vs. Global:**
-  - **Why Global Normalization (`allMapMarkers`) is Dangerous:**
-    - Mission makers routinely place intentional directional markers on the map for tactical operations (e.g., `mil_arrow` attack vectors, flight ingress paths, LZ approaches, defensive sectors, or rotated rectangular minefields).
-    - Executing `{ _x setMarkerDir 0; } forEach allMapMarkers;` would wipe out every tactical arrow and rotated planning zone across the entire mission map.
-  - **The Recommended Architectural Solution (Targeted Scope):**
-    - Scope automatic North-alignment strictly to **logistics base markers** and framework-generated point icons.
-    - In `init.sqf` during base discovery:
-      ```sqf
-      {
-          private _baseName = _x;
-          if (getMarkerColor _baseName != "") then {
-              _baseName setMarkerDir 0; // Enforce true North orientation (upright NATO symbol)
-              ...
-          };
-      } forEach logisticsBases;
-      ```
-    - This guarantees all base HQ icons display upright and professional on all client map displays, regardless of whether a mission maker accidentally rotated a marker in Eden Editor, while preserving 100% of custom tactical mission graphics.
+- **3. Normalization Scope & Applied Implementation:**
+  - In `init.sqf` (Lines 250 & 272), base marker orientation is explicitly normalized to True North:
+    ```sqf
+    {
+        private _baseName = _x;
+        if (getMarkerColor _baseName != "") then {
+            _baseName setMarkerDir 0; // Enforce true North orientation (upright NATO symbol)
+            _baseName setMarkerAlpha 1;
+        };
+    } forEach logisticsBases;
+    ```
+  - This ensures all base HQ icons display upright and professional on all client map displays, regardless of whether a mission maker accidentally rotated a marker in Eden Editor, while preserving 100% of custom tactical mission graphics (arrows, zones).
 
-- **4. Status:** **Logged in Section 6 / Ready for Implementation** (Implementation requires 1 line of non-breaking code in `init.sqf`).
+- **4. Status:** **Verified Resolved & Non-Issue (Architecturally Superseded by Section 6.8)**:
+  - **Transition to 3D Game Logics:** Under Section 6.8, base discovery and facility linking have fully transitioned from 2D Eden map markers to **3D Game Logic / Anchor entities** (`SideBLUFOR_F`, `Logic`, `EmptyDetector`).
+  - **Automated Script Synthesis:** The framework synthesizes missing base map markers dynamically at runtime, where `createMarker` inherently defaults to `0°` (True North).
+  - **Zero Mission Impact:** Combined with the mission maker's manual zeroing in `mission.sqm` and 3D Game Logic anchors, marker angle drift is completely eliminated as an operational concern.
 
 ---
 
