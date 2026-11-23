@@ -822,55 +822,26 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ## 6. Quality of Life (QoL) Improvements & Special Infrastructure Proposals
 
-### [ ] 6.1 Destroyer Flight Deck Naval Aviation (Ghost Hawk & Light Heli Spawns at Naval FOBs)
+### [x] 6.1 Destroyer Flight Deck Naval Aviation (Ghost Hawk & Light Heli Spawns at Naval FOBs)
 - **1. Context & User Requirement:**
   - Destroyers (e.g., `FOB_Destroyer_086`, `FOB_Destroyer_011`, transitioning to US Navy hull codes like `FOB_DDG_086`, `FOB_DDG_011`) feature an aft helicopter flight deck and hangar bay.
   - Operationally, Destroyers should deploy Medium and Light maritime helicopters that realistically fit their flight deck and hangar footprint:
-    - **Authorized Assets:** `UH-80 Ghost Hawk` (including stub-wing armed variants: `B_Heli_Transport_01_F`, `B_Heli_Transport_01_pylons_F`, CTRG variants), `MH-9 Hummingbird` (`B_Heli_Light_01_F`), and `AH-9 Pawnee` (`B_Heli_Light_01_dynamicLoadout_F`).
+    - **Authorized Assets:** `UH-80 Ghost Hawk` (standard, stub-wing armed, sand, and tropic variants), `MH-9 Hummingbird` (`B_Heli_Light_01_F`), and `AH-9 Pawnee` (`B_Heli_Light_01_dynamicLoadout_F`).
     - **Strictly Prohibited Assets:** Heavy-lift helicopters such as `CH-67 Huron` (`B_Heli_Transport_03_F`, `B_Heli_Transport_03_unarmed_F`), Super/King Stallions, or large transport aircraft, which physically exceed destroyer deck dimensions and should only be operated from large amphibious assault ships (LHAs) or fleet aircraft carriers (`SB_Carrier`).
-  - **The Dilemma:** Destroyers are currently designated as **FOBs** (`FOB_DDG_*` / `FOB_Destroyer_*`). In the current framework, FOBs are strictly prevented from spawning helicopters because virtually all Western helicopters in `templates\tp_spawnableVehicles.sqf` are locked to `"SB"` (Supply Base only). The mission maker does *not* want to reclassify Destroyers as full Supply Bases (SBs), nor do they want generic land FOBs (e.g. `FOB_1`) suddenly gaining access to all helicopters.
+  - **The Dilemma & Mission Maker Architecture:** Destroyers are classified as **FOBs** (`FOB_DDG_*` / `FOB_Destroyer_*`). Previously, all Western helicopters in `templates\tp_spawnableVehicles.sqf` were locked to `"SB"` (Supply Base only). The mission maker established that the **naming convention on the physical pad** (`_helicopter` vs. `_ground`) should be the authoritative gatekeeper, while the template grants `"ALL"` base tier access to the light/medium maritime helicopter airframes.
 
-- **2. Technical Analysis & Design Rationale:**
-  - **Why Helicopters are Categorized as `"OPEN"` Size:**
-    - Unlike ground vehicles (which can spawn inside garages of sizes `_XXS` through `_XL`) or fixed-wing aircraft/UAVs (which can spawn inside hangar bays, especially with folded wings), rotary-wing helicopters require unobstructed vertical airspace to avoid clipping or exploding against hangar ceilings and walls upon spawn.
-    - Although physical footprints vary (e.g., Ghost Hawk vs. Huron), they were designated as `"OPEN"` so mission makers place spawn pads in open environments rather than confined interior garages.
-  - **Spawn Factory vs. Staging/Refueling Outpost (Design Philosophy):**
-    - *Military Realism Argument:* In naval doctrine, a Destroyer does not manufacture or procure helicopters; it carries an embarked detachment of 1–2 helicopters flown in from a fleet Carrier (`SB_Carrier`) or coastal airbase. The Destroyer's helipad functions primarily as a forward staging, refueling, rearming, repair (R4-C), and dropoff/pickup facility. Leaving helicopter spawning disabled at Destroyers is therefore technically authentic and encourages tactical ferry flights.
-    - *Player Expectation Argument:* Players boarding a Destroyer observe a full flight deck, hangar, and quartermaster terminal, and may naturally expect to requisition a Ghost Hawk directly at sea rather than travelling back to the main carrier.
-    - *Intermediate Base Taxonomy:* Destroyers represent a hybrid echelon—offering more capability than a frontline land bunker (FOB), but less infrastructure than a fleet carrier/logistics depot (SB).
+- **2. Implemented Architecture (Template Whitelist + Pad-Level Gatekeeper):**
+  - **Pillar A: Template Authorization in `templates/tp_spawnableVehicles.sqf`:**
+    - The restriction column for light/medium maritime helicopters was updated from `"SB"` to `"ALL"`:
+      - `MH-9 Hummingbird` $\rightarrow$ `"ALL"`
+      - `AH-9 Pawnee` $\rightarrow$ `"ALL"`
+      - `UH-80 Ghost Hawk` (all 4 variants: Standard, Stub Wings, Sand, Tropic) $\rightarrow$ `"ALL"`
+    - Heavy-lift rotary (`CH-67 Huron`) and heavy attack (`AH-99 Blackfoot`), as well as fixed-wing strike fighters (`A-164 Wipeout`, `F/A-181 Black Wasp II`), remain strictly locked to `"SB"`. They can never spawn at Destroyers or FOBs.
+  - **Pillar B: Pad-Level Naming Convention Gatekeeper:**
+    - **Land FOBs (Helicopter Blocked):** Mission makers name garage pads with the `_ground` token (e.g. `Garage_Ground_100`, `Garage_Ground_120`, `Garage_Ground_150`). In `qm_vehicleTabs.sqf`, `_maxHeliSize` remains `-1`, so helicopters are completely hidden from the requisition menu. In `qm_serverFunctions.sqf`, `QM_fnc_processGarageSpawn` strictly rejects helicopter spawns on `_ground` pads.
+    - **Destroyers (Naval Aviation Flight Decks):** The aft helipads are named with the `_helicopter` token (e.g. `Garage_Helicopter_60`, `Garage_Helicopter_50`). In `qm_vehicleTabs.sqf`, `_maxHeliSize` evaluates to `6` (`OPEN`), making Ghost Hawks, Hummingbirds, and Pawnees available for deployment directly onto the destroyer's flight deck.
 
-- **3. Evaluated Architectural Approaches (If Implemented):**
-
-  - **Approach 1: Template-Level Base Keyword Restriction Array (Recommended for Simplicity)**
-    - *How it works:* In `templates\tp_spawnableVehicles.sqf`, change the restriction column for Ghost Hawks, Hummingbirds, and Pawnees from `"SB"` to an Array:
-      - `["SB", "DDG", "DD"]`
-    - *UI Logic in `qm_vehicleTabs.sqf`:* Lines 156–161 already support Array restrictions (`_restrictionType isEqualType []`). Adding a check:
-      ```sqf
-      if (("DDG" in _restList && ("DDG" in _bkUpper)) || ("DD" in _restList && ("DD" in _bkUpper))) then { _validBaseRestriction = true; };
-      ```
-    - *Pros:*
-      - 100% clean and transparent. No hardcoded classnames in functional scripts.
-      - Hurons, Blackfoots, and heavy lift remain `"SB"`, completely blocking them from Destroyers.
-      - Regular land FOBs (`FOB_1`, `FOB_Alpha`) remain restricted to ground vehicles.
-      - Preserves Destroyers as FOBs across all economy, ledger, and respawn systems.
-
-  - **Approach 2: Dedicated Base Type Taxonomy (`"DDG"` / `"DD"` Base Tier)**
-    - *How it works:* Introduce `"DDG"` / `"DD"` as first-class base types in `logisticsBaseDefaults.sqf` alongside `"SB"`, `"FOB"`, and `"MSR"`.
-    - In `tp_spawnableVehicles.sqf`, templates explicitly list an array of allowed base types (e.g. `["SB", "DDG"]`, `["SB", "FOB"]`, or `["DDG"]`).
-    - *Pros:* Fully modular; cleanly differentiates Destroyers, LHAs, and land FOBs without fuzzy string matching.
-    - *Cons:* Requires updating base defaults and ledger initialization to recognize the new base type key.
-
-  - **Approach 3: Base Capability / Subtype Profile System**
-    - *How it works:* Introduce a capability metadata layer for bases (e.g., `missionNamespace setVariable ["QM_BaseCapabilities_FOB_DDG_086", ["NAVAL_AVIATION_LIGHT", "BOAT"]]`).
-    - In `qm_vehicleTabs.sqf`, if a base is a FOB but possesses `"NAVAL_AVIATION_LIGHT"`, it grants an exception for rotary-wing aircraft categorized as light/medium transport.
-    - *Pros:* Highly extensible for future special bases (e.g. `FOB_Airfield`, `FOB_Seaport`, `FOB_LHA`).
-    - *Cons:* Requires defining capability lists for each base type.
-
-  - **Approach 4: Leave As Staging-Only Pad (Authentic Naval Doctrine - Zero Code Changes)**
-    - *How it works:* Retain current framework behavior. The Destroyer helipad operates strictly as an active landing pad, R4-C service area (refuel, repair, rearm, recrew), and logistics dropoff/pickup zone. Players ferry Ghost Hawks and Hummingbirds from the Carrier (`SB_Carrier`) or main supply base to the Destroyer as part of operational gameplay.
-    - *Pros:* Zero risk, zero code changes, prevents vehicle clutter on naval decks, and promotes realistic multi-base logistics.
-
-- **4. Status:** **Under Consideration / Backlog Evaluation** (Retained in Section 6 as a structured proposal; awaiting final gameplay decision before implementing).
+- **3. Status:** **Verified Resolved & Implemented** via `templates/tp_spawnableVehicles.sqf`, `logistics/qm_vehicleTabs.sqf`, and `logistics/qm_serverFunctions.sqf`.
 
 ---
 
