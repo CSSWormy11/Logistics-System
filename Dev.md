@@ -822,55 +822,26 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ## 6. Quality of Life (QoL) Improvements & Special Infrastructure Proposals
 
-### [ ] 6.1 Destroyer Flight Deck Naval Aviation (Ghost Hawk & Light Heli Spawns at Naval FOBs)
+### [x] 6.1 Destroyer Flight Deck Naval Aviation (Ghost Hawk & Light Heli Spawns at Naval FOBs)
 - **1. Context & User Requirement:**
   - Destroyers (e.g., `FOB_Destroyer_086`, `FOB_Destroyer_011`, transitioning to US Navy hull codes like `FOB_DDG_086`, `FOB_DDG_011`) feature an aft helicopter flight deck and hangar bay.
   - Operationally, Destroyers should deploy Medium and Light maritime helicopters that realistically fit their flight deck and hangar footprint:
-    - **Authorized Assets:** `UH-80 Ghost Hawk` (including stub-wing armed variants: `B_Heli_Transport_01_F`, `B_Heli_Transport_01_pylons_F`, CTRG variants), `MH-9 Hummingbird` (`B_Heli_Light_01_F`), and `AH-9 Pawnee` (`B_Heli_Light_01_dynamicLoadout_F`).
+    - **Authorized Assets:** `UH-80 Ghost Hawk` (standard, stub-wing armed, sand, and tropic variants), `MH-9 Hummingbird` (`B_Heli_Light_01_F`), and `AH-9 Pawnee` (`B_Heli_Light_01_dynamicLoadout_F`).
     - **Strictly Prohibited Assets:** Heavy-lift helicopters such as `CH-67 Huron` (`B_Heli_Transport_03_F`, `B_Heli_Transport_03_unarmed_F`), Super/King Stallions, or large transport aircraft, which physically exceed destroyer deck dimensions and should only be operated from large amphibious assault ships (LHAs) or fleet aircraft carriers (`SB_Carrier`).
-  - **The Dilemma:** Destroyers are currently designated as **FOBs** (`FOB_DDG_*` / `FOB_Destroyer_*`). In the current framework, FOBs are strictly prevented from spawning helicopters because virtually all Western helicopters in `templates\tp_spawnableVehicles.sqf` are locked to `"SB"` (Supply Base only). The mission maker does *not* want to reclassify Destroyers as full Supply Bases (SBs), nor do they want generic land FOBs (e.g. `FOB_1`) suddenly gaining access to all helicopters.
+  - **The Dilemma & Mission Maker Architecture:** Destroyers are classified as **FOBs** (`FOB_DDG_*` / `FOB_Destroyer_*`). Previously, all Western helicopters in `templates\tp_spawnableVehicles.sqf` were locked to `"SB"` (Supply Base only). The mission maker established that the **naming convention on the physical pad** (`_helicopter` vs. `_ground`) should be the authoritative gatekeeper, while the template grants explicit `["SB", "FOB"]` base tier access to the light/medium maritime helicopter airframes (or `["SB"]` for heavy-lift and attack airframes).
 
-- **2. Technical Analysis & Design Rationale:**
-  - **Why Helicopters are Categorized as `"OPEN"` Size:**
-    - Unlike ground vehicles (which can spawn inside garages of sizes `_XXS` through `_XL`) or fixed-wing aircraft/UAVs (which can spawn inside hangar bays, especially with folded wings), rotary-wing helicopters require unobstructed vertical airspace to avoid clipping or exploding against hangar ceilings and walls upon spawn.
-    - Although physical footprints vary (e.g., Ghost Hawk vs. Huron), they were designated as `"OPEN"` so mission makers place spawn pads in open environments rather than confined interior garages.
-  - **Spawn Factory vs. Staging/Refueling Outpost (Design Philosophy):**
-    - *Military Realism Argument:* In naval doctrine, a Destroyer does not manufacture or procure helicopters; it carries an embarked detachment of 1–2 helicopters flown in from a fleet Carrier (`SB_Carrier`) or coastal airbase. The Destroyer's helipad functions primarily as a forward staging, refueling, rearming, repair (R4-C), and dropoff/pickup facility. Leaving helicopter spawning disabled at Destroyers is therefore technically authentic and encourages tactical ferry flights.
-    - *Player Expectation Argument:* Players boarding a Destroyer observe a full flight deck, hangar, and quartermaster terminal, and may naturally expect to requisition a Ghost Hawk directly at sea rather than travelling back to the main carrier.
-    - *Intermediate Base Taxonomy:* Destroyers represent a hybrid echelon—offering more capability than a frontline land bunker (FOB), but less infrastructure than a fleet carrier/logistics depot (SB).
+- **2. Implemented Architecture (Template Whitelist + Pad-Level Gatekeeper):**
+  - **Pillar A: Template Authorization in `templates/tp_spawnableVehicles.sqf`:**
+    - The restriction column for light/medium maritime helicopters was updated to the explicit array format `["SB", "FOB"]`:
+      - `MH-9 Hummingbird` $\rightarrow$ `["SB", "FOB"]`
+      - `AH-9 Pawnee` $\rightarrow$ `["SB", "FOB"]`
+      - `UH-80 Ghost Hawk` (all 4 variants: Standard, Stub Wings, Sand, Tropic) $\rightarrow$ `["SB", "FOB"]`
+    - Heavy-lift rotary (`CH-67 Huron`) and heavy attack (`AH-99 Blackfoot`), as well as fixed-wing strike fighters (`A-164 Wipeout`, `F/A-181 Black Wasp II`), remain strictly locked to `["SB"]`. They can never spawn at Destroyers or FOBs.
+  - **Pillar B: Pad-Level Naming Convention Gatekeeper:**
+    - **Land FOBs (Helicopter Blocked):** Mission makers name garage pads with the `_ground` token (e.g. `Garage_Ground_100`, `Garage_Ground_120`, `Garage_Ground_150`). In `qm_vehicleTabs.sqf`, `_maxHeliSize` remains `-1`, so helicopters are completely hidden from the requisition menu. In `qm_serverFunctions.sqf`, `QM_fnc_processGarageSpawn` strictly rejects helicopter spawns on `_ground` pads.
+    - **Destroyers (Naval Aviation Flight Decks):** The aft helipads are named with the `_helicopter` token (e.g. `Garage_Helicopter_60`, `Garage_Helicopter_50`). In `qm_vehicleTabs.sqf`, `_maxHeliSize` evaluates to `6` (`OPEN`), making Ghost Hawks, Hummingbirds, and Pawnees available for deployment directly onto the destroyer's flight deck.
 
-- **3. Evaluated Architectural Approaches (If Implemented):**
-
-  - **Approach 1: Template-Level Base Keyword Restriction Array (Recommended for Simplicity)**
-    - *How it works:* In `templates\tp_spawnableVehicles.sqf`, change the restriction column for Ghost Hawks, Hummingbirds, and Pawnees from `"SB"` to an Array:
-      - `["SB", "DDG", "DD"]`
-    - *UI Logic in `qm_vehicleTabs.sqf`:* Lines 156–161 already support Array restrictions (`_restrictionType isEqualType []`). Adding a check:
-      ```sqf
-      if (("DDG" in _restList && ("DDG" in _bkUpper)) || ("DD" in _restList && ("DD" in _bkUpper))) then { _validBaseRestriction = true; };
-      ```
-    - *Pros:*
-      - 100% clean and transparent. No hardcoded classnames in functional scripts.
-      - Hurons, Blackfoots, and heavy lift remain `"SB"`, completely blocking them from Destroyers.
-      - Regular land FOBs (`FOB_1`, `FOB_Alpha`) remain restricted to ground vehicles.
-      - Preserves Destroyers as FOBs across all economy, ledger, and respawn systems.
-
-  - **Approach 2: Dedicated Base Type Taxonomy (`"DDG"` / `"DD"` Base Tier)**
-    - *How it works:* Introduce `"DDG"` / `"DD"` as first-class base types in `logisticsBaseDefaults.sqf` alongside `"SB"`, `"FOB"`, and `"MSR"`.
-    - In `tp_spawnableVehicles.sqf`, templates explicitly list an array of allowed base types (e.g. `["SB", "DDG"]`, `["SB", "FOB"]`, or `["DDG"]`).
-    - *Pros:* Fully modular; cleanly differentiates Destroyers, LHAs, and land FOBs without fuzzy string matching.
-    - *Cons:* Requires updating base defaults and ledger initialization to recognize the new base type key.
-
-  - **Approach 3: Base Capability / Subtype Profile System**
-    - *How it works:* Introduce a capability metadata layer for bases (e.g., `missionNamespace setVariable ["QM_BaseCapabilities_FOB_DDG_086", ["NAVAL_AVIATION_LIGHT", "BOAT"]]`).
-    - In `qm_vehicleTabs.sqf`, if a base is a FOB but possesses `"NAVAL_AVIATION_LIGHT"`, it grants an exception for rotary-wing aircraft categorized as light/medium transport.
-    - *Pros:* Highly extensible for future special bases (e.g. `FOB_Airfield`, `FOB_Seaport`, `FOB_LHA`).
-    - *Cons:* Requires defining capability lists for each base type.
-
-  - **Approach 4: Leave As Staging-Only Pad (Authentic Naval Doctrine - Zero Code Changes)**
-    - *How it works:* Retain current framework behavior. The Destroyer helipad operates strictly as an active landing pad, R4-C service area (refuel, repair, rearm, recrew), and logistics dropoff/pickup zone. Players ferry Ghost Hawks and Hummingbirds from the Carrier (`SB_Carrier`) or main supply base to the Destroyer as part of operational gameplay.
-    - *Pros:* Zero risk, zero code changes, prevents vehicle clutter on naval decks, and promotes realistic multi-base logistics.
-
-- **4. Status:** **Under Consideration / Backlog Evaluation** (Retained in Section 6 as a structured proposal; awaiting final gameplay decision before implementing).
+- **3. Status:** **Verified Resolved & Implemented** via `templates/tp_spawnableVehicles.sqf`, `logistics/qm_vehicleTabs.sqf`, and `logistics/qm_serverFunctions.sqf`.
 
 ---
 
@@ -951,7 +922,7 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
-### [ ] 6.3 Map Marker True-North Normalization & Scope Boundaries
+### [x] 6.3 Map Marker True-North Normalization & Scope Boundaries
 - **1. Context & Eden Editor Observations:**
   - When mission makers place or duplicate markers in the Eden Editor, slight inadvertent rotations often leave markers with non-zero angles (e.g., $14.7^\circ$, $282.4^\circ$, $0.25^\circ$). This causes base installation icons (NATO symbols, flags, HQ icons) to appear tilted or crooked on the player map and GPS.
   - The mission maker recently audited `mission.sqm` and manually zeroed all base marker angles (`SB_Main`, `FOB_AgiaMarinaBase`, `FOB_CampMaxwell`, `FOB_CampRogain`, `FOB_Kamino`, `FOB_Mike26`, `FOB_CampTempest`, `Contested_Stadium`). In Eden Editor SQM format, $0^\circ$ (True North) is represented by omitting the `angle` property entirely.
@@ -964,25 +935,23 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
     - Infantry/Barracks recruitment: `_spawnDir = getDir _padObj;`
   - The only script call to `setMarkerDir` in the entire project is in `logi_initTasks.sqf` (Line 244), where the dynamically generated visual bounding box (`Area_%1`) for rectangular triggers is rotated to match the physical trigger footprint (`(triggerArea _trigger) params [..., "_angle", ...];`).
 
-- **3. Normalization Scope: Targeted vs. Global:**
-  - **Why Global Normalization (`allMapMarkers`) is Dangerous:**
-    - Mission makers routinely place intentional directional markers on the map for tactical operations (e.g., `mil_arrow` attack vectors, flight ingress paths, LZ approaches, defensive sectors, or rotated rectangular minefields).
-    - Executing `{ _x setMarkerDir 0; } forEach allMapMarkers;` would wipe out every tactical arrow and rotated planning zone across the entire mission map.
-  - **The Recommended Architectural Solution (Targeted Scope):**
-    - Scope automatic North-alignment strictly to **logistics base markers** and framework-generated point icons.
-    - In `init.sqf` during base discovery:
-      ```sqf
-      {
-          private _baseName = _x;
-          if (getMarkerColor _baseName != "") then {
-              _baseName setMarkerDir 0; // Enforce true North orientation (upright NATO symbol)
-              ...
-          };
-      } forEach logisticsBases;
-      ```
-    - This guarantees all base HQ icons display upright and professional on all client map displays, regardless of whether a mission maker accidentally rotated a marker in Eden Editor, while preserving 100% of custom tactical mission graphics.
+- **3. Normalization Scope & Applied Implementation:**
+  - In `init.sqf` (Lines 250 & 272), base marker orientation is explicitly normalized to True North:
+    ```sqf
+    {
+        private _baseName = _x;
+        if (getMarkerColor _baseName != "") then {
+            _baseName setMarkerDir 0; // Enforce true North orientation (upright NATO symbol)
+            _baseName setMarkerAlpha 1;
+        };
+    } forEach logisticsBases;
+    ```
+  - This ensures all base HQ icons display upright and professional on all client map displays, regardless of whether a mission maker accidentally rotated a marker in Eden Editor, while preserving 100% of custom tactical mission graphics (arrows, zones).
 
-- **4. Status:** **Logged in Section 6 / Ready for Implementation** (Implementation requires 1 line of non-breaking code in `init.sqf`).
+- **4. Status:** **Verified Resolved & Non-Issue (Architecturally Superseded by Section 6.8)**:
+  - **Transition to 3D Game Logics:** Under Section 6.8, base discovery and facility linking have fully transitioned from 2D Eden map markers to **3D Game Logic / Anchor entities** (`SideBLUFOR_F`, `Logic`, `EmptyDetector`).
+  - **Automated Script Synthesis:** The framework synthesizes missing base map markers dynamically at runtime, where `createMarker` inherently defaults to `0°` (True North).
+  - **Zero Mission Impact:** Combined with the mission maker's manual zeroing in `mission.sqm` and 3D Game Logic anchors, marker angle drift is completely eliminated as an operational concern.
 
 ---
 
@@ -1049,11 +1018,14 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 ---
 
-### [ ] 6.7 Unified Dual-Purpose (Pickup & Dropoff) Pads & Naval Lateral Transfers
-- **1. Context & The Physical Footprint Dilemma:**
-  - On large mainland supply depots or land bases, mission makers have ample geographic space to place separate pickup (`<BaseKey>_pickup`) and dropoff (`<BaseKey>_dropoff`) triggers across distinct logistics yards.
-  - On naval surface combatants (such as Destroyers `FOB_DDG_086` / `DDG_Liberty`), physical deck space is strictly constrained: there is only **one** aft helicopter flight deck.
-  - Mission makers currently must either squeeze two overlapping triggers onto the same physical pad or choose one over the other. Placing a single, dual-purpose pad that dynamically senses whether an inbound aircraft is arriving to *deliver* supplies or arriving to *load* supplies solves this physical space limitation.
+### [ ] 6.7 Unified Dual-Purpose (Cargo Pickup & Dropoff) Logistics Pads & Naval Lateral Transfers
+- **1. Context & Standard Military Doctrine vs. Physical Footprint Dilemma:**
+  - **Standard Military Doctrine (Dedicated Shipping & Receiving):**
+    - In first-world, large-scale military logistics operations, **Shipping (Pickup)** and **Receiving (Dropoff)** yards are deliberately and strictly segregated into separate physical facilities. This prevents dangerous vehicle cross-traffic, cargo bottleneck collisions, and administrative inventory confusion between outbound shipments and inbound deliveries.
+    - Mainland depots (`SB_Main`, `MSR`, large land FOBs) must always adhere to this standard by employing distinct `<BaseKey>_pickup` and `<BaseKey>_dropoff` zones.
+  - **The Space-Constrained Naval Footprint Exception:**
+    - On naval surface combatants (such as Destroyers `FOB_DDG_086` / `DDG_Liberty`), physical deck space is strictly constrained: there is only **one** aft helicopter flight deck.
+    - On such ships, mission makers currently must either squeeze two overlapping triggers onto the same physical pad or choose one over the other. Placing a single, dual-purpose cargo pad that dynamically senses whether an inbound aircraft is arriving to *deliver* supplies or arriving to *load* supplies solves this physical space limitation.
 
 - **2. Dual-Purpose Pad Engine Concept (Context-Sensitive Detection):**
   - **Single Physical Pad Identifier:** e.g., `<BaseKey>_pad` or `<BaseKey>_logi_pad` (or overlapping pickup/dropoff on the same footprint).
@@ -1076,7 +1048,7 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
       - A player simply ignores automated task waypoints, flies to the Destroyer, drops supplies to credit the Destroyer's ledger, and another pilot spawns supplies from the Destroyer to ferry forward.
       - The framework's dropoff triggers, salvage systems, and physical ledgers already naturally support this sandbox freedom!
 
-- **4. Status:** **Logged as Section 6 Optional Alternative** (Architecture fully evaluated; core routing kept simple and robust while dual-purpose pad logic is preserved for future naval flight deck optimization).
+- **4. Status:** **Logged as Architectural Concept for Future Exploration** (Doctrine prioritizes separate shipping and receiving yards; unified pickup/dropoff logic is preserved for future exploration specifically on constrained maritime flight decks).
 
 ---
 
@@ -1176,6 +1148,85 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
   - Dynamic `isClass` checking supports both pure vanilla servers and modded (3den Enhanced) environments seamlessly.
 
 - **6. Status:** **Verified Resolved & Implemented** via `logistics/logi_groundVisuals.sqf`, `logistics/logi_initTasks.sqf`, and `init.sqf`.
+
+---
+
+### [ ] 6.10 Unified Vanilla & Modded Asset Expansion (Fail-Safe `isClass` Dynamic Filtering)
+- **1. Context & User Requirement:**
+  - Mission makers wish to expand the available asset rosters in `templates/tp_spawnableVehicles.sqf` (focusing primarily on rotary wing / helicopters, with future extension to ground and fixed-wing platforms) by incorporating:
+    1. **Additional Vanilla Platforms:** Under-utilized vanilla Arma 3 airframes (e.g., additional camouflage patterns, armed/unarmed variants, and specialized variants).
+    2. **Modded Community Platforms:** Modded rotary-wing airframes (e.g., RHS USAF, CUP, 3CB, or naval aviation airframes such as MH-60R/S Seahawks, CH-53E/K King Stallions, AH-1Z Vipers, UH-1Y Venoms, and MV-22 Ospreys).
+  - **Zero-Dependency Mandate (Vanilla Compatibility Guarantee):**
+    - The mission must remain 100% playable on pure **Vanilla Arma 3** without requiring external mods or throwing missing-addon popup errors.
+    - All assets (both vanilla and modded) must reside within the **single unified template file** (`templates/tp_spawnableVehicles.sqf`).
+    - The engine must dynamically sanitize the configuration matrix: if a mod is not loaded on the server or client, its assets must be silently ignored and excluded from all UI menus, AI spawners, and garage systems without causing script breaks or RPT errors.
+
+- **2. Architectural Implementation Strategy:**
+  - **Pillar A: Fail-Safe Config Class Presence Gatekeeper (`isClass`):**
+    - In `logistics/qm_vehicleTabs.sqf` and `logistics/qm_serverFunctions.sqf`, every candidate vehicle classname is verified against Bohemia's core config engine before registration or spawning:
+      ```sqf
+      isClass (configFile >> "CfgVehicles" >> _classname)
+      ```
+    - When an unmodded client or vanilla server runs the mission, `isClass` evaluates to `false` for modded classnames. The motorpool UI silently omits the item, and the list populates with zero errors or UI artifacts.
+  - **Pillar B: Unified Template Co-Location (`tp_spawnableVehicles.sqf`):**
+    - Modded assets are co-located in `G_Procureable_Vehicles` alongside vanilla assets under distinct, organized sub-blocks (e.g., `// MODDED: RHS USAF ROTARY`, `// MODDED: CUP HELICOPTERS`).
+    - Standard base tier restrictions (`["SB", "FOB"]` for maritime/medium helicopters, `["SB"]` for heavy-lift/attack) and physical pad sizing tokens (`"OPEN"`, `"L"`, `"M"`) are applied identically.
+  - **Pillar C: Optional Mod System Tagging (`_allowedSystems`):**
+    - The 6th column (`_allowedSystems`) or template flags can optionally denote mod families (e.g., `["Quartermaster", "RHS"]`, `["Quartermaster", "CUP"]`), providing an optional master switch in `init.sqf` (e.g., `QM_Enable_Modded_Assets = true;`) to toggle mod integration on or off globally.
+
+- **3. Candidate Helicopter Roster Expansion:**
+  - **Vanilla Additions:**
+    - `CH-67 Huron (Black / Armed)` (`B_Heli_Transport_03_black_F`) & `(Black / Unarmed)` (`B_Heli_Transport_03_unarmed_black_F`)
+    - Additional maritime utility and surveillance rotary variants.
+  - **Modded Additions (Filtered Dynamically via `isClass`):**
+    - **RHS USAF:** `RHS_UH60M`, `RHS_UH60M_d`, `RHS_UH60M_MEV`, `RHS_MELB_MH6M`, `RHS_MELB_AH6M`, `rhsusf_CH53E_USMC`, `RHS_CH_47F`, `rhsusf_v22_navy`.
+    - **CUP:** `CUP_B_UH60M_US`, `CUP_B_MH60S_USMC`, `CUP_B_AH1Z_Dynamic_USMC`, `CUP_B_CH53E_USMC`, `CUP_B_MV22_USMC`.
+
+- **4. Status:** **Under Development & Documented** (Engine `isClass` gating and template expansion).
+
+---
+
+### [x] 6.11 Multi-Category Garage Pad Support, Footprint Sizing & Dynamic Raycast Ceiling Filter
+- **1. Context & Operational Need:**
+  - Standard physical garage pads traditionally lock to single vehicle categories via variable suffixes:
+    - `Garage_Ground_*` $\rightarrow$ Ground vehicles only (`LandVehicle`).
+    - `Garage_Helicopter_*` $\rightarrow$ Helicopters only (`Helicopter`).
+    - `Garage_Plane_*` $\rightarrow$ Fixed-wing aircraft only (`Plane`).
+    - `Garage_Boat_*` $\rightarrow$ Naval surface craft only (`Ship`).
+    - `Garage_*` (without category keywords) $\rightarrow$ Universal pad (allows all categories).
+  - On forward operating locations, expeditionary airfields, or naval flight decks, mission makers frequently require a single physical pad to service **multiple specific categories** (e.g. Ground vehicles and Helicopters), while still strictly prohibiting unauthorized categories (e.g. Planes or Boats), without resorting to an unrestricted Universal pad.
+  - **The Size vs. Ceiling Dilemma:**
+    - Previously, helicopters were assigned size `"OPEN"`, treating overhead clearance as a numeric size rank (`Rank 6`).
+    - This caused a severe design conflict: a mission maker who named an outdoor pad `Garage_Helicopter_M_1` (to allow Light/Medium helicopters like the Hummingbird or Ghost Hawk while blocking massive heavy-lift Hurons) inadvertently blocked **all** helicopters, because `OPEN (6) > M (3)`.
+    - Furthermore, if a pad was inside a covered hangar or shelter, helicopters could clip rotor blades through the ceiling upon spawning.
+    - **UX Principle:** Players must **never see an option in the motorpool menu that cannot be spawned**. If a pad has a ceiling, rotary/VTOL aircraft must be filtered out at menu construction time, rather than presenting a frustrating post-click spawn error.
+
+- **2. Implemented Architecture (Decoupled Footprint Sizing + Dynamic Raycast Ceiling Detection):**
+  - **Pillar A: True Physical Footprint Sizing (`tp_spawnableVehicles.sqf`):**
+    - Helicopters and VTOLs are sized by their true spatial dimensions, completely decoupled from ceiling clearance:
+      - `S` (Small): `MH-9 Hummingbird`, `AH-9 Pawnee`, `MQ-12 Falcon`
+      - `M` (Medium): `UH-80 Ghost Hawk`, `AH-99 Blackfoot`, `PO-30 Orca`, `AW159 Hellcat`
+      - `L` (Large): `CH-67 Huron`, `Mi-48 Kajman`
+      - `XL` (Extra Large): `V-44 X Blackfish` (VTOL)
+  - **Pillar B: Dynamic Native Raycast Ceiling Detection (`qm_vehicleTabs.sqf` & `qm_serverFunctions.sqf`):**
+    - Open-ceiling clearance is inherently required for all rotary and VTOL assets (`_classname isKindOf "Helicopter" || _classname isKindOf "VTOL_Base_F"`).
+    - When evaluating base pads, the engine fires a 25m vertical raycast straight up from each pad object (`lineIntersectsSurfaces`):
+      - If an overhead obstacle (hangar roof, vehicle bay ceiling, bridge, building structure) is detected, `_hasRoof` evaluates to `true`.
+      - **UI-Level Exclusion:** The roofed pad does **not** contribute to `_maxHeliSize`. If a base has only covered pads or indoor hangars, `_maxHeliSize` remains `-1`, and helicopters/VTOLs are **completely omitted from the player's motorpool menu**.
+      - **Cached Performance:** Raycast results are cached on the pad object (`QM_Pad_HasRoof`), executing once per pad and delivering instant subsequent lookups.
+  - **Pillar C: Granular Multi-Category Pad Gating:**
+    - The pad suffix is tokenized by delimiter (`_remainder splitString "_"`):
+      - `GROUND`, `CAR`, `TANK` $\rightarrow$ Enables Ground category.
+      - `HELI`, `HELICOPTER` $\rightarrow$ Enables Helicopter category (gated by `!_hasRoof`).
+      - `PLANE` $\rightarrow$ Enables Fixed-Wing category.
+      - `AIR` $\rightarrow$ Enables both Helicopter and Plane categories.
+      - `BOAT` $\rightarrow$ Enables Naval Boat category.
+    - **Size Inheritance:**
+      - `Garage_Ground_M_Helicopter_1` $\rightarrow$ Ground is `M`, Helicopter is `OPEN` (unlimited, provided sky is clear).
+      - `Garage_Ground_M_Helicopter_M_1` $\rightarrow$ Ground is `M`, Helicopter is `M` (Hummingbird and Ghost Hawk can spawn; Huron is blocked).
+      - `Garage_Ground_Helicopter_60` $\rightarrow$ Both Ground and Helicopter default to `OPEN`.
+
+- **3. Status:** **Verified Resolved & Implemented** via `templates/tp_spawnableVehicles.sqf`, `logistics/qm_vehicleTabs.sqf`, and `logistics/qm_serverFunctions.sqf`.
 
 ---
 
@@ -1456,6 +1507,39 @@ Organize the root mission workspace into clean, modular subdirectories (`templat
 
 - **4. Migration Trigger & Current Status:**
   - **Current Status:** **Implemented & Fully Operational (Section 7.6)**. All legacy Bohemia `ModuleSmoke_F` and `fn_moduleGrenade.sqf` logic removed from `logistics/logi_groundVisuals.sqf` in favor of native `#particlesource` emitters. Historical module activation solution archived in `archive_features.md`. Multiple drop-off zone resolution across bases fully enabled.
+
+---
+
+### [ ] 7.7 Automated Trigger-Bound Physical Dimension Discovery & Dynamic Pad Classification Engine
+- **1. Context & Architectural Dilemma:**
+  - Currently, garage and assembly pad size classifications (`_XXS`, `_XS`, `_S`, `_M`, `_L`, `_XL`, `_OPEN`) are manually encoded as text tokens in pad variable names (e.g. `Garage_Helicopter_M_1`) or inferred via fallbacks.
+  - While reliable, this requires mission makers to manually cross-reference vehicle dimensions against Eden's 10-meter Virtual Reality grid to determine appropriate sizing tokens for every placed spawn pad.
+  - Furthermore, 3D invisible helipads (`Land_HelipadEmpty_F`) do not visually display physical boundary rectangles in the Eden Editor, requiring mission makers to imagine or estimate the physical footprint bounds.
+  - In contrast, Eden Editor **Triggers** (`EmptyDetector`) allow mission makers to visually shape and resize colored bounding boxes or ellipses (`triggerArea`), directly matching physical asphalt footprints, concrete pads, or hangar floor spaces.
+
+- **2. Proposed Overhaul: Hybrid Trigger-Area Dimension Scanner + 3D Spawn Anchor:**
+  - **The Hybrid Architecture:**
+    - **Visual Footprint (Trigger):** The mission maker places an Eden trigger over the physical pad, scaling its width ($A$) and length ($B$) to match the ground surface.
+    - **Exact 3D Spawn Anchor (Synced Helipad):** A `Land_HelipadEmpty_F` placed inside or synchronized to the trigger provides the exact spawn position, heading arrow, and carrier/ship deck pitch.
+  - **Automated Boot-Time Pad Dimension Classification:**
+    - At mission initialization, the engine reads the geometric properties of all placed triggers via `triggerArea _trig` (yielding `[_a, _b, _angle, _isRectangle]`):
+      - `_maxDim = (2 * _a) max (2 * _b);` (Total span in meters)
+    - Automatically maps the measured physical span to the standard 10m VR grid tier:
+      - $\le 10\text{ m} \rightarrow$ **`S`** (Small: Quads, Hummingbirds, Pawnees)
+      - $\le 20\text{ m} \rightarrow$ **`M`** (Medium: Hunters, Prowlers, Ghost Hawks, Blackfoots)
+      - $\le 30\text{ m} \rightarrow$ **`L`** (Large: HEMTTs, Tanks, Hurons, Kajmans)
+      - $> 30\text{ m} \rightarrow$ **`XL`** (Extra Large: Blackfish, large strategic transports)
+  - **Dynamic `sizeOf` Vehicle Validation:**
+    - Vehicles in `G_Procureable_Vehicles` can also have their dimensions cross-referenced automatically against Bohemia's native `sizeOf _classname` (bounding sphere diameter) or `boundingBoxReal` to mathematically verify clearance.
+  - **Seamless Fallback:**
+    - Legacy naming conventions (`_S`, `_M`, `_L`, `_OPEN` on 3D helipads without triggers) remain 100% supported as an override or standalone configuration.
+
+- **3. Operational Value:**
+  - Zero manual size token guesswork for mission makers: simply draw a trigger over the pad in Eden, and the engine handles all vehicle size filtering automatically.
+  - Retains the exact 3D orientation, deck height, and heading of the synced helipad.
+  - Eliminates pad sizing conflicts between helicopters and ground vehicles permanently.
+
+- **4. Status:** **Proposed & Logged as Section 7 Overhaul** (Concept established; preserves existing Section 6.11 multi-category pad architecture while opening path for automated geometric Eden discovery).
 
 ---
 

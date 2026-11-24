@@ -330,22 +330,28 @@ QM_fnc_processGarageSpawn = {
     
     if (_vehSize == "") then {
         private _isDrone = getNumber(configFile >> "CfgVehicles" >> _classname >> "isUav") == 1;
-        if (_classname isKindOf "Helicopter" || _classname isKindOf "VTOL_Base_F" || _isDrone) then {
-            _vehSize = "OPEN";
+        if (_classname isKindOf "Helicopter") then {
+            _vehSize = "M";
         } else {
-            if (_classname isKindOf "Plane") then {
-                _vehSize = "L";
+            if (_classname isKindOf "VTOL_Base_F") then {
+                _vehSize = "XL";
             } else {
-                if (_classname isKindOf "Quadbike_01_base_F" || _classname isKindOf "Motorcycle") then {
-                    _vehSize = "S";
+                if (_classname isKindOf "Plane") then {
+                    _vehSize = "L";
                 } else {
-                    _vehSize = "M"; // Standard ground vehicle fallback
+                    if (_classname isKindOf "Quadbike_01_base_F" || _classname isKindOf "Motorcycle") then {
+                        _vehSize = "S";
+                    } else {
+                        _vehSize = "M"; // Standard ground vehicle fallback
+                    };
                 };
             };
         };
     };
 
-    if (_classname == "") exitWith { ["MECHANIC: Factory canceled."] remoteExec ["systemChat", _clientPlayer]; };
+    if (_classname == "" || { !isClass (configFile >> "CfgVehicles" >> _classname) }) exitWith {
+        [format ["MECHANIC: Vehicle blueprint '%1' is not available in current configuration.", _classname]] remoteExec ["systemChat", _clientPlayer];
+    };
 
     private _capData = [_classname] call QM_CAP_fnc_checkCurrentActiveCount;
     if !(_capData select 0) exitWith { [format ["PROCURMENT DENIED: Cap limit reached [%1/%2].", _capData select 1, _capData select 2]] remoteExec ["hint", _clientPlayer]; };
@@ -388,13 +394,14 @@ QM_fnc_processGarageSpawn = {
 
     // Determine vehicle classification
     private _isBoat = _classname isKindOf "Ship";
-    private _isPlane = _classname isKindOf "Plane";
+    private _isVTOL = _classname isKindOf "VTOL_Base_F";
     private _isHeli = _classname isKindOf "Helicopter";
-    private _isGround = (!_isBoat && !_isPlane && !_isHeli);
+    private _isPlane = (_classname isKindOf "Plane" && !_isHeli && !_isVTOL);
+    private _isGround = (!_isBoat && !_isPlane && !_isHeli && !_isVTOL);
 
     private _typeSuffix = if (_isBoat) then { "BOAT" } else {
         if (_isPlane) then { "PLANE" } else {
-            if (_isHeli) then { "HELICOPTER" } else { "GROUND" }
+            if (_isHeli || _isVTOL) then { "HELICOPTER" } else { "GROUND" }
         }
     };
 
@@ -448,61 +455,92 @@ QM_fnc_processGarageSpawn = {
             if (_gIdx >= 0) then { _mUpper select [_gIdx + 6] } else { _mUpper };
         };
 
-        // 1. Determine the pad's category from its remaining suffix
-        private _padHasGround = ("_GROUND" in _remainder || "GROUND" in _remainder || "_CAR" in _remainder || "CAR" in _remainder || "_TANK" in _remainder || "TANK" in _remainder);
-        private _padHasBoat = ("_BOAT" in _remainder || "BOAT" in _remainder);
-        private _padHasHeli = ("_HELI" in _remainder || "HELI" in _remainder || "_HELICOPTER" in _remainder || "HELICOPTER" in _remainder);
-        private _padHasPlane = ("_PLANE" in _remainder || "PLANE" in _remainder);
-        private _padHasAir = ("_AIR" in _remainder || "AIR" in _remainder);
-        private _isUniversalPad = (!_padHasGround && !_padHasBoat && !_padHasHeli && !_padHasPlane && !_padHasAir);
+        // Multi-Category & Granular Per-Category Size Parser
+        private _tokens = _remainder splitString "_";
+        private _padGroundSize = -1;
+        private _padHeliSize = -1;
+        private _padPlaneSize = -1;
+        private _padBoatSize = -1;
+        private _hasGround = false;
+        private _hasHeli = false;
+        private _hasPlane = false;
+        private _hasBoat = false;
+        private _defaultPadSize = 6;
+        private _lastCat = "";
 
-        // 2. Strict Type Compatibility Gate
-        private _typeValid = false;
-        if (_isGround && (_padHasGround || _isUniversalPad)) then { _typeValid = true; };
-        if (_isBoat && (_padHasBoat || _isUniversalPad)) then { _typeValid = true; };
-        if (_isHeli && (_padHasHeli || _padHasAir || _isUniversalPad)) then { _typeValid = true; };
-        if (_isPlane && (_padHasPlane || _padHasAir || _isUniversalPad)) then { _typeValid = true; };
+        {
+            private _t = _x;
+            if (_t in ["GROUND", "CAR", "TANK"]) then { _hasGround = true; _lastCat = "GROUND"; };
+            if (_t in ["HELI", "HELICOPTER"]) then { _hasHeli = true; _lastCat = "HELI"; };
+            if (_t in ["PLANE"]) then { _hasPlane = true; _lastCat = "PLANE"; };
+            if (_t in ["BOAT"]) then { _hasBoat = true; _lastCat = "BOAT"; };
+            if (_t in ["AIR"]) then { _hasHeli = true; _hasPlane = true; _lastCat = "AIR"; };
 
-        if (_typeValid) then {
-            // 3. Determine Pad Size Rank (0=XXS ... 6=OPEN/unspecified)
-            private _padSize = 6; // Default OPEN
-            if ("_XXS" in _remainder) then {
-                _padSize = 0;
-            } else {
-                if ("_XS" in _remainder) then {
-                    _padSize = 1;
-                } else {
-                    if ("_XL" in _remainder) then {
-                        _padSize = 5;
-                    } else {
-                        if ("_L" in _remainder) then {
-                            _padSize = 4;
-                        } else {
-                            if ("_M" in _remainder) then {
-                                _padSize = 3;
-                            } else {
-                                if ("_S" in _remainder) then {
-                                    _padSize = 2;
-                                } else {
-                                    if ("_OPEN" in _remainder) then {
-                                        _padSize = 6;
-                                    };
-                                };
-                            };
-                        };
-                    };
-                };
+            private _szVal = -1;
+            switch (_t) do {
+                case "XXS":  { _szVal = 0; };
+                case "XS":   { _szVal = 1; };
+                case "S":    { _szVal = 2; };
+                case "M":    { _szVal = 3; };
+                case "L":    { _szVal = 4; };
+                case "XL":   { _szVal = 5; };
+                case "OPEN": { _szVal = 6; };
             };
 
-            // Pad size must be >= vehicle size
-            if (_padSize >= _reqSize) then {
-                private _rawVar = missionNamespace getVariable [_mName, objNull];
-                private _padObj = if (_rawVar isEqualType objNull) then { _rawVar } else { objNull };
-                if (!isNull _padObj) then {
-                    private _posASL = getPosASL _padObj;
-                    private _dir = getDir _padObj;
-                    _locations pushBack [_padObj, _posASL, _dir, "OBJECT", _mName];
+            if (_szVal != -1) then {
+                switch (_lastCat) do {
+                    case "GROUND": { _padGroundSize = _szVal; };
+                    case "HELI":   { _padHeliSize = _szVal; };
+                    case "PLANE":  { _padPlaneSize = _szVal; };
+                    case "BOAT":   { _padBoatSize = _szVal; };
+                    case "AIR":    { _padHeliSize = _szVal; _padPlaneSize = _szVal; };
+                    default        { _defaultPadSize = _szVal; };
                 };
+            };
+        } forEach _tokens;
+
+        private _isUniversalPad = (!_hasGround && !_hasHeli && !_hasPlane && !_hasBoat);
+
+        // Strict Type & Size Compatibility Gate
+        private _typeValid = false;
+        private _padSize = -1;
+
+        // Vertical clearance check on server
+        private _rawVar = missionNamespace getVariable [_mName, objNull];
+        private _padObj = if (_rawVar isEqualType objNull) then { _rawVar } else { objNull };
+        private _hasRoof = false;
+        if (!isNull _padObj) then {
+            _hasRoof = _padObj getVariable "QM_Pad_HasRoof";
+            if (isNil "_hasRoof") then {
+                private _posASL = getPosASL _padObj;
+                private _hits = lineIntersectsSurfaces [_posASL vectorAdd [0, 0, 1], _posASL vectorAdd [0, 0, 25], _padObj, objNull, true, 1];
+                _hasRoof = (count _hits > 0);
+                _padObj setVariable ["QM_Pad_HasRoof", _hasRoof];
+            };
+        };
+
+        if (_isGround && (_hasGround || _isUniversalPad)) then {
+            _typeValid = true;
+            _padSize = if (_padGroundSize != -1) then { _padGroundSize } else { _defaultPadSize };
+        };
+        if (_isBoat && (_hasBoat || _isUniversalPad)) then {
+            _typeValid = true;
+            _padSize = if (_padBoatSize != -1) then { _padBoatSize } else { _defaultPadSize };
+        };
+        if ((_isHeli || _isVTOL) && (_hasHeli || _isUniversalPad) && !_hasRoof) then {
+            _typeValid = true;
+            _padSize = if (_padHeliSize != -1) then { _padHeliSize } else { _defaultPadSize };
+        };
+        if (_isPlane && (_hasPlane || _isUniversalPad)) then {
+            _typeValid = true;
+            _padSize = if (_padPlaneSize != -1) then { _padPlaneSize } else { _defaultPadSize };
+        };
+
+        if (_typeValid && (_padSize >= _reqSize)) then {
+            if (!isNull _padObj) then {
+                private _posASL = getPosASL _padObj;
+                private _dir = getDir _padObj;
+                _locations pushBack [_padObj, _posASL, _dir, "OBJECT", _mName];
             };
         };
     } forEach _allBaseGarages;

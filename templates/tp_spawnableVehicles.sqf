@@ -117,29 +117,33 @@ G_Procureable_Vehicles = [
     ["AL-6 Pelican (Medical)", ["B_UAV_06_medical_F"], [["Cargo", 120], ["Ammo", 0], ["Fuel", 100], ["Medical", 1], ["Repair", 0], ["Vehicle", 251], ["Troops", 0]], "ALL", "WEST", ["Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "XS"],
     ["MQ-4A Greyhawk", ["B_UAV_02_dynamicLoadout_F"], [["Cargo", 250], ["Ammo", 0], ["Fuel", 1000], ["Medical", 0], ["Repair", 0], ["Vehicle", 3000], ["Troops", 0]], "SB", "WEST", ["Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "L"],
     ["UCAV Sentinel", ["B_UAV_05_F"], [["Cargo", 999], ["Ammo", 0], ["Fuel", 1000], ["Medical", 0], ["Repair", 0], ["Vehicle", 11450], ["Troops", 0]], "SB", "WEST", ["Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "XL"],
-    ["MQ-12 Falcon", ["B_T_UAV_03_dynamicLoadout_F"], [["Cargo", 999], ["Ammo", 0], ["Fuel", 100], ["Medical", 0], ["Repair", 0], ["Vehicle", 5154], ["Troops", 0]], "SB", "WEST", ["Woodland", "Jungle"], ["Quartermaster", "WorldAI"], "OPEN"],
+    ["MQ-12 Falcon", ["B_T_UAV_03_dynamicLoadout_F"], [["Cargo", 999], ["Ammo", 0], ["Fuel", 100], ["Medical", 0], ["Repair", 0], ["Vehicle", 5154], ["Troops", 0]], "SB", "WEST", ["Woodland", "Jungle"], ["Quartermaster", "WorldAI"], "S"],
 
     // ------------------------------------------------------------------------
     // ROTARY WING / HELICOPTERS
+    // Light & Medium maritime helicopters allowed at ["SB", "FOB"] (_helicopter pad suffix);
+    // Heavy lift & attack restricted strictly to ["SB"].
+    // Sized by physical footprint (S = Light, M = Medium, L = Heavy).
+    // Open-ceiling clearance is verified dynamically via engine raycast.
     // ------------------------------------------------------------------------
-    ["MH-9 Hummingbird", ["B_Heli_Light_01_F"], [["Cargo", 1000], ["Ammo", 0], ["Fuel", 242], ["Medical", 0], ["Repair", 0], ["Vehicle", 500], ["Troops", 2]], "SB", "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "OPEN"],
-    ["AH-9 Pawnee", ["B_Heli_Light_01_dynamicLoadout_F"], [["Cargo", 1000], ["Ammo", 0], ["Fuel", 242], ["Medical", 0], ["Repair", 0], ["Vehicle", 500], ["Troops", 2]], "SB", "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "OPEN"],
-    ["AH-99 Blackfoot", ["B_Heli_Attack_01_dynamicLoadout_F"], [["Cargo", 999], ["Ammo", 0], ["Fuel", 500], ["Medical", 0], ["Repair", 0], ["Vehicle", 10056], ["Troops", 2]], "SB", "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "OPEN"],
-    ["AH-99 Blackfoot (Stub Wings)", ["B_Heli_Attack_01_pylons_dynamicLoadout_F"], [["Cargo", 999], ["Ammo", 0], ["Fuel", 500], ["Medical", 0], ["Repair", 0], ["Vehicle", 10056], ["Troops", 2]], "SB", "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "OPEN"],
-    ["UH-80 Ghost Hawk", ["B_Heli_Transport_01_F"], [["Cargo", 3000], ["Ammo", 0], ["Fuel", 1360], ["Medical", 0], ["Repair", 0], ["Vehicle", 4000], ["Troops", 4]], "SB", "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "OPEN"],
-    ["UH-80 Ghost Hawk (Stub Wings)", ["B_Heli_Transport_01_pylons_F"], [["Cargo", 3000], ["Ammo", 0], ["Fuel", 1360], ["Medical", 0], ["Repair", 0], ["Vehicle", 4000], ["Troops", 4]], "SB", "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "OPEN"],
-    ["CH-67 Huron (Unarmed)", ["B_Heli_Transport_03_unarmed_F"], [["Cargo", 6000], ["Ammo", 0], ["Fuel", 1360], ["Medical", 0], ["Repair", 0], ["Vehicle", 12000], ["Troops", 4]], "SB", "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "OPEN"],
-    ["CH-67 Huron", ["B_Heli_Transport_03_F"], [["Cargo", 6000], ["Ammo", 0], ["Fuel", 1360], ["Medical", 0], ["Repair", 0], ["Vehicle", 12000], ["Troops", 4]], "SB", "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "OPEN"],
+    ["MH-9 Hummingbird", ["B_Heli_Light_01_F"], [["Cargo", 1000], ["Ammo", 0], ["Fuel", 242], ["Medical", 0], ["Repair", 0], ["Vehicle", 500], ["Troops", 2]], ["SB", "FOB"], "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "S"],
+    ["AH-9 Pawnee", ["B_Heli_Light_01_dynamicLoadout_F"], [["Cargo", 1000], ["Ammo", 0], ["Fuel", 242], ["Medical", 0], ["Repair", 0], ["Vehicle", 500], ["Troops", 2]], ["SB", "FOB"], "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "S"],
+    ["AH-99 Blackfoot", ["B_Heli_Attack_01_dynamicLoadout_F"], [["Cargo", 999], ["Ammo", 0], ["Fuel", 500], ["Medical", 0], ["Repair", 0], ["Vehicle", 10056], ["Troops", 2]], ["SB"], "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "M"],
+    ["AH-99 Blackfoot (Stub Wings)", ["B_Heli_Attack_01_pylons_dynamicLoadout_F"], [["Cargo", 999], ["Ammo", 0], ["Fuel", 500], ["Medical", 0], ["Repair", 0], ["Vehicle", 10056], ["Troops", 2]], ["SB"], "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "M"],
+    ["UH-80 Ghost Hawk", ["B_Heli_Transport_01_F"], [["Cargo", 3000], ["Ammo", 0], ["Fuel", 1360], ["Medical", 0], ["Repair", 0], ["Vehicle", 4000], ["Troops", 4]], ["SB", "FOB"], "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "M"],
+    ["UH-80 Ghost Hawk (Stub Wings)", ["B_Heli_Transport_01_pylons_F"], [["Cargo", 3000], ["Ammo", 0], ["Fuel", 1360], ["Medical", 0], ["Repair", 0], ["Vehicle", 4000], ["Troops", 4]], ["SB", "FOB"], "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "M"],
+    ["CH-67 Huron (Unarmed)", ["B_Heli_Transport_03_unarmed_F"], [["Cargo", 6000], ["Ammo", 0], ["Fuel", 1360], ["Medical", 0], ["Repair", 0], ["Vehicle", 12000], ["Troops", 4]], ["SB"], "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "L"],
+    ["CH-67 Huron", ["B_Heli_Transport_03_F"], [["Cargo", 6000], ["Ammo", 0], ["Fuel", 1360], ["Medical", 0], ["Repair", 0], ["Vehicle", 12000], ["Troops", 4]], ["SB"], "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "L"],
     
-    ["UH-80 Ghost Hawk (Sand)", ["B_CTRG_Heli_Transport_01_sand_F"], [["Cargo", 3000], ["Ammo", 0], ["Fuel", 1360], ["Medical", 0], ["Repair", 0], ["Vehicle", 4000], ["Troops", 4]], "SB", "WEST", ["Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "OPEN"],
-    ["UH-80 Ghost Hawk (Tropic)", ["B_CTRG_Heli_Transport_01_tropic_F"], [["Cargo", 3000], ["Ammo", 0], ["Fuel", 1360], ["Medical", 0], ["Repair", 0], ["Vehicle", 4000], ["Troops", 4]], "SB", "WEST", ["Woodland", "Jungle"], ["Quartermaster", "WorldAI"], "OPEN"],
+    ["UH-80 Ghost Hawk (Sand)", ["B_CTRG_Heli_Transport_01_sand_F"], [["Cargo", 3000], ["Ammo", 0], ["Fuel", 1360], ["Medical", 0], ["Repair", 0], ["Vehicle", 4000], ["Troops", 4]], ["SB", "FOB"], "WEST", ["Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "M"],
+    ["UH-80 Ghost Hawk (Tropic)", ["B_CTRG_Heli_Transport_01_tropic_F"], [["Cargo", 3000], ["Ammo", 0], ["Fuel", 1360], ["Medical", 0], ["Repair", 0], ["Vehicle", 4000], ["Troops", 4]], ["SB", "FOB"], "WEST", ["Woodland", "Jungle"], ["Quartermaster", "WorldAI"], "M"],
 
     // ------------------------------------------------------------------------
     // FIXED WING & VTOL
     // ------------------------------------------------------------------------
-    ["V-44 X Blackfish (Infantry Transport)", ["B_T_VTOL_01_infantry_F"], [["Cargo", 12000], ["Ammo", 0], ["Fuel", 1000], ["Medical", 0], ["Repair", 0], ["Vehicle", 47709], ["Troops", 4]], "SB", "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "OPEN"],
-    ["V-44 X Blackfish (Vehicle Transport)", ["B_T_VTOL_01_vehicle_F"], [["Cargo", 12000], ["Ammo", 0], ["Fuel", 1000], ["Medical", 0], ["Repair", 0], ["Vehicle", 47709], ["Troops", 4]], "SB", "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "OPEN"],
-    ["V-44 X Blackfish (Armed)", ["B_T_VTOL_01_armed_F"], [["Cargo", 3000], ["Ammo", 0], ["Fuel", 1000], ["Medical", 0], ["Repair", 0], ["Vehicle", 47759], ["Troops", 4]], "SB", "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "OPEN"],
+    ["V-44 X Blackfish (Infantry Transport)", ["B_T_VTOL_01_infantry_F"], [["Cargo", 12000], ["Ammo", 0], ["Fuel", 1000], ["Medical", 0], ["Repair", 0], ["Vehicle", 47709], ["Troops", 4]], "SB", "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "XL"],
+    ["V-44 X Blackfish (Vehicle Transport)", ["B_T_VTOL_01_vehicle_F"], [["Cargo", 12000], ["Ammo", 0], ["Fuel", 1000], ["Medical", 0], ["Repair", 0], ["Vehicle", 47709], ["Troops", 4]], "SB", "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "XL"],
+    ["V-44 X Blackfish (Armed)", ["B_T_VTOL_01_armed_F"], [["Cargo", 3000], ["Ammo", 0], ["Fuel", 1000], ["Medical", 0], ["Repair", 0], ["Vehicle", 47759], ["Troops", 4]], "SB", "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "XL"],
     ["A-164 Wipeout (CAS)", ["B_Plane_CAS_01_dynamicLoadout_F"], [["Cargo", 500], ["Ammo", 0], ["Fuel", 1000], ["Medical", 0], ["Repair", 0], ["Vehicle", 19500], ["Troops", 1]], "SB", "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "L"],
     ["F/A-181 Black Wasp II", ["B_Plane_Fighter_01_F"], [["Cargo", 500], ["Ammo", 0], ["Fuel", 1550], ["Medical", 0], ["Repair", 0], ["Vehicle", 11000], ["Troops", 1]], "SB", "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "L"],
     ["F/A-181 Black Wasp II (Stealth)", ["B_Plane_Fighter_01_Stealth_F"], [["Cargo", 500], ["Ammo", 0], ["Fuel", 1550], ["Medical", 0], ["Repair", 0], ["Vehicle", 11000], ["Troops", 1]], "SB", "WEST", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "L"],
@@ -225,7 +229,7 @@ G_Procureable_Vehicles = [
     ["T-140K Angara (Command)", ["O_MBT_04_command_F"], [["Cargo", 3000], ["Ammo", 550], ["Fuel", 20], ["Medical", 0], ["Repair", 0], ["Vehicle", 78000], ["Troops", 3]], "SB", "EAST", ["Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "M"],
     
     // AT/CAS Aircraft
-    ["Mi-48 Kajman", ["O_Heli_Attack_02_dynamicLoadout_F"], [["Cargo", 1000], ["Ammo", 700], ["Fuel", 500], ["Medical", 0], ["Repair", 0], ["Vehicle", 15000], ["Troops", 2]], "SB", "EAST", ["Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "OPEN"],
+    ["Mi-48 Kajman", ["O_Heli_Attack_02_dynamicLoadout_F"], [["Cargo", 1000], ["Ammo", 700], ["Fuel", 500], ["Medical", 0], ["Repair", 0], ["Vehicle", 15000], ["Troops", 2]], "SB", "EAST", ["Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "L"],
     ["To-199 Neophron (CAS)", ["O_Plane_CAS_02_dynamicLoadout_F"], [["Cargo", 500], ["Ammo", 800], ["Fuel", 1000], ["Medical", 0], ["Repair", 0], ["Vehicle", 18000], ["Troops", 1]], "SB", "EAST", ["Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "L"],
     ["Ababil-3 (UCAV)", ["O_UAV_02_dynamicLoadout_F"], [["Cargo", 250], ["Ammo", 300], ["Fuel", 800], ["Medical", 0], ["Repair", 0], ["Vehicle", 5000], ["Troops", 0]], "SB", "EAST", ["Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "L"],
 
@@ -241,7 +245,7 @@ G_Procureable_Vehicles = [
     ["UGV Saif", ["O_UGV_01_rcws_F"], [["Cargo", 1000], ["Ammo", 150], ["Fuel", 14], ["Medical", 0], ["Repair", 0], ["Vehicle", 4500], ["Troops", 0]], "FOB", "EAST", ["Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "M"],
     
     // Support Aircraft
-    ["PO-30 Orca", ["O_Heli_Light_02_dynamicLoadout_F"], [["Cargo", 2000], ["Ammo", 200], ["Fuel", 300], ["Medical", 0], ["Repair", 0], ["Vehicle", 6000], ["Troops", 2]], "FOB", "EAST", ["Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "OPEN"],
+    ["PO-30 Orca", ["O_Heli_Light_02_dynamicLoadout_F"], [["Cargo", 2000], ["Ammo", 200], ["Fuel", 300], ["Medical", 0], ["Repair", 0], ["Vehicle", 6000], ["Troops", 2]], "FOB", "EAST", ["Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "M"],
 
     // ------------------------------------------------------------------------
     // CORE LOGISTICS & TRANSPORT TRUCKS
@@ -298,7 +302,7 @@ G_Procureable_Vehicles = [
     ["UGV Stomper (AAF)", ["I_UGV_01_rcws_F"], [["Cargo", 1000], ["Ammo", 150], ["Fuel", 14], ["Medical", 0], ["Repair", 0], ["Vehicle", 4500], ["Troops", 0]], "FOB", "GUER", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "M"],
     
     // Support Aircraft
-    ["AW159 Hellcat", ["I_Heli_light_03_dynamicLoadout_F"], [["Cargo", 1500], ["Ammo", 200], ["Fuel", 200], ["Medical", 0], ["Repair", 0], ["Vehicle", 5500], ["Troops", 2]], "FOB", "GUER", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "OPEN"],
+    ["AW159 Hellcat", ["I_Heli_light_03_dynamicLoadout_F"], [["Cargo", 1500], ["Ammo", 200], ["Fuel", 200], ["Medical", 0], ["Repair", 0], ["Vehicle", 5500], ["Troops", 2]], "FOB", "GUER", ["Woodland", "Jungle", "Mediterranean", "Desert"], ["Quartermaster", "WorldAI"], "M"],
 
     // ------------------------------------------------------------------------
     // CORE LOGISTICS TRUCKS
